@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập hệ thống · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-green: #044e37;
+            --brand-green-hover: #033928;
+            --brand-teal: #057a55;
+            --bg-page: #f3f7f5;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border-light: #e2e8f0;
+            --border-input: #cbd5e1;
+            --input-focus: #057a55;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 440px;
+            border-radius: 20px;
+            box-shadow: 0 20px 44px -10px rgba(4, 78, 55, 0.14), 0 0 1px 1px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER LOGO */
+        .card-header-brand {
+            background-color: var(--brand-green);
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #ffffff;
+        }
+
+        .brand-text {
+            font-size: 25px;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+
+        /* BODY */
+        .card-body {
+            padding: 32px 30px 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .login-desc {
+            font-size: 13.5px;
+            color: var(--text-sub);
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        /* ALERT ERROR */
+        .alert-error {
+            background-color: var(--danger-bg);
+            border: 1px solid #fecaca;
+            color: var(--danger);
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.4;
+        }
+
+        /* FORM CONTROLS */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .form-label .req {
+            color: #dc2626;
+            margin-left: 2px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            color: #64748b;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-control {
+            width: 100%;
+            height: 46px;
+            padding: 10px 42px 10px 42px;
+            border: 1.5px solid var(--border-input);
+            border-radius: 11px;
+            font-size: 14px;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.2s ease;
+            background-color: #ffffff;
+        }
+
+        .form-control::placeholder {
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        .form-control:focus {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(5, 122, 85, 0.12);
+        }
+
+        .btn-toggle-pwd {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-toggle-pwd:hover {
+            color: var(--text-main);
+        }
+
+        /* HÀNG GHI NHỚ ĐĂNG NHẬP & QUÊN MẬT KHẨU */
+        .form-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+            font-size: 13.5px;
+        }
+
+        .remember-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1e293b;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .remember-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--brand-green);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .link-forgot-pwd {
+            color: var(--brand-teal);
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.15s ease;
+            cursor: pointer;
+        }
+
+        .link-forgot-pwd:hover {
+            color: var(--brand-green-hover);
+            text-decoration: underline;
+        }
+
+        /* NÚT SUBMIT ĐĂNG NHẬP */
+        .btn-submit-login {
+            width: 100%;
+            height: 48px;
+            background-color: var(--brand-green);
+            color: #ffffff;
+            border: none;
+            border-radius: 11px;
+            font-size: 15.5px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(4, 78, 55, 0.22);
+        }
+
+        .btn-submit-login:hover {
+            background-color: var(--brand-green-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(4, 78, 55, 0.28);
+        }
+
+        .btn-submit-login:active {
+            transform: translateY(0);
+        }
+
+        /* FOOTER */
+        .card-footer {
+            margin: 0 30px;
+            padding: 18px 0 22px;
+            font-size: 12px;
+            color: #64748b;
+            text-align: center;
+            font-weight: 500;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        /* MODAL QUÊN MẬT KHẨU */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(2px);
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 420px;
+            padding: 24px 26px;
+            box-shadow: 0 20px 44px rgba(0, 0, 0, 0.22);
+            animation: popFade 0.18s ease-out;
+        }
+
+        @keyframes popFade {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-icon-circle {
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            background: #ecfdf5;
+            color: #057a55;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+
+        .modal-head {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            font-size: 13.5px;
+            color: #334155;
+            line-height: 1.55;
+            margin-bottom: 14px;
+        }
+
+        .modal-info-card {
+            background: #f8fafc;
+            border: 1px solid var(--border-light);
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 12.5px;
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 18px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-cancel {
+            background: #ffffff;
+            border: 1px solid var(--border-input);
+            color: #334155;
+            padding: 9px 18px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-cancel:hover {
+            background: #f8fafc;
+        }
+
+        .btn-confirm {
+            background: var(--brand-green);
+            color: #ffffff;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-confirm:hover {
+            background: var(--brand-green-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <!-- HEADER LOGO -->
+        <div class="card-header-brand">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            <div class="brand-text">SANOVA</div>
+        </div>
+
+        <div class="card-body">
+            <h1 class="login-title">Đăng nhập hệ thống</h1>
+            <p class="login-desc">Sử dụng tài khoản được cấp để truy cập SANOVA.</p>
+
+            {% if error %}
+            <div class="alert-error">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span>{{ error }}</span>
+            </div>
+            {% endif %}
+
+            <form action="/login" method="POST" id="loginForm" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- MÃ NHÂN VIÊN / TÊN ĐĂNG NHẬP -->
+                <div class="form-group">
+                    <label class="form-label" for="username">Mã nhân viên / Tên đăng nhập <span class="req">*</span></label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </span>
+                        <input type="text" id="username" name="username" class="form-control"
+                               placeholder="Nhập mã nhân viên hoặc tên đăng nhập"
+                               value="{{ username or '' }}" required autofocus>
+                    </div>
+                </div>
+
+                <!-- MẬT KHẨU (KHÔNG TỰ ĐIỀN LẠI ĐỂ ĐẢM BẢO BẢO MẬT) -->
+                <div class="form-group">
+                    <label class="form-label" for="password">Mật khẩu <span class="req">*</span></label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                        </span>
+                        <input type="password" id="password" name="password" class="form-control"
+                               placeholder="Nhập mật khẩu" autocomplete="new-password" required>
+                        <button type="button" class="btn-toggle-pwd" id="togglePassword" aria-label="Ẩn hiện mật khẩu">
+                            <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- HÀNG GHI NHỚ ĐĂNG NHẬP & QUÊN MẬT KHẨU -->
+                <div class="form-meta-row">
+                    <label class="remember-checkbox">
+                        <input type="checkbox" id="rememberChk" name="remember" value="yes">
+                        <span>Ghi nhớ đăng nhập</span>
+                    </label>
+                    <a href="javascript:void(0)" class="link-forgot-pwd" onclick="openForgotModal()">Quên mật khẩu?</a>
+                </div>
+
+                <!-- NÚT ĐĂNG NHẬP -->
+                <button type="submit" class="btn-submit-login">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                        <polyline points="10 17 15 12 10 7"></polyline>
+                        <line x1="15" y1="12" x2="3" y2="12"></line>
+                    </svg>
+                    Đăng nhập
+                </button>
+            </form>
+        </div>
+
+        <div class="card-footer">
+            © 2026 SANOVA. Hệ thống quản lý kho nội bộ.
+        </div>
+    </div>
+
+    <!-- MODAL POPUP QUÊN MẬT KHẨU -->
+    <div class="modal-overlay" id="forgotModal">
+        <div class="modal-box">
+            <div class="modal-icon-circle">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            </div>
+            <h2 class="modal-head">Hỗ trợ quên mật khẩu</h2>
+            <p class="modal-desc">
+                Vui lòng liên hệ với <strong>Quản trị viên (Admin)</strong> để nhận sự hỗ trợ kiểm tra thông tin và cấp lại mật khẩu mới.
+            </p>
+            <div class="modal-info-card">
+                • Hệ thống nội bộ SANOVA không tự động gửi mật khẩu qua email cá nhân để đảm bảo an toàn dữ liệu kho.<br>
+                • Sau khi Admin đặt lại mật khẩu, bạn hãy đăng nhập lại và đổi mật khẩu mới tại mục <strong>Tài khoản cá nhân</strong>.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-confirm" onclick="closeForgotModal()">Đã hiểu</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const rememberChk = document.getElementById('rememberChk');
+        const loginForm = document.getElementById('loginForm');
+        const STORAGE_KEY = 'sanova_remembered_login_id';
+
+        // 1. Khi mở trang: nếu trước đó đã tick "Ghi nhớ đăng nhập" thì điền sẵn Mã NV / Tên đăng nhập
+        // Mật khẩu luôn để trống để bắt buộc người dùng nhập lại mỗi lần đăng nhập
+        document.addEventListener('DOMContentLoaded', function () {
+            const savedId = localStorage.getItem(STORAGE_KEY);
+            if (savedId) {
+                if (!usernameInput.value) {
+                    usernameInput.value = savedId;
+                }
+                rememberChk.checked = true;
+                passwordInput.focus();
+            }
+        });
+
+        // 2. Khi bấm Đăng nhập: lưu hoặc xóa Mã NV / Tên đăng nhập tùy theo trạng thái checkbox
+        loginForm.addEventListener('submit', function () {
+            const typedId = usernameInput.value.trim();
+            if (rememberChk.checked && typedId) {
+                localStorage.setItem(STORAGE_KEY, typedId);
+            } else {
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        });
+
+        // Bỏ tick ngay lập tức cũng xóa dữ liệu đã ghi nhớ trước đó
+        rememberChk.addEventListener('change', function () {
+            if (!this.checked) {
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        });
+
+        // 3. Ẩn / hiện mật khẩu
+        const togglePassword = document.getElementById('togglePassword');
+        const eyeIcon = document.getElementById('eyeIcon');
+
+        togglePassword.addEventListener('click', function () {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+
+            if (isPassword) {
+                eyeIcon.innerHTML = `
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                `;
+            } else {
+                eyeIcon.innerHTML = `
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                `;
+            }
+        });
+
+        // 4. Mở / đóng hộp thoại Quên mật khẩu
+        function openForgotModal() {
+            document.getElementById('forgotModal').classList.add('active');
+        }
+
+        function closeForgotModal() {
+            document.getElementById('forgotModal').classList.remove('active');
+        }
+
+        document.getElementById('forgotModal').addEventListener('click', function (e) {
+            if (e.target === this) closeForgotModal();
+        });
+    </script>
+</body>
+</html>

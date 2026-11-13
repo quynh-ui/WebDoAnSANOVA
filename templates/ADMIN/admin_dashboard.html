@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tổng quan hệ thống · SANOVA Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-green: #064e3b;
+            --brand-teal: #086f68;
+            --sidebar-bg: #04382a;
+            --sidebar-active: #086f68;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* 1. KHÓA CUỘN TOÀN TRANG, CỐ ĐỊNH LAYOUT 100VH */
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 2. SIDEBAR GHIM CỐ ĐỊNH, KHÔNG BỊ TRÔI KHI LĂN CHUỘT */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ecfdf5;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px 16px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 24px;
+        }
+        .brand-logo-icon { display: flex; align-items: center; color: #ffffff; }
+        .brand-name { font-size: 22px; font-weight: 800; letter-spacing: 1.5px; color: #ffffff; }
+
+        .nav-category {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6ee7b7;
+            font-weight: 700;
+            margin-bottom: 12px;
+            padding-left: 10px;
+        }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            color: #a7f3d0;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+        /* 3. VÙNG NỘI DUNG CUỘN ĐỘC LẬP KHI DÙNG CON LĂN */
+        .main-wrapper {
+            flex-grow: 1;
+            height: 100vh;
+            padding: 24px 32px 40px;
+            overflow-y: auto;
+        }
+
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .main-wrapper::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* TOP NAVBAR */
+        .top-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .page-heading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .user-badge-wrap { display: flex; align-items: center; gap: 12px; }
+        .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #475569; position: relative; cursor: pointer; }
+        .bell-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; position: absolute; top: 8px; right: 8px; border: 2px solid #fff; }
+        .admin-profile-pill { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--border); padding: 7px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 700; color: #1e293b; }
+
+        /* 4 THẺ CHỈ SỐ */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .icon-blue-bg { background: #e0f2fe; color: #0284c7; }
+        .icon-green-bg { background: #dcfce7; color: #16a34a; }
+        .icon-yellow-bg { background: #fef3c7; color: #d97706; }
+        .icon-indigo-bg { background: #e0e7ff; color: #4f46e5; }
+        .kpi-label { font-size: 12.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 2px; }
+        .kpi-num { font-size: 26px; font-weight: 800; color: #0f172a; }
+
+        /* GRID BỐ CỤC */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .card-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px 22px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .panel-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* BIỂU ĐỒ DONUT */
+        .chart-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            gap: 20px;
+            padding: 10px 0;
+        }
+        .donut-chart {
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            background: conic-gradient(#064e3b 0% 25%, #10b981 25% 58%, #86efac 58% 83%, #cbd5e1 83% 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .donut-inner {
+            width: 105px;
+            height: 105px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .donut-inner-num { font-size: 24px; font-weight: 800; color: #0f172a; line-height: 1; }
+        .donut-inner-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        .legend-list { display: flex; flex-direction: column; gap: 12px; }
+        .legend-item { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: #334155; }
+        .legend-bullet { width: 12px; height: 12px; border-radius: 3px; }
+
+        /* BIẾN ĐỘNG TRONG NGÀY */
+        .trend-list { display: flex; flex-direction: column; gap: 16px; }
+        .trend-item { display: flex; align-items: center; justify-content: space-between; font-size: 13.5px; }
+        .trend-left { display: flex; align-items: center; gap: 10px; color: #334155; font-weight: 500; }
+        .trend-num { font-weight: 700; font-size: 15px; color: #0f172a; }
+
+        /* BẢNG HOẠT ĐỘNG GẦN ĐÂY */
+        .activity-table { width: 100%; border-collapse: collapse; }
+        .activity-table th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); background: #f8fafc; }
+        .activity-table td { padding: 12px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+        .activity-action { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #1e293b; }
+
+        /* CẢNH BÁO & THÔNG TIN HỆ THỐNG */
+        .alert-card-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.15s;
+        }
+        .alert-card-red { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .alert-card-yellow { background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .alert-card-item:hover { transform: translateX(2px); }
+
+        .system-meta-row { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+        .system-meta-row:last-child { border-bottom: none; }
+        .system-meta-val { font-weight: 700; color: #0f172a; }
+        /* CHUÔNG THÔNG BÁO ADMIN */
+.noti-bell-wrapper { position: relative; display: inline-flex; align-items: center; }
+.bell-btn {
+    width: 38px; height: 38px; border-radius: 50%; background: #ffffff;
+    border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center;
+    color: #334155; position: relative; cursor: pointer; transition: 0.2s;
+}
+.bell-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.bell-count-badge {
+    position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px;
+    padding: 0 4px; border-radius: 999px; background: #ef4444; color: #ffffff;
+    font-size: 10.5px; font-weight: 800; display: none; align-items: center;
+    justify-content: center; border: 2px solid #ffffff;
+}
+.noti-dropdown {
+    position: absolute; top: 48px; right: 0; width: 390px; background: #ffffff;
+    border: 1px solid #e2e8f0; border-radius: 16px;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14); z-index: 9999;
+    display: none; flex-direction: column; overflow: hidden;
+}
+.noti-dropdown.show { display: flex; }
+.noti-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 18px 12px;
+}
+.noti-head-left { display: flex; align-items: center; gap: 10px; }
+.noti-head-title { font-size: 16px; font-weight: 800; color: #0f172a; }
+.noti-unread-pill {
+    background: #fee2e2; color: #dc2626; font-size: 11.5px; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px;
+}
+.noti-mark-all {
+    background: none; border: none; font-size: 12.5px; font-weight: 600;
+    color: #475569; cursor: pointer;
+}
+.noti-mark-all:hover { color: #057a55; text-decoration: underline; }
+.noti-tabs {
+    display: grid; grid-template-columns: 1fr 1fr; background: #f8fafc;
+    margin: 0 16px 10px; padding: 4px; border-radius: 999px; border: 1px solid #f1f5f9;
+}
+.noti-tab-btn {
+    border: none; background: transparent; padding: 6px 12px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.15s;
+}
+.noti-tab-btn.active {
+    background: #ffffff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.noti-list { max-height: 360px; overflow-y: auto; padding: 4px 8px; }
+.noti-item {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 10px;
+    border-radius: 10px; cursor: pointer; transition: 0.15s; position: relative;
+}
+.noti-item:hover { background: #f8fafc; }
+.noti-item.unread { background: #f0f9ff; }
+.noti-item.unread:hover { background: #e0f2fe; }
+.noti-icon-circle {
+    width: 34px; height: 34px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+}
+.noti-ico-amber { background: #fef3c7; color: #b45309; }
+.noti-ico-red { background: #fee2e2; color: #dc2626; }
+.noti-ico-slate { background: #f1f5f9; color: #334155; }
+.noti-ico-green { background: #dcfce7; color: #15803d; }
+.noti-item-body { flex: 1; min-width: 0; }
+.noti-item-title { font-size: 13.5px; font-weight: 700; color: #0f172a; }
+.noti-item-msg { font-size: 12.5px; color: #475569; margin-top: 2px; line-height: 1.4; }
+.noti-item-time { font-size: 11.5px; color: #94a3b8; margin-top: 4px; }
+.noti-blue-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #0284c7;
+    flex-shrink: 0; margin-top: 8px;
+}
+.noti-empty-state {
+    text-align: center; padding: 28px 16px; font-size: 13px; color: #64748b;
+}
+.noti-footer {
+    padding: 12px 16px; border-top: 1px solid #f1f5f9; background: #ffffff;
+}
+.btn-view-all-noti {
+    display: block; width: 100%; text-align: center; padding: 9px 14px;
+    border: 1px solid #e2e8f0; border-radius: 999px; font-size: 13px;
+    font-weight: 700; color: #1e293b; text-decoration: none; transition: 0.15s;
+}
+.btn-view-all-noti:hover { background: #f8fafc; border-color: #cbd5e1; }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR QUẢN TRỊ VIÊN -->
+    <aside class="sidebar">
+        <div>
+            <div class="brand-header">
+                <div class="brand-logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">Quản trị hệ thống</div>
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link {% if current_path == '/admin' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        Tổng quan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link {% if current_path.startswith('/admin/users') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        Quản lý người dùng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/roles" class="nav-link {% if current_path.startswith('/admin/roles') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Vai trò & phân quyền
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/logs" class="nav-link {% if current_path.startswith('/admin/logs') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        Nhật ký hệ thống
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/settings" class="nav-link {% if current_path.startswith('/admin/settings') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Cấu hình hệ thống
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/profile" class="nav-link {% if current_path.startswith('/admin/profile') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Tài khoản cá nhân
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <a href="/logout" class="btn-logout">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            Đăng xuất
+        </a>
+    </aside>
+
+    <!-- NỘI DUNG MAIN -->
+    <main class="main-wrapper">
+        <!-- TOP NAVBAR -->
+        <header class="top-navbar">
+            <div class="page-heading">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                Tổng quan hệ thống
+            </div>
+
+            <div class="header-right">
+                <div class="user-badge-wrap">
+                    <!-- Chuông thông báo Admin -->
+                    <div class="noti-bell-wrapper" id="adminNotiBellWrap">
+                        <button type="button" class="bell-btn" id="adminNotiBellBtn" title="Thông báo quản trị">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                            <span class="bell-count-badge" id="adminNotiBellCount">0</span>
+                        </button>
+
+                        <!-- Bảng Dropdown thông báo -->
+                        <div class="noti-dropdown" id="adminNotiDropdown">
+                            <div class="noti-head">
+                                <div class="noti-head-left">
+                                    <span class="noti-head-title">Thông báo</span>
+                                    <span class="noti-unread-pill" id="notiHeaderUnreadPill">0 chưa đọc</span>
+                                </div>
+                                <button type="button" class="noti-mark-all" id="btnMarkAllNotiRead">Đánh dấu đã đọc</button>
+                            </div>
+
+                            <div class="noti-tabs">
+                                <button type="button" class="noti-tab-btn active" id="notiTabAll">Tất cả</button>
+                                <button type="button" class="noti-tab-btn" id="notiTabUnread">Chưa đọc</button>
+                            </div>
+
+                            <div class="noti-list" id="adminNotiList">
+                                <div class="noti-empty-state">Đang tải thông báo...</div>
+                            </div>
+
+                            <div class="noti-footer">
+                                <a href="/admin/logs" class="btn-view-all-noti">Xem tất cả thông báo</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Khung tên tài khoản đang đăng nhập -->
+                    <div class="admin-profile-pill">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span>{{ session.get('user', {}).get('name') or 'Admin' }}</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 4 THẺ CHỈ SỐ KPI HÀNG TRÊN CÙNG -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon icon-blue-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Tổng tài khoản</div>
+                    <div class="kpi-num">{{ total_users }}</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon icon-green-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Đang hoạt động</div>
+                    <div class="kpi-num">{{ active_users }}</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon icon-yellow-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Tạm khóa</div>
+                    <div class="kpi-num">{{ locked_count }}</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon icon-indigo-bg">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Chờ kích hoạt</div>
+                    <div class="kpi-num">{{ pending_count }}</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- KHỐI GIỮA: PHÂN BỔ VAI TRÒ & BIẾN ĐỘNG TRONG NGÀY -->
+        <section class="content-grid">
+            <!-- PHÂN BỔ THEO VAI TRÒ (DONUT CHART) -->
+            <div class="card-panel">
+                <div class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Phân bổ người dùng theo vai trò
+                </div>
+
+                <div class="chart-container">
+                    <div class="donut-chart" style="background: {{ donut_gradient }};">
+                        <div class="donut-inner">
+                            <span class="donut-inner-num">{{ total_users }}</span>
+                            <span class="donut-inner-sub">Tài khoản</span>
+                        </div>
+                    </div>
+
+                    <div class="legend-list">
+                        {% for r_name, count in role_counts.items() %}
+                        <div class="legend-item">
+                            <span class="legend-bullet" style="background-color: 
+                                {% if r_name == 'Quản trị viên' %}#064e3b
+                                {% elif r_name == 'Quản lý kho' %}#10b981
+                                {% elif r_name == 'Nhân viên kho' %}#86efac
+                                {% else %}#cbd5e1{% endif %};">
+                            </span>
+                            <span>{{ r_name }}: {{ count }} ({{ ((count / total_users * 100)|round|int) if total_users > 0 else 0 }}%)</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- BIẾN ĐỘNG TRONG NGÀY -->
+            <div class="card-panel">
+                <div class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    Biến động trong ngày
+                </div>
+
+                <div class="trend-list">
+                    <div class="trend-item">
+                        <div class="trend-left">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+                            Tạo tài khoản mới
+                        </div>
+                        <span class="trend-num">{{ today_created_count or 1 }}</span>
+                    </div>
+
+                    <div class="trend-item">
+                        <div class="trend-left">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            Cập nhật tài khoản
+                        </div>
+                        <span class="trend-num">{{ today_updated_count or 2 }}</span>
+                    </div>
+
+                    <div class="trend-item">
+                        <div class="trend-left">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            Thay đổi trạng thái
+                        </div>
+                        <span class="trend-num">{{ today_status_count or 1 }}</span>
+                    </div>
+
+                    <div class="trend-item">
+                        <div class="trend-left">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                            Cập nhật cấu hình
+                        </div>
+                        <span class="trend-num">{{ today_config_count or 0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- KHỐI DƯỚI: HOẠT ĐỘNG GẦN ĐÂY & CẢNH BÁO + THÔNG TIN HỆ THỐNG -->
+        <section class="content-grid">
+            <!-- HOẠT ĐỘNG GẦN ĐÂY -->
+            <div class="card-panel">
+                <div class="panel-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Hoạt động gần đây
+                </div>
+
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 85px;">Thời gian</th>
+                            <th>Hành động</th>
+                            <th style="width: 140px;">Đối tượng tác động</th>
+                            <th style="width: 130px;">Người thực hiện</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if logs %}
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.time }}</td>
+                                <td>
+                                    <div class="activity-action">
+                                        {% if 'Tạo' in log.action %}
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+                                        {% elif 'Cập nhật' in log.action or 'vai trò' in log.action %}
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                        {% elif 'khóa' in log.action %}
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                        {% else %}
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.5"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                                        {% endif %}
+                                        <span>{{ log.action }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong style="color: #086f68;">{{ log.target or 'Hệ thống' }}</strong>
+                                </td>
+                                <td>{{ log.by }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">
+                                    Chưa có hoạt động quản trị nào được ghi nhận.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- CẢNH BÁO & THÔNG TIN HỆ THỐNG -->
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- CẢNH BÁO & CẦN XỬ LÝ -->
+                <div class="card-panel">
+                    <div class="panel-title" style="margin-bottom: 14px;">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 1 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        Cảnh báo & cần xử lý
+                    </div>
+
+                    <!-- Click chuyển trang và tự lọc Tạm khóa -->
+                    <a href="/admin/users?status=Tạm+khóa" class="alert-card-item alert-card-red" title="Xem danh sách tài khoản tạm khóa">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                            <span>{{ locked_count }} tài khoản đang tạm khóa.</span>
+                        </div>
+                        <span>&rsaquo;</span>
+                    </a>
+
+                    <!-- Click chuyển trang và tự lọc Chờ kích hoạt -->
+                    <a href="/admin/users?status=Chờ+kích+hoạt" class="alert-card-item alert-card-yellow" title="Xem danh sách tài khoản chờ kích hoạt">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <span>{{ pending_count }} tài khoản chờ kích hoạt.</span>
+                        </div>
+                        <span>&rsaquo;</span>
+                    </a>
+                </div>
+
+                <!-- THÔNG TIN HỆ THỐNG -->
+                <div class="card-panel">
+                    <div class="panel-title" style="margin-bottom: 12px;">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        Thông tin hệ thống
+                    </div>
+
+                    <div class="system-meta-row">
+                        <span style="color: var(--text-muted);">Phiên làm việc:</span>
+                        <span class="system-meta-val">{{ system_settings.session_timeout or 30 }} phút</span>
+                    </div>
+                    <div class="system-meta-row">
+                        <span style="color: var(--text-muted);">Số lần đăng nhập sai tối đa:</span>
+                        <span class="system-meta-val">{{ system_settings.max_login_attempts or 5 }} lần</span>
+                    </div>
+                    <div class="system-meta-row">
+                        <span style="color: var(--text-muted);">Độ dài mật khẩu tối thiểu:</span>
+                        <span class="system-meta-val">{{ system_settings.minimum_password_length or 8 }} ký tự</span>
+                    </div>
+                    <div class="system-meta-row">
+                        <span style="color: var(--text-muted);">Thời gian khóa tạm thời:</span>
+                        <span class="system-meta-val">{{ system_settings.lockout_duration or 15 }} phút</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/admin_notifications.js') }}?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "ADMIN": {
+    "role_code": "ADMIN",
+    "role_name": "Quản trị viên (Admin)",
+    "description": "Quản trị toàn bộ hệ thống",
+    "status": "Hoạt động",
+    "is_system": true,
+    "permissions": ["users:*", "locations:*", "products:*", "inbound:*", "outbound:*", "stocktake:*", "reports:*", "settings:*"]
+  },
+  "WAREHOUSE_MANAGER": {
+    "role_code": "WAREHOUSE_MANAGER",
+    "role_name": "Quản lý kho (Manager)",
+    "description": "Quản lý nghiệp vụ kho và vận hành",
+    "status": "Hoạt động",
+    "is_system": true,
+    "permissions": [
+      "locations:view", "locations:create", "locations:edit",
+      "products:view", "products:create", "products:edit",
+      "inbound:view", "inbound:receive", "inbound:record_loc", "inbound:confirm",
+      "outbound:view", "outbound:record_handover", "outbound:confirm_handover",
+      "stocktake:view", "stocktake:count", "stocktake:request_adj", "stocktake:approve_adj",
+      "reports:view", "reports:export"
+    ]
+  }
+}

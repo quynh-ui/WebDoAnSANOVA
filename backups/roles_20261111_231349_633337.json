@@ -1,0 +1,274 @@
+{
+    "ADMIN": {
+        "id": "ADMIN",
+        "role_code": "ADMIN",
+        "name": "Quản trị viên (Admin)",
+        "role_name": "Quản trị viên (Admin)",
+        "desc": "Quản trị toàn bộ hệ thống",
+        "description": "Quản trị toàn bộ hệ thống",
+        "icon": "👑",
+        "is_system": true,
+        "permissions": {
+            "users": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": true,
+                "approve": true
+            },
+            "locations": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": true,
+                "approve": true
+            },
+            "products": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": true,
+                "approve": true
+            },
+            "inbound": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": true,
+                "approve": true
+            },
+            "outbound": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": true,
+                "approve": true
+            },
+            "stocktake": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": true,
+                "approve": true
+            },
+            "reports": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": true,
+                "approve": true
+            },
+            "settings": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": true,
+                "approve": true
+            }
+        }
+    },
+    "WAREHOUSE_MANAGER": {
+        "id": "WAREHOUSE_MANAGER",
+        "role_code": "WAREHOUSE_MANAGER",
+        "name": "Quản lý kho (Manager)",
+        "role_name": "Quản lý kho (Manager)",
+        "desc": "Quản lý nghiệp vụ kho và vận hành hệ thống kho.",
+        "description": "Quản lý nghiệp vụ kho và vận hành",
+        "icon": "📚",
+        "is_system": true,
+        "permissions": {
+            "users": {
+                "view": false,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "locations": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": false,
+                "approve": false
+            },
+            "products": {
+                "view": true,
+                "create": true,
+                "edit": true,
+                "delete": false,
+                "approve": false
+            },
+            "inbound": {
+                "view": true,
+                "create": true,
+                "edit": false,
+                "delete": false,
+                "approve": true
+            },
+            "outbound": {
+                "view": true,
+                "create": true,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "stocktake": {
+                "view": true,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": true
+            },
+            "reports": {
+                "view": true,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "settings": {
+                "view": false,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            }
+        }
+    },
+    "WAREHOUSE_STAFF": {
+        "id": "WAREHOUSE_STAFF",
+        "role_code": "WAREHOUSE_STAFF",
+        "name": "Nhân viên kho (Staff)",
+        "role_name": "Nhân viên kho (Staff)",
+        "desc": "Thực hiện hoạt động nhập, lấy, đóng gói",
+        "description": "Thực hiện hoạt động nhập, lấy, đóng gói",
+        "icon": "👤",
+        "is_system": true,
+        "permissions": {
+            "users": {
+                "view": false,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "locations": {
+                "view": true,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "products": {
+                "view": true,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "inbound": {
+                "view": true,
+                "create": true,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "outbound": {
+                "view": true,
+                "create": true,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "stocktake": {
+                "view": true,
+                "create": true,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "reports": {
+                "view": false,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "settings": {
+                "view": false,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            }
+        }
+    },
+    "COORDINATOR": {
+        "id": "COORDINATOR",
+        "role_code": "COORDINATOR",
+        "name": "Điều phối / Kế toán kho",
+        "role_name": "Điều phối / Kế toán kho",
+        "desc": "Theo dõi, đối soát và hỗ trợ nghiệp vụ kho",
+        "description": "Theo dõi, đối soát và hỗ trợ nghiệp vụ kho",
+        "icon": "📋",
+        "is_system": true,
+        "permissions": {
+            "users": {
+                "view": false,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "locations": {
+                "view": false,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "products": {
+                "view": true,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "inbound": {
+                "view": true,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "outbound": {
+                "view": true,
+                "create": true,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "stocktake": {
+                "view": true,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "reports": {
+                "view": true,
+                "create": true,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            },
+            "settings": {
+                "view": false,
+                "create": false,
+                "edit": false,
+                "delete": false,
+                "approve": false
+            }
+        }
+    }
+}

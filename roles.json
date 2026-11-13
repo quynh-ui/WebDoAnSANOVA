@@ -1,0 +1,373 @@
+{
+  "ADMIN": {
+    "id": "ADMIN",
+    "role_code": "ADMIN",
+    "name": "Quản trị viên (Admin)",
+    "role_name": "Quản trị viên (Admin)",
+    "desc": "Quản trị toàn bộ hệ thống",
+    "description": "Quản trị toàn bộ hệ thống",
+    "icon": "👑",
+    "is_system": true,
+    "permissions": {
+      "users": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true
+      },
+      "locations": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true
+      },
+      "products": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true
+      },
+      "inbound": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true
+      },
+      "outbound": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true
+      },
+      "stocktake": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true
+      },
+      "reports": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true
+      },
+      "settings": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": true,
+        "approve": true
+      }
+    }
+  },
+  "WAREHOUSE_MANAGER": {
+    "id": "WAREHOUSE_MANAGER",
+    "role_code": "WAREHOUSE_MANAGER",
+    "name": "Quản lý kho (Manager)",
+    "role_name": "Quản lý kho (Manager)",
+    "desc": "Quản lý nghiệp vụ kho và vận hành hệ thống kho.",
+    "description": "Quản lý nghiệp vụ kho và vận hành hệ thống kho.",
+    "icon": "📚",
+    "is_system": true,
+    "permissions": {
+      "users": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "locations": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": false
+      },
+      "products": {
+        "view": true,
+        "create": true,
+        "edit": true,
+        "delete": false,
+        "approve": false
+      },
+      "inbound": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": true
+      },
+      "outbound": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "stocktake": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": true
+      },
+      "reports": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "settings": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      }
+    },
+    "detail_permissions": {
+      "locations": [
+        "view",
+        "create",
+        "edit"
+      ],
+      "products": [
+        "view",
+        "create",
+        "edit"
+      ],
+      "inbound": [
+        "view",
+        "approve"
+      ],
+      "outbound": [
+        "view"
+      ],
+      "stocktake": [
+        "view",
+        "approve"
+      ],
+      "reports": [
+        "view"
+      ]
+    },
+    "status": "Hoạt động"
+  },
+  "WAREHOUSE_STAFF": {
+    "id": "WAREHOUSE_STAFF",
+    "role_code": "WAREHOUSE_STAFF",
+    "name": "Nhân viên kho (Staff)",
+    "role_name": "Nhân viên kho (Staff)",
+    "desc": "Thực hiện hoạt động nhập, lấy, đóng gói",
+    "description": "Thực hiện hoạt động nhập, lấy, đóng gói",
+    "icon": "👤",
+    "is_system": true,
+    "permissions": {
+      "users": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "locations": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "products": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "inbound": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "outbound": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "stocktake": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "reports": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "settings": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      }
+    }
+  },
+  "COORDINATOR": {
+    "id": "COORDINATOR",
+    "role_code": "COORDINATOR",
+    "name": "Điều phối / Kế toán kho",
+    "role_name": "Điều phối / Kế toán kho",
+    "desc": "Theo dõi, đối soát và hỗ trợ nghiệp vụ kho",
+    "description": "Theo dõi, đối soát và hỗ trợ nghiệp vụ kho",
+    "icon": "📋",
+    "is_system": true,
+    "permissions": {
+      "users": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "locations": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "products": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "inbound": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "outbound": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "stocktake": {
+        "view": true,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "reports": {
+        "view": true,
+        "create": true,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      },
+      "settings": {
+        "view": false,
+        "create": false,
+        "edit": false,
+        "delete": false,
+        "approve": false
+      }
+    }
+  },
+  "HELLO": {
+    "id": "HELLO",
+    "role_code": "HELLO",
+    "name": "Chaò",
+    "role_name": "Chaò",
+    "desc": "hakjskfsfdg",
+    "description": "hakjskfsfdg",
+    "icon": "🛡️",
+    "status": "Ngừng sử dụng",
+    "is_system": false,
+    "created_at": "12/11/2026 · 22:48",
+    "created_by": "Phạm Đức Long",
+    "permissions": {
+      "reports": {
+        "delete": false,
+        "edit": false,
+        "view": false,
+        "create": false,
+        "approve": false
+      },
+      "users": {
+        "delete": false,
+        "edit": false,
+        "view": true,
+        "create": false,
+        "approve": false
+      },
+      "products": {
+        "delete": false,
+        "edit": false,
+        "view": false,
+        "create": false,
+        "approve": false
+      },
+      "inbound": {
+        "delete": false,
+        "edit": false,
+        "view": false,
+        "create": false,
+        "approve": false
+      },
+      "locations": {
+        "delete": false,
+        "edit": false,
+        "view": false,
+        "create": false,
+        "approve": false
+      },
+      "stocktake": {
+        "delete": false,
+        "edit": false,
+        "view": false,
+        "create": false,
+        "approve": false
+      },
+      "outbound": {
+        "delete": false,
+        "edit": false,
+        "view": false,
+        "create": false,
+        "approve": false
+      },
+      "settings": {
+        "delete": false,
+        "edit": false,
+        "view": false,
+        "create": false,
+        "approve": false
+      }
+    },
+    "detail_permissions": {}
+  }
+}

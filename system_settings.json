@@ -1,0 +1,48 @@
+{
+  "security": {
+    "session_timeout": 30,
+    "session_warning_enabled": true,
+    "session_warning_minutes": 5,
+    "max_failed_logins": 5,
+    "lockout_duration": 15,
+    "log_failed_logins": true,
+    "single_session_only": false
+  },
+  "password": {
+    "min_length": 8,
+    "require_uppercase": true,
+    "require_number": true,
+    "require_special": false,
+    "force_change_first_login": true,
+    "prevent_common_passwords": true,
+    "password_expiry_days": 90
+  },
+  "backup": {
+    "auto_backup_enabled": true,
+    "backup_frequency": "daily",
+    "retention_count": 7,
+    "last_backup_time": "12/11/2026 – 02:00:00",
+    "history": [
+      {
+        "id": "BK-20261112-0200",
+        "filename": "sanova_backup_20261112.zip",
+        "created_at": "12/11/2026 – 02:00:00",
+        "size": "148 KB",
+        "type": "Tự động",
+        "by": "Hệ thống"
+      }
+    ]
+  },
+  "notifications": {
+    "alert_failed_login": true,
+    "alert_account_locked": true,
+    "alert_system_error": true,
+    "alert_stock_discrepancy": true
+  },
+  "general": {
+    "system_name": "SANOVA WMS",
+    "timezone": "Asia/Ho_Chi_Minh (GMT+7)",
+    "date_format": "DD/MM/YYYY",
+    "log_retention_days": 90
+  }
+}

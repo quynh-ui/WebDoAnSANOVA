@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cấu hình hệ thống · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-green: #034833;
+            --brand-teal: #057a55;
+            --sidebar-bg: #033928;
+            --sidebar-active: #05593f;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --border-input: #cbd5e1;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-page); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR SANOVA CỐ ĐỊNH */
+        .sidebar {
+            width: 250px; height: 100vh; background-color: var(--sidebar-bg); color: #ecfdf5;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 24px 16px;
+            flex-shrink: 0; position: sticky; top: 0; left: 0; z-index: 90;
+        }
+        .brand-header { display: flex; align-items: center; gap: 10px; padding-bottom: 24px; }
+        .brand-logo { color: #fff; }
+        .brand-name { font-size: 21px; font-weight: 800; letter-spacing: 1.5px; color: #fff; }
+        .nav-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #a7f3d0; font-weight: 700; margin-bottom: 12px; padding-left: 8px; opacity: 0.8; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: #a7f3d0; text-decoration: none; border-radius: 8px; font-size: 13.5px; font-weight: 600; transition: all 0.2s; }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #fff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .sidebar-footer { padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        .logout-link:hover { background-color: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+
+        /* MAIN CONTENT */
+        .main-wrapper { flex: 1; height: 100vh; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 22px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header-icon-box { width: 44px; height: 44px; border-radius: 12px; background: #ecfdf5; border: 1.5px solid #a7f3d0; display: flex; align-items: center; justify-content: center; color: #057a55; }
+        .page-title { font-size: 24px; font-weight: 800; color: #0f172a; }
+        .page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+        .user-badge-wrap { display: flex; align-items: center; gap: 12px; }
+        .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #475569; position: relative; }
+        .bell-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; position: absolute; top: 8px; right: 8px; border: 2px solid #fff; }
+        .admin-profile-pill { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--border); padding: 7px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 700; color: #1e293b; }
+
+        /* LAYOUT 2 CỘT CẤU HÌNH */
+        .settings-layout { display: grid; grid-template-columns: 310px 1fr; gap: 22px; align-items: start; }
+        .settings-nav { display: flex; flex-direction: column; gap: 12px; }
+        .group-tab {
+            background: #fff; border: 1.5px solid var(--border); border-radius: 14px; padding: 16px 18px;
+            display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; text-align: left;
+        }
+        .group-tab:hover { border-color: #6ee7b7; background: #f8fafc; }
+        .group-tab.active {
+            background: #ecfdf5; border-color: #10b981; border-left: 4px solid #057a55;
+            box-shadow: 0 4px 12px rgba(5, 122, 85, 0.08);
+        }
+        .tab-left { display: flex; align-items: center; gap: 14px; }
+        .tab-icon { width: 38px; height: 38px; border-radius: 10px; background: #f1f5f9; color: #475569; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .group-tab.active .tab-icon { background: #d1fae5; color: #057a55; }
+        .tab-title { font-size: 14.5px; font-weight: 800; color: #0f172a; }
+        .tab-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .tab-arrow { color: #94a3b8; }
+        .group-tab.active .tab-arrow { color: #057a55; }
+
+        /* PANEL CHI TIẾT BÊN PHẢI */
+        .settings-panel { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 26px 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .panel-section { display: none; }
+        .panel-section.active { display: block; }
+        .panel-head { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .panel-head-icon { width: 42px; height: 42px; border-radius: 10px; background: #ecfdf5; color: #057a55; display: flex; align-items: center; justify-content: center; }
+        .panel-head h2 { font-size: 18px; font-weight: 800; color: #0f172a; }
+        .panel-head p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+        .sub-banner { background: #f1f5f9; padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 800; color: #1e293b; margin: 18px 0 10px 0; }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 4px; border-bottom: 1px solid #f1f5f9; gap: 16px; }
+        .setting-row:last-of-type { border-bottom: none; }
+        .row-info { display: flex; align-items: center; gap: 14px; }
+        .row-icon { color: #475569; flex-shrink: 0; }
+        .row-label { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .row-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+        .row-control { display: flex; align-items: center; gap: 12px; }
+
+        select.cfg-select, input.cfg-input {
+            height: 38px; min-width: 145px; border: 1.5px solid var(--border-input); border-radius: 8px;
+            padding: 0 12px; font-size: 13px; font-weight: 600; color: #1e293b; background: #fff; outline: none;
+        }
+        select.cfg-select:focus, input.cfg-input:focus { border-color: var(--brand-teal); }
+
+        /* TOGGLE SWITCH */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #cbd5e1; transition: .25s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .25s; border-radius: 50%; }
+        input:checked + .slider { background-color: #057a55; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* NÚT HÀNH ĐỘNG DƯỚI PANEL */
+        .panel-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); }
+        .btn-outline { height: 40px; padding: 0 18px; border: 1.5px solid var(--border-input); background: #fff; border-radius: 9px; font-size: 13.5px; font-weight: 700; color: #334155; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+        .btn-outline:hover { background: #f8fafc; }
+        .btn-primary { height: 40px; padding: 0 22px; border: none; background: #057a55; border-radius: 9px; font-size: 13.5px; font-weight: 700; color: #fff; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+        .btn-primary:hover { background: #046c4e; }
+
+        /* BẢNG LỊCH SỬ SAO LƯU */
+        .backup-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+        .backup-table th { background: #f8fafc; color: #475569; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        .backup-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+        .btn-restore-sm { padding: 5px 10px; border: 1px solid #057a55; color: #057a55; background: #ecfdf5; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+        /* TOAST THÔNG BÁO */
+        .toast { position: fixed; bottom: 24px; right: 24px; background: #0f172a; color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.18); display: none; z-index: 200; }
+        .toast.show { display: block; }
+        /* CHUÔNG THÔNG BÁO ADMIN */
+.noti-bell-wrapper { position: relative; display: inline-flex; align-items: center; }
+.bell-btn {
+    width: 38px; height: 38px; border-radius: 50%; background: #ffffff;
+    border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center;
+    color: #334155; position: relative; cursor: pointer; transition: 0.2s;
+}
+.bell-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.bell-count-badge {
+    position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px;
+    padding: 0 4px; border-radius: 999px; background: #ef4444; color: #ffffff;
+    font-size: 10.5px; font-weight: 800; display: none; align-items: center;
+    justify-content: center; border: 2px solid #ffffff;
+}
+.noti-dropdown {
+    position: absolute; top: 48px; right: 0; width: 390px; background: #ffffff;
+    border: 1px solid #e2e8f0; border-radius: 16px;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14); z-index: 9999;
+    display: none; flex-direction: column; overflow: hidden;
+}
+.noti-dropdown.show { display: flex; }
+.noti-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 18px 12px;
+}
+.noti-head-left { display: flex; align-items: center; gap: 10px; }
+.noti-head-title { font-size: 16px; font-weight: 800; color: #0f172a; }
+.noti-unread-pill {
+    background: #fee2e2; color: #dc2626; font-size: 11.5px; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px;
+}
+.noti-mark-all {
+    background: none; border: none; font-size: 12.5px; font-weight: 600;
+    color: #475569; cursor: pointer;
+}
+.noti-mark-all:hover { color: #057a55; text-decoration: underline; }
+.noti-tabs {
+    display: grid; grid-template-columns: 1fr 1fr; background: #f8fafc;
+    margin: 0 16px 10px; padding: 4px; border-radius: 999px; border: 1px solid #f1f5f9;
+}
+.noti-tab-btn {
+    border: none; background: transparent; padding: 6px 12px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.15s;
+}
+.noti-tab-btn.active {
+    background: #ffffff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.noti-list { max-height: 360px; overflow-y: auto; padding: 4px 8px; }
+.noti-item {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 10px;
+    border-radius: 10px; cursor: pointer; transition: 0.15s; position: relative;
+}
+.noti-item:hover { background: #f8fafc; }
+.noti-item.unread { background: #f0f9ff; }
+.noti-item.unread:hover { background: #e0f2fe; }
+.noti-icon-circle {
+    width: 34px; height: 34px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+}
+.noti-ico-amber { background: #fef3c7; color: #b45309; }
+.noti-ico-red { background: #fee2e2; color: #dc2626; }
+.noti-ico-slate { background: #f1f5f9; color: #334155; }
+.noti-ico-green { background: #dcfce7; color: #15803d; }
+.noti-item-body { flex: 1; min-width: 0; }
+.noti-item-title { font-size: 13.5px; font-weight: 700; color: #0f172a; }
+.noti-item-msg { font-size: 12.5px; color: #475569; margin-top: 2px; line-height: 1.4; }
+.noti-item-time { font-size: 11.5px; color: #94a3b8; margin-top: 4px; }
+.noti-blue-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #0284c7;
+    flex-shrink: 0; margin-top: 8px;
+}
+.noti-empty-state {
+    text-align: center; padding: 28px 16px; font-size: 13px; color: #64748b;
+}
+.noti-footer {
+    padding: 12px 16px; border-top: 1px solid #f1f5f9; background: #ffffff;
+}
+.btn-view-all-noti {
+    display: block; width: 100%; text-align: center; padding: 9px 14px;
+    border: 1px solid #e2e8f0; border-radius: 999px; font-size: 13px;
+    font-weight: 700; color: #1e293b; text-decoration: none; transition: 0.15s;
+}
+.btn-view-all-noti:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+    </style>
+</head>
+<body>
+
+    <!-- 1. SIDEBAR CHUNG SANOVA -->
+    <aside class="sidebar">
+        <div>
+            <div class="brand-header">
+                <svg class="brand-logo" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+            <div class="nav-category">QUẢN TRỊ HỆ THỐNG</div>
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link {% if current_path == '/admin' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        Tổng quan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link {% if current_path.startswith('/admin/users') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        Quản lý người dùng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/roles" class="nav-link {% if current_path.startswith('/admin/roles') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Vai trò & phân quyền
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/logs" class="nav-link {% if current_path.startswith('/admin/logs') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        Nhật ký hệ thống
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/settings" class="nav-link {% if current_path.startswith('/admin/settings') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Cấu hình hệ thống
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/profile" class="nav-link {% if current_path.startswith('/admin/profile') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Tài khoản cá nhân
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="nav-link logout-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Đăng xuất
+            </a>
+        </div>
+    </aside>
+
+    <!-- 2. VÙNG NỘI DUNG CHÍNH -->
+    <main class="main-wrapper">
+        <header class="page-header">
+            <div class="header-left">
+                <div class="header-icon-box">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="page-title">Cấu hình hệ thống</h1>
+                    <p class="page-subtitle">Thiết lập các quy tắc vận hành, bảo mật và quản trị hệ thống SANOVA</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="user-badge-wrap">
+                    <!-- Chuông thông báo Admin -->
+                    <div class="noti-bell-wrapper" id="adminNotiBellWrap">
+                        <button type="button" class="bell-btn" id="adminNotiBellBtn" title="Thông báo quản trị">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                            <span class="bell-count-badge" id="adminNotiBellCount">0</span>
+                        </button>
+
+                        <!-- Bảng Dropdown thông báo -->
+                        <div class="noti-dropdown" id="adminNotiDropdown">
+                            <div class="noti-head">
+                                <div class="noti-head-left">
+                                    <span class="noti-head-title">Thông báo</span>
+                                    <span class="noti-unread-pill" id="notiHeaderUnreadPill">0 chưa đọc</span>
+                                </div>
+                                <button type="button" class="noti-mark-all" id="btnMarkAllNotiRead">Đánh dấu đã đọc</button>
+                            </div>
+
+                            <div class="noti-tabs">
+                                <button type="button" class="noti-tab-btn active" id="notiTabAll">Tất cả</button>
+                                <button type="button" class="noti-tab-btn" id="notiTabUnread">Chưa đọc</button>
+                            </div>
+
+                            <div class="noti-list" id="adminNotiList">
+                                <div class="noti-empty-state">Đang tải thông báo...</div>
+                            </div>
+
+                            <div class="noti-footer">
+                                <a href="/admin/logs" class="btn-view-all-noti">Xem tất cả thông báo</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Khung tên tài khoản đang đăng nhập -->
+                    <div class="admin-profile-pill">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span>{{ session.get('user', {}).get('name') or 'Admin' }}</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- BỐ CỤC 2 CỘT: 5 NHÓM CẤU HÌNH BÊN TRÁI + CHI TIẾT BÊN PHẢI -->
+        <div class="settings-layout">
+            <!-- CỘT TRÁI: 5 NHÓM -->
+            <div class="settings-nav">
+                <button type="button" class="group-tab active" onclick="switchGroup('security', this)">
+                    <div class="tab-left">
+                        <div class="tab-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        </div>
+                        <div>
+                            <div class="tab-title">Bảo mật & đăng nhập</div>
+                            <div class="tab-desc">Phiên làm việc, đăng nhập và khóa tài khoản</div>
+                        </div>
+                    </div>
+                    <span class="tab-arrow">›</span>
+                </button>
+
+                <button type="button" class="group-tab" onclick="switchGroup('password', this)">
+                    <div class="tab-left">
+                        <div class="tab-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                        </div>
+                        <div>
+                            <div class="tab-title">Chính sách mật khẩu</div>
+                            <div class="tab-desc">Quy định về độ dài, độ mạnh và đổi mật khẩu</div>
+                        </div>
+                    </div>
+                    <span class="tab-arrow">›</span>
+                </button>
+
+                <button type="button" class="group-tab" onclick="switchGroup('backup', this)">
+                    <div class="tab-left">
+                        <div class="tab-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                        </div>
+                        <div>
+                            <div class="tab-title">Sao lưu & khôi phục</div>
+                            <div class="tab-desc">Quản lý sao lưu và phục hồi dữ liệu</div>
+                        </div>
+                    </div>
+                    <span class="tab-arrow">›</span>
+                </button>
+
+                <button type="button" class="group-tab" onclick="switchGroup('notifications', this)">
+                    <div class="tab-left">
+                        <div class="tab-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        </div>
+                        <div>
+                            <div class="tab-title">Thông báo & cảnh báo</div>
+                            <div class="tab-desc">Thiết lập các loại thông báo quan trọng</div>
+                        </div>
+                    </div>
+                    <span class="tab-arrow">›</span>
+                </button>
+
+                <button type="button" class="group-tab" onclick="switchGroup('general', this)">
+                    <div class="tab-left">
+                        <div class="tab-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                        </div>
+                        <div>
+                            <div class="tab-title">Thông tin hệ thống</div>
+                            <div class="tab-desc">Thông tin chung và thời gian lưu trữ</div>
+                        </div>
+                    </div>
+                    <span class="tab-arrow">›</span>
+                </button>
+            </div>
+
+            <!-- CỘT PHẢI: CHI TIẾT TỪNG NHÓM -->
+            <div class="settings-panel">
+                <!-- NHÓM 1: BẢO MẬT & ĐĂNG NHẬP -->
+                <div class="panel-section active" id="sec-security">
+                    <div class="panel-head">
+                        <div class="panel-head-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        </div>
+                        <div>
+                            <h2>Bảo mật & đăng nhập</h2>
+                            <p>Thiết lập các chính sách bảo mật liên quan đến đăng nhập và phiên làm việc.</p>
+                        </div>
+                    </div>
+
+                    <div class="sub-banner">Phiên làm việc</div>
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <svg class="row-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <div>
+                                <div class="row-label">Thời gian phiên làm việc</div>
+                                <div class="row-sub">Tự động đăng xuất khi không hoạt động.</div>
+                            </div>
+                        </div>
+                        <div class="row-control">
+                            <select class="cfg-select" id="sec_session_timeout">
+                                <option value="15" {% if settings.security.session_timeout == 15 %}selected{% endif %}>15 phút</option>
+                                <option value="30" {% if settings.security.session_timeout == 30 %}selected{% endif %}>30 phút</option>
+                                <option value="60" {% if settings.security.session_timeout == 60 %}selected{% endif %}>60 phút</option>
+                                <option value="120" {% if settings.security.session_timeout == 120 %}selected{% endif %}>120 phút</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <svg class="row-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <div>
+                                <div class="row-label">Cảnh báo sắp hết phiên</div>
+                                <div class="row-sub">Hiển thị thông báo trước khi phiên hết hạn.</div>
+                            </div>
+                        </div>
+                        <div class="row-control">
+                            <label class="switch">
+                                <input type="checkbox" id="sec_session_warning_enabled" {% if settings.security.session_warning_enabled %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                            <select class="cfg-select" id="sec_session_warning_minutes">
+                                <option value="2" {% if settings.security.session_warning_minutes == 2 %}selected{% endif %}>2 phút trước</option>
+                                <option value="5" {% if settings.security.session_warning_minutes == 5 %}selected{% endif %}>5 phút trước</option>
+                                <option value="10" {% if settings.security.session_warning_minutes == 10 %}selected{% endif %}>10 phút trước</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="sub-banner">Đăng nhập & khóa tài khoản</div>
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <svg class="row-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                            <div>
+                                <div class="row-label">Số lần đăng nhập sai tối đa</div>
+                                <div class="row-sub">Sau số lần này, tài khoản sẽ bị khóa tạm thời.</div>
+                            </div>
+                        </div>
+                        <div class="row-control">
+                            <select class="cfg-select" id="sec_max_failed_logins">
+                                <option value="3" {% if settings.security.max_failed_logins == 3 %}selected{% endif %}>3 lần</option>
+                                <option value="5" {% if settings.security.max_failed_logins == 5 %}selected{% endif %}>5 lần</option>
+                                <option value="10" {% if settings.security.max_failed_logins == 10 %}selected{% endif %}>10 lần</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <svg class="row-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <div>
+                                <div class="row-label">Thời gian khóa tạm thời</div>
+                                <div class="row-sub">Thời gian không thể đăng nhập sau khi vượt quá số lần cho phép.</div>
+                            </div>
+                        </div>
+                        <div class="row-control">
+                            <select class="cfg-select" id="sec_lockout_duration">
+                                <option value="5" {% if settings.security.lockout_duration == 5 %}selected{% endif %}>5 phút</option>
+                                <option value="15" {% if settings.security.lockout_duration == 15 %}selected{% endif %}>15 phút</option>
+                                <option value="30" {% if settings.security.lockout_duration == 30 %}selected{% endif %}>30 phút</option>
+                                <option value="60" {% if settings.security.lockout_duration == 60 %}selected{% endif %}>60 phút</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <svg class="row-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#057a55" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            <div>
+                                <div class="row-label">Ghi nhận đăng nhập không thành công</div>
+                                <div class="row-sub">Lưu vào nhật ký hệ thống khi có đăng nhập sai.</div>
+                            </div>
+                        </div>
+                        <div class="row-control">
+                            <label class="switch">
+                                <input type="checkbox" id="sec_log_failed_logins" {% if settings.security.log_failed_logins %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <svg class="row-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                            <div>
+                                <div class="row-label">Giới hạn đăng nhập đồng thời</div>
+                                <div class="row-sub">Chỉ cho phép 1 phiên đăng nhập trên mỗi tài khoản.</div>
+                            </div>
+                        </div>
+                        <div class="row-control">
+                            <label class="switch">
+                                <input type="checkbox" id="sec_single_session_only" {% if settings.security.single_session_only %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="panel-footer">
+                        <button type="button" class="btn-outline" onclick="resetGroup('security')">↻ Khôi phục mặc định</button>
+                        <button type="button" class="btn-primary" onclick="saveGroup('security')">💾 Lưu cấu hình</button>
+                    </div>
+                </div>
+
+                <!-- NHÓM 2: CHÍNH SÁCH MẬT KHẨU -->
+                <div class="panel-section" id="sec-password">
+                    <div class="panel-head">
+                        <div class="panel-head-icon">🔑</div>
+                        <div>
+                            <h2>Chính sách mật khẩu</h2>
+                            <p>Quy định độ phức tạp mật khẩu bắt buộc đối với toàn bộ tài khoản SANOVA.</p>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Độ dài mật khẩu tối thiểu</div>
+                                <div class="row-sub">Áp dụng khi tạo mới hoặc đặt lại mật khẩu nhân viên.</div>
+                            </div>
+                        </div>
+                        <select class="cfg-select" id="pwd_min_length">
+                            <option value="6" {% if settings.password.min_length == 6 %}selected{% endif %}>6 ký tự</option>
+                            <option value="8" {% if settings.password.min_length == 8 %}selected{% endif %}>8 ký tự</option>
+                            <option value="10" {% if settings.password.min_length == 10 %}selected{% endif %}>10 ký tự</option>
+                            <option value="12" {% if settings.password.min_length == 12 %}selected{% endif %}>12 ký tự</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Yêu cầu chữ in hoa (A-Z)</div>
+                                <div class="row-sub">Mật khẩu phải chứa ít nhất 1 ký tự viết hoa.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="pwd_require_uppercase" {% if settings.password.require_uppercase %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Yêu cầu chữ số (0-9)</div>
+                                <div class="row-sub">Mật khẩu phải chứa ít nhất 1 chữ số.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="pwd_require_number" {% if settings.password.require_number %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Yêu cầu ký tự đặc biệt (!@#$...)</div>
+                                <div class="row-sub">Tăng cường độ mạnh chống dò mật khẩu.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="pwd_require_special" {% if settings.password.require_special %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên</div>
+                                <div class="row-sub">Áp dụng cho tài khoản vừa được Admin tạo hoặc đặt lại mật khẩu.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="pwd_force_change_first_login" {% if settings.password.force_change_first_login %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Ngăn sử dụng mật khẩu phổ biến</div>
+                                <div class="row-sub">Chặn các mật khẩu dễ đoán như 123456, password, admin123.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="pwd_prevent_common_passwords" {% if settings.password.prevent_common_passwords %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Chu kỳ yêu cầu đổi mật khẩu định kỳ</div>
+                                <div class="row-sub">Nhắc nhở người dùng đổi mật khẩu sau thời gian quy định.</div>
+                            </div>
+                        </div>
+                        <select class="cfg-select" id="pwd_password_expiry_days">
+                            <option value="0" {% if settings.password.password_expiry_days == 0 %}selected{% endif %}>Không giới hạn</option>
+                            <option value="60" {% if settings.password.password_expiry_days == 60 %}selected{% endif %}>60 ngày</option>
+                            <option value="90" {% if settings.password.password_expiry_days == 90 %}selected{% endif %}>90 ngày</option>
+                            <option value="180" {% if settings.password.password_expiry_days == 180 %}selected{% endif %}>180 ngày</option>
+                        </select>
+                    </div>
+
+                    <div class="panel-footer">
+                        <button type="button" class="btn-outline" onclick="resetGroup('password')">↻ Khôi phục mặc định</button>
+                        <button type="button" class="btn-primary" onclick="saveGroup('password')">💾 Lưu cấu hình</button>
+                    </div>
+                </div>
+
+                <!-- NHÓM 3: SAO LƯU & KHÔI PHỤC -->
+                <div class="panel-section" id="sec-backup">
+                    <div class="panel-head">
+                        <div class="panel-head-icon">🗄️</div>
+                        <div>
+                            <h2>Sao lưu & khôi phục dữ liệu</h2>
+                            <p>Quản lý bản sao lưu dữ liệu người dùng, phân quyền, cấu hình và nhật ký hệ thống.</p>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Bật sao lưu tự động định kỳ</div>
+                                <div class="row-sub">Lần sao lưu gần nhất: <strong id="lastBackupLabel">{{ settings.backup.last_backup_time }}</strong></div>
+                            </div>
+                        </div>
+                        <div class="row-control">
+                            <label class="switch"><input type="checkbox" id="bk_auto_backup_enabled" {% if settings.backup.auto_backup_enabled %}checked{% endif %}><span class="slider"></span></label>
+                            <select class="cfg-select" id="bk_backup_frequency">
+                                <option value="daily" {% if settings.backup.backup_frequency == 'daily' %}selected{% endif %}>Hàng ngày (02:00)</option>
+                                <option value="weekly" {% if settings.backup.backup_frequency == 'weekly' %}selected{% endif %}>Hàng tuần (Chủ nhật)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Tạo bản sao lưu thủ công ngay bây giờ</div>
+                                <div class="row-sub">Đóng gói toàn bộ dữ liệu JSON hiện tại thành tệp .ZIP an toàn.</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-primary" onclick="createBackupNow()">+ Tạo bản sao lưu ngay</button>
+                    </div>
+
+                    <div class="sub-banner">Lịch sử sao lưu & khôi phục</div>
+                    <table class="backup-table">
+                        <thead>
+                            <tr>
+                                <th>Tên tệp sao lưu</th>
+                                <th>Thời gian tạo</th>
+                                <th>Dung lượng</th>
+                                <th>Loại</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupHistoryBody">
+                            {% for item in settings.backup.history %}
+                            <tr>
+                                <td><strong>{{ item.filename }}</strong></td>
+                                <td>{{ item.created_at }}</td>
+                                <td>{{ item.size }}</td>
+                                <td>{{ item.type }}</td>
+                                <td><button type="button" class="btn-restore-sm" onclick="restoreBackup('{{ item.filename }}')">Khôi phục</button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <div class="panel-footer">
+                        <button type="button" class="btn-primary" onclick="saveGroup('backup')">💾 Lưu thiết lập sao lưu</button>
+                    </div>
+                </div>
+
+                <!-- NHÓM 4: THÔNG BÁO & CẢNH BÁO -->
+                <div class="panel-section" id="sec-notifications">
+                    <div class="panel-head">
+                        <div class="panel-head-icon">🔔</div>
+                        <div>
+                            <h2>Thông báo & cảnh báo</h2>
+                            <p>Bật/tắt các cảnh báo an ninh và sự kiện vận hành hiển thị cho Quản trị viên.</p>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Cảnh báo đăng nhập thất bại nhiều lần</div>
+                                <div class="row-sub">Thông báo ngay trên thanh chuông Admin khi phát hiện dò mật khẩu.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="noti_alert_failed_login" {% if settings.notifications.alert_failed_login %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Cảnh báo tài khoản bị tạm khóa</div>
+                                <div class="row-sub">Gửi thông báo khi có tài khoản nhân viên bị khóa tự động hoặc thủ công.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="noti_alert_account_locked" {% if settings.notifications.alert_account_locked %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Cảnh báo lỗi hệ thống / truy cập trái quyền</div>
+                                <div class="row-sub">Báo động khi có truy cập vượt quyền (HTTP 403) hoặc lỗi tệp dữ liệu.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="noti_alert_system_error" {% if settings.notifications.alert_system_error %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Cảnh báo chênh lệch kiểm kê kho</div>
+                                <div class="row-sub">Gửi thông báo khi phát sinh yêu cầu điều chỉnh tồn kho cần phê duyệt.</div>
+                            </div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="noti_alert_stock_discrepancy" {% if settings.notifications.alert_stock_discrepancy %}checked{% endif %}><span class="slider"></span></label>
+                    </div>
+
+                    <div class="panel-footer">
+                        <button type="button" class="btn-outline" onclick="resetGroup('notifications')">↻ Khôi phục mặc định</button>
+                        <button type="button" class="btn-primary" onclick="saveGroup('notifications')">💾 Lưu cấu hình</button>
+                    </div>
+                </div>
+
+                <!-- NHÓM 5: THÔNG TIN HỆ THỐNG -->
+                <div class="panel-section" id="sec-general">
+                    <div class="panel-head">
+                        <div class="panel-head-icon">⚙️</div>
+                        <div>
+                            <h2>Thông tin hệ thống</h2>
+                            <p>Quản lý tên hiển thị, múi giờ chuẩn và chính sách lưu trữ nhật ký kiểm toán.</p>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Tên hệ thống hiển thị</div>
+                                <div class="row-sub">Hiển thị trên tiêu đề trang và các báo cáo xuất dữ liệu.</div>
+                            </div>
+                        </div>
+                        <input type="text" class="cfg-input" id="gen_system_name" value="{{ settings.general.system_name }}">
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Múi giờ hệ thống</div>
+                                <div class="row-sub">Đồng bộ thời gian ghi nhật ký và giao dịch kho.</div>
+                            </div>
+                        </div>
+                        <select class="cfg-select" id="gen_timezone">
+                            <option value="Asia/Ho_Chi_Minh (GMT+7)" {% if settings.general.timezone == 'Asia/Ho_Chi_Minh (GMT+7)' %}selected{% endif %}>Asia/Ho_Chi_Minh (GMT+7)</option>
+                            <option value="UTC (GMT+0)" {% if settings.general.timezone == 'UTC (GMT+0)' %}selected{% endif %}>UTC (GMT+0)</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Định dạng ngày giờ</div>
+                                <div class="row-sub">Định dạng chuẩn áp dụng trên bảng dữ liệu và nhật ký.</div>
+                            </div>
+                        </div>
+                        <select class="cfg-select" id="gen_date_format">
+                            <option value="DD/MM/YYYY" {% if settings.general.date_format == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY (12/11/2026)</option>
+                            <option value="YYYY-MM-DD" {% if settings.general.date_format == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD (2026-11-12)</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="row-info">
+                            <div>
+                                <div class="row-label">Thời gian lưu trữ nhật ký hệ thống</div>
+                                <div class="row-sub">Tối thiểu 30 ngày để phục vụ truy vết và kiểm toán.</div>
+                            </div>
+                        </div>
+                        <select class="cfg-select" id="gen_log_retention_days">
+                            <option value="30" {% if settings.general.log_retention_days == 30 %}selected{% endif %}>30 ngày</option>
+                            <option value="90" {% if settings.general.log_retention_days == 90 %}selected{% endif %}>90 ngày</option>
+                            <option value="180" {% if settings.general.log_retention_days == 180 %}selected{% endif %}>180 ngày</option>
+                            <option value="365" {% if settings.general.log_retention_days == 365 %}selected{% endif %}>365 ngày (1 năm)</option>
+                        </select>
+                    </div>
+
+                    <div class="panel-footer">
+                        <button type="button" class="btn-outline" onclick="resetGroup('general')">↻ Khôi phục mặc định</button>
+                        <button type="button" class="btn-primary" onclick="saveGroup('general')">💾 Lưu cấu hình</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toastMsg"></div>
+
+    <script>
+        function switchGroup(groupId, btnEl) {
+            document.querySelectorAll('.group-tab').forEach(t => t.classList.remove('active'));
+            btnEl.classList.add('active');
+
+            document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+            document.getElementById('sec-' + groupId).classList.add('active');
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toastMsg');
+            toast.textContent = msg;
+            toast.style.background = isError ? '#dc2626' : '#057a55';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3200);
+        }
+
+        function collectGroupValues(group) {
+            if (group === 'security') {
+                return {
+                    session_timeout: parseInt(document.getElementById('sec_session_timeout').value),
+                    session_warning_enabled: document.getElementById('sec_session_warning_enabled').checked,
+                    session_warning_minutes: parseInt(document.getElementById('sec_session_warning_minutes').value),
+                    max_failed_logins: parseInt(document.getElementById('sec_max_failed_logins').value),
+                    lockout_duration: parseInt(document.getElementById('sec_lockout_duration').value),
+                    log_failed_logins: document.getElementById('sec_log_failed_logins').checked,
+                    single_session_only: document.getElementById('sec_single_session_only').checked
+                };
+            }
+            if (group === 'password') {
+                return {
+                    min_length: parseInt(document.getElementById('pwd_min_length').value),
+                    require_uppercase: document.getElementById('pwd_require_uppercase').checked,
+                    require_number: document.getElementById('pwd_require_number').checked,
+                    require_special: document.getElementById('pwd_require_special').checked,
+                    force_change_first_login: document.getElementById('pwd_force_change_first_login').checked,
+                    prevent_common_passwords: document.getElementById('pwd_prevent_common_passwords').checked,
+                    password_expiry_days: parseInt(document.getElementById('pwd_password_expiry_days').value)
+                };
+            }
+            if (group === 'backup') {
+                return {
+                    auto_backup_enabled: document.getElementById('bk_auto_backup_enabled').checked,
+                    backup_frequency: document.getElementById('bk_backup_frequency').value
+                };
+            }
+            if (group === 'notifications') {
+                return {
+                    alert_failed_login: document.getElementById('noti_alert_failed_login').checked,
+                    alert_account_locked: document.getElementById('noti_alert_account_locked').checked,
+                    alert_system_error: document.getElementById('noti_alert_system_error').checked,
+                    alert_stock_discrepancy: document.getElementById('noti_alert_stock_discrepancy').checked
+                };
+            }
+            if (group === 'general') {
+                return {
+                    system_name: document.getElementById('gen_system_name').value.trim(),
+                    timezone: document.getElementById('gen_timezone').value,
+                    date_format: document.getElementById('gen_date_format').value,
+                    log_retention_days: parseInt(document.getElementById('gen_log_retention_days').value)
+                };
+            }
+            return {};
+        }
+
+        function saveGroup(group) {
+            const values = collectGroupValues(group);
+            fetch('/admin/api/settings/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ group, values })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message);
+                } else {
+                    showToast(res.message || 'Lỗi khi lưu cấu hình', true);
+                }
+            });
+        }
+
+        function resetGroup(group) {
+            if (!confirm('Bạn có chắc muốn khôi phục nhóm cấu hình này về giá trị mặc định?')) return;
+            fetch('/admin/api/settings/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ group })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message);
+                    setTimeout(() => location.reload(), 600);
+                }
+            });
+        }
+
+        function createBackupNow() {
+            fetch('/admin/api/settings/backup/create', { method: 'POST' })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message);
+                    document.getElementById('lastBackupLabel').textContent = res.record.created_at;
+                    const tbody = document.getElementById('backupHistoryBody');
+                    const row = `<tr>
+                        <td><strong>${res.record.filename}</strong></td>
+                        <td>${res.record.created_at}</td>
+                        <td>${res.record.size}</td>
+                        <td>${res.record.type}</td>
+                        <td><button type="button" class="btn-restore-sm" onclick="restoreBackup('${res.record.filename}')">Khôi phục</button></td>
+                    </tr>`;
+                    tbody.insertAdjacentHTML('afterbegin', row);
+                }
+            });
+        }
+
+        function restoreBackup(filename) {
+            if (!confirm(`Xác nhận khôi phục toàn bộ dữ liệu từ bản sao lưu ${filename}?`)) return;
+            fetch('/admin/api/settings/backup/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename })
+            })
+            .then(r => r.json())
+            .then(res => {
+                showToast(res.message, !res.success);
+            });
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/admin_notifications.js') }}?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trung tâm thông báo · SANOVA Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-green: #034833;
+            --brand-teal: #057a55;
+            --sidebar-bg: #033928;
+            --sidebar-active: #05593f;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-page); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR ĐỒNG BỘ */
+        .sidebar {
+            width: 250px; height: 100vh; background-color: var(--sidebar-bg); color: #ecfdf5;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 24px 16px;
+            flex-shrink: 0; position: sticky; top: 0; left: 0; z-index: 90;
+        }
+        .brand-header { display: flex; align-items: center; gap: 10px; padding-bottom: 24px; }
+        .brand-name { font-size: 21px; font-weight: 800; letter-spacing: 1.5px; color: #fff; }
+        .nav-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #a7f3d0; font-weight: 700; margin-bottom: 12px; padding-left: 8px; opacity: 0.8; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: #a7f3d0; text-decoration: none; border-radius: 8px; font-size: 13.5px; font-weight: 600; transition: all 0.2s; }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #fff; }
+        .sidebar-footer { padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        .logout-link:hover { background-color: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+
+        /* MAIN CONTENT */
+        .main-wrapper { flex: 1; height: 100vh; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 18px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .header-icon-box { width: 44px; height: 44px; border-radius: 12px; background: #ecfdf5; border: 1.5px solid #a7f3d0; display: flex; align-items: center; justify-content: center; color: #057a55; }
+        .page-title { font-size: 24px; font-weight: 800; color: #0f172a; }
+        .page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+        .header-actions { display: flex; align-items: center; gap: 10px; }
+        .btn { padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; border: 1px solid #cbd5e1; background: #fff; color: #1e293b; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { background: #f8fafc; }
+        .btn-primary { background: #057a55; color: #fff; border-color: #057a55; }
+        .btn-primary:hover { background: #046c4e; }
+
+        /* THANH LỌC TRẠNG THÁI + 5 NHÓM */
+        .filters-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .filter-pill { padding: 7px 15px; border-radius: 999px; border: 1px solid var(--border); background: #fff; font-size: 13px; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.15s; }
+        .filter-pill:hover { border-color: #cbd5e1; color: #0f172a; }
+        .filter-pill.active { background: #ecfdf5; color: #057a55; border-color: #10b981; }
+
+        .group-select {
+            height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #cbd5e1;
+            background: #fff; font-size: 13px; font-weight: 700; color: #1e293b; outline: none; cursor: pointer;
+        }
+        .group-select:focus { border-color: #057a55; }
+
+        /* DANH SÁCH THÔNG BÁO (PHÂN BIỆT RÕ CHƯA ĐỌC / ĐÃ ĐỌC) */
+        .card { background: #fff; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .noti-row {
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            padding: 16px 22px; border-bottom: 1px solid #f1f5f9; cursor: pointer;
+            transition: background 0.15s; background: #ffffff;
+        }
+        .noti-row:last-child { border-bottom: none; }
+        .noti-row:hover { background: #f8fafc; }
+
+        /* Nền xanh rất nhạt + viền trái nổi bật cho thông báo CHƯA ĐỌC */
+        .noti-row.unread {
+            background: #f0f9ff;
+            border-left: 4px solid #0284c7;
+            padding-left: 18px;
+        }
+        .noti-row.unread:hover { background: #e0f2fe; }
+
+        .noti-left { display: flex; align-items: flex-start; gap: 14px; }
+        .group-tag {
+            display: inline-block; padding: 2px 9px; border-radius: 6px; font-size: 11px;
+            font-weight: 700; margin-bottom: 4px;
+        }
+        .tag-account { background: #fef3c7; color: #b45309; }
+        .tag-security { background: #fee2e2; color: #dc2626; }
+        .tag-role { background: #f3e8ff; color: #7e22ce; }
+        .tag-config { background: #e0f2fe; color: #0369a1; }
+        .tag-system { background: #dcfce7; color: #15803d; }
+
+        .noti-title { font-size: 14.5px; font-weight: 700; color: #0f172a; }
+        .noti-row:not(.unread) .noti-title { font-weight: 600; color: #334155; }
+        .noti-msg { font-size: 13px; color: #475569; margin-top: 3px; }
+        .noti-meta { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #0284c7; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR ĐỒNG BỘ -->
+    <aside class="sidebar">
+        <div>
+            <div class="brand-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+            <div class="nav-category">QUẢN TRỊ HỆ THỐNG</div>
+            <ul class="nav-list">
+                <li><a href="/admin" class="nav-link">Tổng quan</a></li>
+                <li><a href="/admin/users" class="nav-link">Quản lý người dùng</a></li>
+                <li><a href="/admin/roles" class="nav-link">Vai trò & phân quyền</a></li>
+                <li><a href="/admin/logs" class="nav-link">Nhật ký hệ thống</a></li>
+                <li><a href="/admin/settings" class="nav-link">Cấu hình hệ thống</a></li>
+                <li><a href="/admin/profile" class="nav-link">Tài khoản cá nhân</a></li>
+            </ul>
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="nav-link logout-link">Đăng xuất</a>
+        </div>
+    </aside>
+
+    <!-- NỘI DUNG CHÍNH -->
+    <main class="main-wrapper">
+        <header class="page-header">
+            <div class="header-left">
+                <div class="header-icon-box">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </div>
+                <div>
+                    <h1 class="page-title">Trung tâm thông báo quản trị</h1>
+                    <p class="page-subtitle">Cảnh báo tài khoản, bảo mật, phân quyền, cấu hình và hệ thống SANOVA</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn" onclick="markAllReadPage()">✓ Đánh dấu tất cả đã đọc</button>
+                <button type="button" class="btn btn-primary" onclick="goBackSmart()">← Quay lại</button>
+            </div>
+        </header>
+
+        <!-- THANH LỌC TRẠNG THÁI VÀ 5 NHÓM THÔNG BÁO -->
+        <div class="filters-toolbar">
+            <div class="filter-group">
+                <button type="button" class="filter-pill active" id="stAll" onclick="setStatusFilter('all', this)">
+                    Tất cả ({{ notifications|length }})
+                </button>
+                <button type="button" class="filter-pill" id="stUnread" onclick="setStatusFilter('unread', this)">
+                    Chưa đọc (<span id="pageUnreadCounter">{{ notifications|selectattr('is_read', 'equalto', false)|list|length }}</span>)
+                </button>
+            </div>
+
+            <div class="filter-group">
+                <span style="font-size: 12.5px; font-weight: 700; color: #64748b;">Nhóm thông báo:</span>
+                <select id="groupFilterSelect" class="group-select" onchange="applyFilters()">
+                    <option value="ALL">Tất cả 5 nhóm</option>
+                    <option value="account">Tài khoản</option>
+                    <option value="security">Bảo mật</option>
+                    <option value="role">Phân quyền</option>
+                    <option value="config">Cấu hình</option>
+                    <option value="system">Hệ thống</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card" id="notiCardList">
+            {% set group_labels = {
+                'account': ('Tài khoản', 'tag-account'),
+                'security': ('Bảo mật', 'tag-security'),
+                'role': ('Phân quyền', 'tag-role'),
+                'config': ('Cấu hình', 'tag-config'),
+                'system': ('Hệ thống', 'tag-system')
+            } %}
+            {% for n in notifications %}
+            {% set g_info = group_labels.get(n.group, ('Hệ thống', 'tag-system')) %}
+            <div class="noti-row {% if not n.is_read %}unread{% endif %}"
+                 data-unread="{{ '1' if not n.is_read else '0' }}"
+                 data-group="{{ n.group or 'system' }}"
+                 onclick='openPageNotiDetail({{ n|tojson|safe }}, this)'>
+                <div class="noti-left">
+                    <div>
+                        <span class="group-tag {{ g_info[1] }}">{{ g_info[0] }}</span>
+                        <div class="noti-title">{{ n.title }}</div>
+                        <div class="noti-msg">{{ n.message }}</div>
+                        <div class="noti-meta">{{ n.time_ago }} ({{ n.created_at }})</div>
+                    </div>
+                </div>
+                {% if not n.is_read %}<span class="dot" title="Chưa đọc"></span>{% endif %}
+            </div>
+            {% else %}
+            <div id="emptyNotiPlaceholder" style="padding: 44px; text-align: center; color: #64748b; font-size: 14px;">
+                Chưa có thông báo cảnh báo nào cần xử lý.
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/admin_notifications.js') }}?v=3"></script>
+    <script>
+        let currentStatusMode = 'all';
+
+        function goBackSmart() {
+            if (document.referrer && document.referrer.includes(window.location.host) && !document.referrer.endsWith('/admin/notifications')) {
+                window.location.href = document.referrer;
+            } else {
+                window.location.href = '/admin';
+            }
+        }
+
+        function setStatusFilter(mode, btn) {
+            currentStatusMode = mode;
+            document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const selectedGroup = document.getElementById('groupFilterSelect').value;
+            const rows = document.querySelectorAll('#notiCardList .noti-row');
+
+            rows.forEach(row => {
+                const isUnread = row.getAttribute('data-unread') === '1';
+                const rowGroup = row.getAttribute('data-group');
+
+                const matchStatus = (currentStatusMode === 'all') || (currentStatusMode === 'unread' && isUnread);
+                const matchGroup = (selectedGroup === 'ALL') || (rowGroup === selectedGroup);
+
+                row.style.display = (matchStatus && matchGroup) ? 'flex' : 'none';
+            });
+        }
+
+        async function openPageNotiDetail(item, rowEl) {
+            // Đánh dấu đã đọc -> chuyển nền xanh nhạt sang nền trắng và giảm bộ đếm
+            if (rowEl.getAttribute('data-unread') === '1') {
+                rowEl.setAttribute('data-unread', '0');
+                rowEl.classList.remove('unread');
+                const dot = rowEl.querySelector('.dot');
+                if (dot) dot.remove();
+
+                const counterEl = document.getElementById('pageUnreadCounter');
+                if (counterEl) {
+                    const cur = Math.max(0, parseInt(counterEl.textContent || '0') - 1);
+                    counterEl.textContent = cur;
+                }
+                applyFilters();
+                fetch(`/admin/api/notifications/read/${item.id}`, { method: 'POST' }).catch(() => {});
+            }
+
+            // Mở hộp thoại chi tiết & nút điều hướng tới chức năng xử lý
+            document.getElementById("ndTitle").textContent = item.title;
+            document.getElementById("ndMessage").textContent = item.message;
+            document.getElementById("ndTime").textContent = `${item.time_ago} (${item.created_at})`;
+            document.getElementById("ndGoTargetBtn").setAttribute("href", item.target_url || "/admin");
+
+            const accRow = document.getElementById("ndAccountRow");
+            if (item.account) { accRow.style.display = "grid"; document.getElementById("ndAccount").textContent = item.account; }
+            else { accRow.style.display = "none"; }
+
+            const reasonRow = document.getElementById("ndReasonRow");
+            if (item.reason) { reasonRow.style.display = "grid"; document.getElementById("ndReason").textContent = item.reason; }
+            else { reasonRow.style.display = "none"; }
+
+            const impactRow = document.getElementById("ndImpactRow");
+            if (item.impact) { impactRow.style.display = "grid"; document.getElementById("ndImpact").textContent = item.impact; }
+            else { impactRow.style.display = "none"; }
+
+            document.getElementById("notiDetailBackdrop").classList.add("show");
+        }
+
+        async function markAllReadPage() {
+            await fetch('/admin/api/notifications/read-all', { method: 'POST' });
+            location.reload();
+        }
+    </script>
+</body>
+</html>

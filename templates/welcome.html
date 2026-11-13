@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chào mừng · Hệ thống Quản lý kho SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-green: #064e3b;
+            --brand-teal: #086f68;
+            --brand-accent: #10b981;
+            --bg-page: #f2f5f3;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --border-light: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        /* KHỐI CARD CHÍNH THEO MẪU */
+        .welcome-card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 440px;
+            border-radius: 18px;
+            box-shadow: 0 16px 36px -8px rgba(6, 78, 59, 0.12), 0 0 1px 1px rgba(0,0,0,0.04);
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER BRANDING */
+        .card-header-brand {
+            background-color: var(--brand-green);
+            padding: 22px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #ffffff;
+        }
+        .brand-logo-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .brand-text {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+
+        /* BODY NỘI DUNG */
+        .card-body {
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .title-system {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--brand-green);
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .desc-system {
+            font-size: 13px;
+            color: var(--text-sub);
+            line-height: 1.5;
+            max-width: 340px;
+            margin-bottom: 24px;
+        }
+
+        /* KHU VỰC NGÔI NHÀ VỚI VÒNG LOAD CHẠY XUNG QUANH */
+        .house-loader-wrapper {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 26px;
+        }
+
+        .house-circle-bg {
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            background: #e8f5ed;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        /* SVG VÒNG XOAY LOADER QUANH NGÔI NHÀ */
+        .loader-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            animation: spinLoop 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            pointer-events: none;
+        }
+
+        .loader-ring-pulse {
+            position: absolute;
+            width: 146px;
+            height: 146px;
+            border: 2px dashed rgba(16, 185, 129, 0.35);
+            border-radius: 50%;
+            z-index: 1;
+            animation: spinReverse 12s linear infinite;
+        }
+
+        @keyframes spinLoop {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes spinReverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .house-svg-icon {
+            position: relative;
+            z-index: 3;
+            color: var(--brand-green);
+            filter: drop-shadow(0 2px 4px rgba(6, 78, 59, 0.15));
+            transition: transform 0.3s ease;
+        }
+
+        .house-loader-wrapper:hover .house-svg-icon {
+            transform: scale(1.05);
+        }
+
+        /* 3 KHỐI TÍNH NĂNG NỔI BẬT */
+        .features-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 8px 6px;
+        }
+
+        .feature-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #eaf6f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--brand-green);
+        }
+
+        .feature-info strong {
+            display: block;
+            font-size: 14.5px;
+            font-weight: 700;
+            color: #0f2b25;
+            margin-bottom: 2px;
+        }
+
+        .feature-info span {
+            font-size: 12.5px;
+            color: var(--text-sub);
+        }
+
+        /* NÚT ĐĂNG NHẬP */
+        .btn-welcome-login {
+            width: 100%;
+            background-color: var(--brand-green);
+            color: #ffffff;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(6, 78, 59, 0.25);
+        }
+
+        .btn-welcome-login:hover {
+            background-color: #04382a;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(6, 78, 59, 0.35);
+        }
+
+        .btn-welcome-login:active {
+            transform: translateY(0);
+        }
+
+        /* FOOTER CARD */
+        .card-footer {
+            background-color: #e5ece8;
+            padding: 12px;
+            font-size: 11.5px;
+            color: #4b6358;
+            text-align: center;
+            font-weight: 500;
+            border-top: 1px solid rgba(0,0,0,0.04);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="welcome-card">
+        <!-- HEADER LOGO -->
+        <div class="card-header-brand">
+            <div class="brand-logo-box">
+                <!-- Icon khối hộp 3D SANOVA -->
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+            </div>
+            <div class="brand-text">SANOVA</div>
+        </div>
+
+        <div class="card-body">
+            <h1 class="title-system">Hệ thống quản lý kho SANOVA</h1>
+            <p class="desc-system">Quản lý hàng hóa, vị trí lưu trữ và đối soát xuất hàng đa nguồn bằng mã QR.</p>
+
+            <!-- NGÔI NHÀ VỚI HIỆU ỨNG VÒNG LOAD XOAY XUNG QUANH -->
+            <div class="house-loader-wrapper">
+                <div class="house-circle-bg"></div>
+                <div class="loader-ring-pulse"></div>
+
+                <!-- SVG xoay quay quanh ngôi nhà -->
+                <svg class="loader-svg" viewBox="0 0 160 160">
+                    <defs>
+                        <linearGradient id="loadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#064e3b" stop-opacity="0"/>
+                            <stop offset="40%" stop-color="#086f68" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="#10b981" stop-opacity="1"/>
+                        </linearGradient>
+                    </defs>
+                    <circle cx="80" cy="80" r="70" 
+                            stroke="url(#loadGrad)" 
+                            stroke-width="3.5" 
+                            stroke-linecap="round" 
+                            fill="none" 
+                            stroke-dasharray="140 280" />
+                </svg>
+
+                <!-- BIỂU TƯỢNG NGÔI NHÀ / NHÀ KHO CHỨA HÀNG -->
+                <svg class="house-svg-icon" width="76" height="76" viewBox="0 0 80 80" fill="none" stroke="currentColor">
+                    <!-- Mái nhà -->
+                    <path d="M40 10L14 30V34H66V30L40 10Z" stroke-width="4.5" stroke-linejoin="round" fill="none"/>
+                    <!-- Thân nhà kho -->
+                    <rect x="18" y="34" width="44" height="34" rx="2" stroke-width="4.5" fill="none"/>
+                    <!-- Khung cửa cuốn / Cổng kho -->
+                    <rect x="26" y="44" width="28" height="24" rx="1.5" stroke-width="3" fill="#e8f5ed"/>
+                    <!-- Các thùng hàng bên trong nhà kho -->
+                    <rect x="30" y="56" width="9" height="12" stroke-width="2.5" fill="none"/>
+                    <rect x="41" y="56" width="9" height="12" stroke-width="2.5" fill="none"/>
+                    <rect x="35" y="47" width="9" height="9" stroke-width="2.5" fill="none"/>
+                </svg>
+            </div>
+
+            <!-- 3 TÍNH NĂNG ĐẠI DIỆN HỆ THỐNG -->
+            <div class="features-list">
+                <div class="feature-item">
+                    <div class="feature-icon-box">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                    </div>
+                    <div class="feature-info">
+                        <strong>Quản lý bằng mã QR</strong>
+                        <span>Nhận diện nhanh vị trí và sản phẩm</span>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon-box">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                            <line x1="1" y1="3" x2="23" y2="3"></line>
+                            <path d="M10 12h4"></path>
+                        </svg>
+                    </div>
+                    <div class="feature-info">
+                        <strong>Kiểm soát tồn kho</strong>
+                        <span>Theo dõi chính xác, theo thời gian thực</span>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon-box">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10"></line>
+                            <line x1="12" y1="20" x2="12" y2="4"></line>
+                            <line x1="6" y1="20" x2="6" y2="14"></line>
+                        </svg>
+                    </div>
+                    <div class="feature-info">
+                        <strong>Báo cáo & đối soát</strong>
+                        <span>Tổng hợp và xuất báo cáo dễ dàng</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NÚT CHUYỂN TỚI MÀN HÌNH ĐĂNG NHẬP -->
+            <a href="/login" class="btn-welcome-login">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                    <polyline points="10 17 15 12 10 7"></polyline>
+                    <line x1="15" y1="12" x2="3" y2="12"></line>
+                </svg>
+                Đăng nhập hệ thống
+            </a>
+        </div>
+
+        <div class="card-footer">
+            © 2026 SANOVA. Hệ thống quản lý kho nội bộ.
+        </div>
+    </div>
+
+</body>
+</html>

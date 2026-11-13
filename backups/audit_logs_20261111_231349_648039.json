@@ -1,0 +1,231 @@
+[
+    {
+        "id": "LOG-20261111-AF300A2F",
+        "time": "20:54:27",
+        "date": "2026-11-11",
+        "timestamp": "11/11/2026 – 20:54:27",
+        "category": "BẢO MẬT",
+        "action": "Đăng nhập hệ thống",
+        "by": "Phạm Đức Long",
+        "target": "admin",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Sa",
+        "reason": "",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261111-40564426",
+        "time": "07:11:54",
+        "date": "2026-11-11",
+        "timestamp": "11/11/2026 – 07:11:54",
+        "category": "BẢO MẬT",
+        "action": "Đăng nhập hệ thống",
+        "by": "Phạm Đức Long",
+        "target": "admin",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Sa",
+        "reason": "",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261109-756C1332",
+        "time": "14:26:42",
+        "date": "2026-11-09",
+        "timestamp": "09/11/2026 – 14:26:42",
+        "category": "BẢO MẬT",
+        "action": "Đăng nhập hệ thống",
+        "by": "Phạm Đức Long",
+        "target": "admin",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Sa",
+        "reason": "",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261109-8D504F58",
+        "time": "12:41:55",
+        "date": "2026-11-09",
+        "timestamp": "09/11/2026 – 12:41:55",
+        "category": "BẢO MẬT",
+        "action": "Đăng nhập hệ thống",
+        "by": "Phạm Đức Long",
+        "target": "admin",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Sa",
+        "reason": "",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261109-6586500C",
+        "time": "12:41:48",
+        "date": "2026-11-09",
+        "timestamp": "09/11/2026 – 12:41:48",
+        "category": "BẢO MẬT",
+        "action": "Đăng xuất hệ thống",
+        "by": "Phạm Đức Long",
+        "target": "admin",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Sa",
+        "reason": "",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261109-71F66AC9",
+        "time": "12:41:39",
+        "date": "2026-11-09",
+        "timestamp": "09/11/2026 – 12:41:39",
+        "category": "BẢO MẬT",
+        "action": "Đăng nhập hệ thống",
+        "by": "Phạm Đức Long",
+        "target": "admin",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Sa",
+        "reason": "",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261109-6EE3989E",
+        "time": "12:07:07",
+        "date": "2026-11-09",
+        "timestamp": "09/11/2026 – 12:07:07",
+        "category": "BẢO MẬT",
+        "action": "Đăng nhập hệ thống",
+        "by": "Phạm Đức Long",
+        "target": "admin",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Sa",
+        "reason": "",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261105-012",
+        "time": "11:11:26",
+        "date": "2026-11-05",
+        "timestamp": "05/11/2026 – 11:11:26",
+        "category": "BẢO MẬT",
+        "action": "Đặt lại mật khẩu nhân viên",
+        "by": "Phạm Đức Long",
+        "target": "Nguyễn Văn B",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb",
+        "reason": "Mật khẩu đã được thiết lập lại thành công (không lưu giá trị mật khẩu)",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261105-011",
+        "time": "11:11:10",
+        "date": "2026-11-05",
+        "timestamp": "05/11/2026 – 11:11:10",
+        "category": "TÀI KHOẢN",
+        "action": "Cập nhật hồ sơ/quyền Nguyễn Văn B",
+        "by": "Phạm Đức Long",
+        "target": "Nguyễn Văn B",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb",
+        "reason": "",
+        "changes": []
+    },
+    {
+        "id": "LOG-20261105-010",
+        "time": "11:05:19",
+        "date": "2026-11-05",
+        "timestamp": "05/11/2026 – 11:05:19",
+        "category": "TÀI KHOẢN",
+        "action": "Tạo tài khoản Nguyễn Văn B",
+        "by": "Phạm Đức Long",
+        "target": "Nguyễn Văn B",
+        "status": "Thành công",
+        "ip": "127.0.0.1",
+        "device": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb",
+        "reason": "",
+        "changes": [
+            {
+                "field": "Tài khoản",
+                "before": "(Chưa có)",
+                "after": "nguyen.van.b"
+            },
+            {
+                "field": "Vai trò",
+                "before": "(Chưa có)",
+                "after": "Quản lý kho"
+            },
+            {
+                "field": "Phạm vi kho",
+                "before": "(Chưa có)",
+                "after": "Kho chính - SANOVA"
+            }
+        ]
+    },
+    {
+        "time": "21:25",
+        "date": "2026-11-03",
+        "action": "Cập nhật hồ sơ Nguyễn Văn A",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    },
+    {
+        "time": "21:25",
+        "date": "2026-11-03",
+        "action": "Mở khóa tài khoản Nguyễn Văn A",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    },
+    {
+        "time": "21:25",
+        "date": "2026-11-03",
+        "action": "Tạm khóa tài khoản Nguyễn Văn A",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    },
+    {
+        "time": "21:25",
+        "date": "2026-11-03",
+        "action": "Mở khóa tài khoản Nguyễn Văn A",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    },
+    {
+        "time": "21:25",
+        "date": "2026-11-03",
+        "action": "Tạm khóa tài khoản Nguyễn Văn A",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    },
+    {
+        "time": "21:24",
+        "date": "2026-11-03",
+        "action": "Cập nhật hồ sơ Nguyễn Văn A",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    },
+    {
+        "time": "16:18",
+        "date": "2026-11-03",
+        "action": "Mời Đỗ Ngọc Mai · Nhân viên kho",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    },
+    {
+        "time": "15:40",
+        "date": "2026-11-03",
+        "action": "Tạm khóa tài khoản Võ Hoàng Nam",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    },
+    {
+        "time": "14:52",
+        "date": "2026-11-03",
+        "action": "Cập nhật vị trí A-01-T1-V01",
+        "by": "Phạm Đức Long",
+        "status": "Đã ghi nhận"
+    }
+]

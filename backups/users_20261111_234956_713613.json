@@ -1,0 +1,31 @@
+{
+    "admin": {
+        "password": "scrypt:32768:8:1$l6AYLEfdPWy3iega$1ac09e7217403b856912869e4eb86c31f967d11dbe1b80f492485e176ed0eb3bbb58d6749243ae4fe7c0f2f1889395b15b5e648eb27e996bb4ac339f35f31e48",
+        "name": "Phạm Đức Long",
+        "email": "duc.long@sanova.vn",
+        "role": "Quản trị viên",
+        "status": "Hoạt động",
+        "last_login": "11/11/2026 · 20:54",
+        "scope": "Kho chính - SANOVA"
+    },
+    "nguyen.van.a": {
+        "password": "123",
+        "name": "Nguyễn Văn A",
+        "email": "a.nguyen@sonova.vn",
+        "role": "Nhân viên kho",
+        "status": "Hoạt động",
+        "last_login": "16:17",
+        "scope": "Kho chính - SANOVA"
+    },
+    "nguyen.van.b": {
+        "password": "123a@",
+        "name": "Nguyễn Văn B",
+        "email": "b.nguyen@sonova.vn",
+        "role": "Quản lý kho",
+        "status": "Hoạt động",
+        "last_login": "05/11/2026 · 14:26",
+        "created_at": "05/11/2026 · 11:05",
+        "created_by": "Phạm Đức Long",
+        "scope": "Kho chính - SANOVA"
+    }
+}

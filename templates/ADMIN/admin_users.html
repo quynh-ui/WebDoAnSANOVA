@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý người dùng · SANOVA Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-green: #064e3b;
+            --brand-teal: #086f68;
+            --sidebar-bg: #04382a;
+            --sidebar-active: #086f68;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --border-input: #cbd5e1;
+            
+            --tag-admin-bg: #e6f7f2;
+            --tag-admin-txt: #057a55;
+            --tag-manager-bg: #e0f2fe;
+            --tag-manager-txt: #0369a1;
+            --tag-staff-bg: #ecfdf5;
+            --tag-staff-txt: #047857;
+            --tag-coord-bg: #f3e8ff;
+            --tag-coord-txt: #7e22ce;
+            
+            --status-active-bg: #f0fdf4;
+            --status-active-txt: #16a34a;
+            --status-locked-bg: #fef2f2;
+            --status-locked-txt: #dc2626;
+            --status-pending-bg: #fffbeb;
+            --status-pending-txt: #d97706;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: var(--bg-page); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR CHUẨN ĐỒNG BỘ - ĐỨNG IM TUYỆT ĐỐI */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ecfdf5;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px 16px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .brand-header { display: flex; align-items: center; gap: 12px; padding-bottom: 24px; }
+        .brand-logo-icon { display: flex; align-items: center; color: #ffffff; }
+        .brand-name { font-size: 22px; font-weight: 800; letter-spacing: 1.5px; color: #ffffff; }
+        .nav-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6ee7b7; font-weight: 700; margin-bottom: 12px; padding-left: 10px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: #a7f3d0; text-decoration: none; border-radius: 8px; font-size: 13.5px; font-weight: 600; transition: all 0.2s; }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-logout { display: flex; align-items: center; gap: 10px; color: #cbd5e1; text-decoration: none; padding: 12px 14px; border-radius: 8px; font-size: 13.5px; font-weight: 600; transition: all 0.2s; }
+        .btn-logout:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+        /* VÙNG MAIN */
+        .main-wrapper { flex-grow: 1; height: 100vh; padding: 24px 36px 36px; overflow-y: auto; }
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .top-navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+        .page-title-wrap { display: flex; align-items: center; gap: 12px; }
+        .page-title { font-size: 22px; font-weight: 800; color: #0f172a; }
+        .page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+        
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .user-badge-wrap { display: flex; align-items: center; gap: 12px; }
+        .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #475569; position: relative; cursor: pointer; }
+        .bell-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; position: absolute; top: 8px; right: 8px; border: 2px solid #fff; }
+        .admin-profile-pill { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--border); padding: 7px 14px; border-radius: 20px; font-size: 13.5px; font-weight: 700; color: #1e293b; }
+
+        .btn-add-user { 
+            background: var(--brand-teal); 
+            color: #fff; 
+            border: none; 
+            border-radius: 8px; 
+            padding: 10px 20px; 
+            font-size: 13.5px; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            cursor: pointer; 
+            transition: 0.2s; 
+        }
+        .btn-add-user:hover { background: #065752; transform: translateY(-1px); }
+
+        /* 4 THẺ CHỈ SỐ */
+        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+        .kpi-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .kpi-icon-wrap { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .icon-blue { background: #f0f9ff; color: #0284c7; }
+        .icon-green { background: #f0fdf4; color: #16a34a; }
+        .icon-orange { background: #fffbeb; color: #d97706; }
+        .icon-purple { background: #f5f3ff; color: #7c3aed; }
+        .kpi-label { font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+        .kpi-val { font-size: 26px; font-weight: 800; color: #0f172a; margin-top: 2px; }
+
+        /* BẢNG & BỘ LỌC */
+        .card-table-panel { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .filter-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+        .search-box-wrap { position: relative; width: 100%; }
+        .search-box-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .search-input { width: 100%; height: 42px; border: 1.5px solid var(--border-input); border-radius: 8px; padding: 8px 14px 8px 38px; font-size: 13.5px; outline: none; background: #fff; }
+        .select-filter { width: 100%; height: 42px; border: 1.5px solid var(--border-input); border-radius: 8px; padding: 8px 14px; font-size: 13.5px; outline: none; background: #fff; cursor: pointer; color: #334155; }
+
+        .user-table { width: 100%; border-collapse: collapse; }
+        .user-table th { text-align: left; padding: 12px 14px; font-size: 12.5px; font-weight: 700; color: #475569; border-bottom: 1.5px solid var(--border); }
+        .user-table td { padding: 14px 14px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        
+        .role-pill { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .role-admin { background: var(--tag-admin-bg); color: var(--tag-admin-txt); }
+        .role-manager { background: var(--tag-manager-bg); color: var(--tag-manager-txt); }
+        .role-staff { background: var(--tag-staff-bg); color: var(--tag-staff-txt); }
+        .role-coord { background: var(--tag-coord-bg); color: var(--tag-coord-txt); }
+
+        .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12.5px; font-weight: 700; }
+        .dot { width: 6px; height: 6px; border-radius: 50%; }
+        .pill-active { background: var(--status-active-bg); color: var(--status-active-txt); }
+        .pill-active .dot { background: var(--status-active-txt); }
+        .pill-locked { background: var(--status-locked-bg); color: var(--status-locked-txt); }
+        .pill-locked .dot { background: var(--status-locked-txt); }
+        .pill-pending { background: var(--status-pending-bg); color: var(--status-pending-txt); }
+        .pill-pending .dot { background: var(--status-pending-txt); }
+
+        .btn-view-action { background: transparent; border: 1.5px solid var(--border-input); border-radius: 8px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; }
+        .btn-view-action:hover { background: #f8fafc; border-color: #94a3b8; }
+
+        /* PHÂN TRANG */
+        .table-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; padding-top: 12px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        .pagination-controls { display: flex; align-items: center; gap: 6px; }
+        .page-btn { padding: 6px 12px; border: 1px solid var(--border-input); border-radius: 6px; background: #fff; color: #334155; text-decoration: none; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+        .page-btn.active { background: var(--brand-teal); color: #fff; border-color: var(--brand-teal); }
+        .page-btn.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+        /* MODAL */
+        .modal-overlay { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(2px); 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 9999; 
+            padding: 16px; 
+        }
+        .modal-overlay.active { display: flex !important; }
+        .modal-container { background: #fff; border-radius: 14px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 26px 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        
+        .modal-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+        .modal-title { font-size: 18px; font-weight: 800; color: #0f172a; }
+        .modal-subtitle { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+
+        .form-section-title { font-size: 13px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; margin: 16px 0 10px; }
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-bottom: 10px; }
+        .form-col-full { grid-column: span 2; }
+        .form-label { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px; }
+        .req { color: #dc2626; }
+        .modal-input { width: 100%; height: 40px; border: 1.5px solid var(--border-input); border-radius: 20px; padding: 6px 14px; font-size: 13px; outline: none; }
+        .modal-input:focus { border-color: var(--brand-teal); }
+
+        .input-suffix-group {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            border: 1.5px solid var(--border-input);
+            border-radius: 20px;
+            background: #fff;
+            overflow: hidden;
+            height: 40px;
+        }
+        .input-suffix-group:focus-within {
+            border-color: var(--brand-teal);
+        }
+        .input-suffix-group input {
+            flex: 1;
+            border: none !important;
+            outline: none !important;
+            padding: 8px 14px;
+            font-size: 13.5px;
+            height: 100%;
+        }
+        .suffix-addon {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 0 14px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            border-left: 1.5px solid var(--border-input);
+            user-select: none;
+        }
+
+        .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #334155; font-weight: 600; margin: 8px 0 12px; cursor: pointer; }
+        .radio-group-wrap { display: flex; align-items: center; gap: 20px; font-size: 13px; font-weight: 600; color: #334155; margin-top: 6px; }
+        .radio-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+        .modal-actions-bar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--border); }
+        .btn-modal-reset { background: #f8fafc; border: 1px solid var(--border-input); border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; }
+        .btn-modal-submit { background: #0f172a; color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+
+        /* BẢNG CHI TIẾT */
+        .detail-grid-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 13px; }
+        .detail-grid-table tr { border-bottom: 1px solid #f1f5f9; }
+        .detail-grid-table td { padding: 10px 8px; vertical-align: middle; }
+        .detail-grid-table td.col-label { width: 38%; color: var(--text-muted); font-weight: 600; }
+        .detail-grid-table td.col-value { color: var(--text-main); font-weight: 700; }
+
+        .toast-msg { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-weight: 700; font-size: 13px; color: #fff; z-index: 20000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .toast-success { background: #16a34a; }
+        .toast-error { background: #dc2626; }
+
+        /* KIỂU NÚT BO TRÒN PILL */
+        .btn-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 38px;
+            padding: 0 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        .btn-pill:hover { transform: translateY(-1px); }
+        .btn-pill-danger { background-color: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .btn-pill-danger:hover { background-color: #dc2626; color: #ffffff; }
+        .btn-pill-unlock { background-color: #dcfce7; color: #16a34a; border-color: #86efac; }
+        .btn-pill-unlock:hover { background-color: #16a34a; color: #ffffff; }
+        .btn-pill-primary { background-color: #e0f2fe; color: #0284c7; border-color: #bae6fd; }
+        .btn-pill-primary:hover { background-color: #0284c7; color: #ffffff; }
+        .btn-pill-secondary { background-color: #f1f5f9; color: #334155; border-color: #cbd5e1; }
+        .btn-pill-secondary:hover { background-color: #e2e8f0; color: #0f172a; }
+        .btn-pill-dark { background-color: #0f172a; color: #ffffff; border-color: #0f172a; }
+        .btn-pill-dark:hover { background-color: #1e293b; }
+        /* CHUÔNG THÔNG BÁO ADMIN */
+.noti-bell-wrapper { position: relative; display: inline-flex; align-items: center; }
+.bell-btn {
+    width: 38px; height: 38px; border-radius: 50%; background: #ffffff;
+    border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center;
+    color: #334155; position: relative; cursor: pointer; transition: 0.2s;
+}
+.bell-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.bell-count-badge {
+    position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px;
+    padding: 0 4px; border-radius: 999px; background: #ef4444; color: #ffffff;
+    font-size: 10.5px; font-weight: 800; display: none; align-items: center;
+    justify-content: center; border: 2px solid #ffffff;
+}
+.noti-dropdown {
+    position: absolute; top: 48px; right: 0; width: 390px; background: #ffffff;
+    border: 1px solid #e2e8f0; border-radius: 16px;
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14); z-index: 9999;
+    display: none; flex-direction: column; overflow: hidden;
+}
+.noti-dropdown.show { display: flex; }
+.noti-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 18px 12px;
+}
+.noti-head-left { display: flex; align-items: center; gap: 10px; }
+.noti-head-title { font-size: 16px; font-weight: 800; color: #0f172a; }
+.noti-unread-pill {
+    background: #fee2e2; color: #dc2626; font-size: 11.5px; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px;
+}
+.noti-mark-all {
+    background: none; border: none; font-size: 12.5px; font-weight: 600;
+    color: #475569; cursor: pointer;
+}
+.noti-mark-all:hover { color: #057a55; text-decoration: underline; }
+.noti-tabs {
+    display: grid; grid-template-columns: 1fr 1fr; background: #f8fafc;
+    margin: 0 16px 10px; padding: 4px; border-radius: 999px; border: 1px solid #f1f5f9;
+}
+.noti-tab-btn {
+    border: none; background: transparent; padding: 6px 12px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.15s;
+}
+.noti-tab-btn.active {
+    background: #ffffff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.noti-list { max-height: 360px; overflow-y: auto; padding: 4px 8px; }
+.noti-item {
+    display: flex; align-items: flex-start; gap: 12px; padding: 12px 10px;
+    border-radius: 10px; cursor: pointer; transition: 0.15s; position: relative;
+}
+.noti-item:hover { background: #f8fafc; }
+.noti-item.unread { background: #f0f9ff; }
+.noti-item.unread:hover { background: #e0f2fe; }
+.noti-icon-circle {
+    width: 34px; height: 34px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+}
+.noti-ico-amber { background: #fef3c7; color: #b45309; }
+.noti-ico-red { background: #fee2e2; color: #dc2626; }
+.noti-ico-slate { background: #f1f5f9; color: #334155; }
+.noti-ico-green { background: #dcfce7; color: #15803d; }
+.noti-item-body { flex: 1; min-width: 0; }
+.noti-item-title { font-size: 13.5px; font-weight: 700; color: #0f172a; }
+.noti-item-msg { font-size: 12.5px; color: #475569; margin-top: 2px; line-height: 1.4; }
+.noti-item-time { font-size: 11.5px; color: #94a3b8; margin-top: 4px; }
+.noti-blue-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #0284c7;
+    flex-shrink: 0; margin-top: 8px;
+}
+.noti-empty-state {
+    text-align: center; padding: 28px 16px; font-size: 13px; color: #64748b;
+}
+.noti-footer {
+    padding: 12px 16px; border-top: 1px solid #f1f5f9; background: #ffffff;
+}
+.btn-view-all-noti {
+    display: block; width: 100%; text-align: center; padding: 9px 14px;
+    border: 1px solid #e2e8f0; border-radius: 999px; font-size: 13px;
+    font-weight: 700; color: #1e293b; text-decoration: none; transition: 0.15s;
+}
+.btn-view-all-noti:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+    </style>
+</head>
+<body>
+
+    <!-- 1. SIDEBAR CHUNG SANOVA -->
+    <aside class="sidebar">
+        <div>
+            <div class="brand-header">
+                <svg class="brand-logo" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+            <div class="nav-category">QUẢN TRỊ HỆ THỐNG</div>
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link {% if current_path == '/admin' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        Tổng quan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/users" class="nav-link {% if current_path.startswith('/admin/users') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        Quản lý người dùng
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/roles" class="nav-link {% if current_path.startswith('/admin/roles') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Vai trò & phân quyền
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/logs" class="nav-link {% if current_path.startswith('/admin/logs') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        Nhật ký hệ thống
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/settings" class="nav-link {% if current_path.startswith('/admin/settings') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Cấu hình hệ thống
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/profile" class="nav-link {% if current_path.startswith('/admin/profile') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Tài khoản cá nhân
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="sidebar-footer">
+            <a href="/logout" class="nav-link logout-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Đăng xuất
+            </a>
+        </div>
+    </aside>
+
+    <!-- NỘI DUNG CHÍNH (MAIN WRAPPER) -->
+    <main class="main-wrapper">
+        <div class="top-navbar">
+            <div class="page-title-wrap">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2.2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <div>
+                    <h1 class="page-title">Quản lý người dùng</h1>
+                    <p class="page-subtitle">Danh sách và thông tin tài khoản hệ thống</p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="header-right">
+                    <div class="user-badge-wrap">
+                        <!-- Chuông thông báo Admin -->
+                        <div class="noti-bell-wrapper" id="adminNotiBellWrap">
+                            <button type="button" class="bell-btn" id="adminNotiBellBtn" title="Thông báo quản trị">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                </svg>
+                                <span class="bell-count-badge" id="adminNotiBellCount">0</span>
+                            </button>
+
+                            <!-- Bảng Dropdown thông báo -->
+                            <div class="noti-dropdown" id="adminNotiDropdown">
+                                <div class="noti-head">
+                                    <div class="noti-head-left">
+                                        <span class="noti-head-title">Thông báo</span>
+                                        <span class="noti-unread-pill" id="notiHeaderUnreadPill">0 chưa đọc</span>
+                                    </div>
+                                    <button type="button" class="noti-mark-all" id="btnMarkAllNotiRead">Đánh dấu đã đọc</button>
+                                </div>
+
+                                <div class="noti-tabs">
+                                    <button type="button" class="noti-tab-btn active" id="notiTabAll">Tất cả</button>
+                                    <button type="button" class="noti-tab-btn" id="notiTabUnread">Chưa đọc</button>
+                                </div>
+
+                                <div class="noti-list" id="adminNotiList">
+                                    <div class="noti-empty-state">Đang tải thông báo...</div>
+                                </div>
+
+                                <div class="noti-footer">
+                                    <a href="/admin/logs" class="btn-view-all-noti">Xem tất cả thông báo</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Khung tên tài khoản đang đăng nhập -->
+                        <div class="admin-profile-pill">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <span>{{ session.get('user', {}).get('name') or 'Admin' }}</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-add-user" id="btnOpenAddUser" onclick="openAddModal()">
+                    <span>+</span> Thêm
+                </button>
+            </div>
+        </div>
+
+        <!-- 4 THẺ CHỈ SỐ -->
+        <section class="kpi-row">
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-blue">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Tổng tài khoản</div>
+                    <div class="kpi-val" id="stat_total">{{ total_users }}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-green">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Đang hoạt động</div>
+                    <div class="kpi-val" id="stat_active">{{ active_users }}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-orange">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Tạm khóa</div>
+                    <div class="kpi-val" id="stat_locked">{{ locked_users }}</div>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon-wrap icon-purple">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Chờ kích hoạt</div>
+                    <div class="kpi-val" id="stat_pending">{{ pending_users }}</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL BẢNG VÀ BỘ LỌC -->
+        <section class="card-table-panel">
+            <form method="GET" action="/admin/users" class="filter-row">
+                <div class="search-box-wrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" name="q" class="search-input" placeholder="Tìm mã NV, họ tên, tên đăng nhập..." value="{{ q }}" onchange="this.form.submit()">
+                </div>
+
+                <select name="role" class="select-filter" onchange="this.form.submit()">
+                    <option value="ALL">Tất cả vai trò</option>
+                    {% for r in roles %}
+                    <option value="{{ r }}" {% if role_filter == r %}selected{% endif %}>{{ r }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="status" class="select-filter" onchange="this.form.submit()">
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="Hoạt động" {% if status_filter == 'Hoạt động' %}selected{% endif %}>Hoạt động</option>
+                    <option value="Tạm khóa" {% if status_filter == 'Tạm khóa' %}selected{% endif %}>Tạm khóa</option>
+                    <option value="Chờ kích hoạt" {% if status_filter == 'Chờ kích hoạt' %}selected{% endif %}>Chờ kích hoạt</option>
+                </select>
+            </form>
+
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Mã NV</th>
+                        <th style="width: 25%;">Họ và tên</th>
+                        <th style="width: 20%;">Tên đăng nhập</th>
+                        <th style="width: 18%;">Vai trò</th>
+                        <th style="width: 12%;">Trạng thái</th>
+                        <th style="width: 10%; text-align: center;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    {% for u in users %}
+                    <tr id="row-{{ u.username }}">
+                        <td><strong>{{ u.staff_code or 'NV00125' }}</strong></td>
+                        <td><strong>{{ u.name }}</strong></td>
+                        <td style="color: #64748b;">{{ u.username }}</td>
+                        <td>
+                            {% if u.role == 'Quản trị viên' %}
+                                <span class="role-pill role-admin">Quản trị viên</span>
+                            {% elif u.role == 'Quản lý kho' %}
+                                <span class="role-pill role-manager">Quản lý kho</span>
+                            {% elif u.role == 'Nhân viên kho' %}
+                                <span class="role-pill role-staff">Nhân viên kho</span>
+                            {% else %}
+                                <span class="role-pill role-coord">Điều phối / Kế toán kho</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.status == 'Hoạt động' %}
+                                <span class="status-pill pill-active"><span class="dot"></span> Hoạt động</span>
+                            {% elif u.status == 'Tạm khóa' %}
+                                <span class="status-pill pill-locked"><span class="dot"></span> Tạm khóa</span>
+                            {% else %}
+                                <span class="status-pill pill-pending"><span class="dot"></span> Chờ kích hoạt</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" class="btn-view-action" onclick='showAccountDetails({{ u|tojson|safe }})'>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                Xem
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                            Không tìm thấy tài khoản phù hợp.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="table-footer">
+                <span id="paginationInfo">Hiển thị {{ users|length }} / {{ total_filtered }} tài khoản</span>
+
+                <div class="pagination-controls">
+                    <a href="/admin/users?page={{ page - 1 }}&q={{ q }}&role={{ role_filter }}&status={{ status_filter }}" 
+                       class="page-btn {% if page <= 1 %}disabled{% endif %}">‹</a>
+
+                    {% for p in range(1, total_pages + 1) %}
+                    <a href="/admin/users?page={{ p }}&q={{ q }}&role={{ role_filter }}&status={{ status_filter }}" 
+                       class="page-btn {% if p == page %}active{% endif %}">{{ p }}</a>
+                    {% endfor %}
+
+                    <a href="/admin/users?page={{ page + 1 }}&q={{ q }}&role={{ role_filter }}&status={{ status_filter }}" 
+                       class="page-btn {% if page >= total_pages %}disabled{% endif %}">›</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL THÊM NGƯỜI DÙNG -->
+    <div class="modal-overlay" id="addUserModal">
+        <div class="modal-container">
+            <div class="modal-header-row">
+                <div>
+                    <h2 class="modal-title">Thêm người dùng</h2>
+                    <p class="modal-subtitle">Tạo tài khoản truy cập hệ thống SANOVA</p>
+                </div>
+                <div style="cursor: pointer; color: var(--text-muted); font-size: 18px;" onclick="closeAddModal()">✕</div>
+            </div>
+
+            <form id="addUserForm" onsubmit="handleCreateUser(event)">
+                <div class="form-section-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    Thông tin nhân viên
+                </div>
+                <div class="form-grid-2">
+                    <div>
+                        <label class="form-label">Mã nhân viên <span class="req">*</span></label>
+                        <input type="text" id="add_staff_code" class="modal-input" placeholder="VD: NV00125" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Họ và tên <span class="req">*</span></label>
+                        <input type="text" id="add_name" class="modal-input" placeholder="Nguyễn Văn A" required>
+                    </div>
+                    <div class="form-col-full">
+                        <label class="form-label">Email</label>
+                        <div class="input-suffix-group">
+                            <input type="text" id="add_email_prefix" placeholder="nhập tên email (vd: nguyen.van.a)">
+                            <span class="suffix-addon">@sanova.vn</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Thông tin tài khoản và phân quyền
+                </div>
+                <div class="form-grid-2">
+                    <div>
+                        <label class="form-label">Tên đăng nhập <span class="req">*</span></label>
+                        <input type="text" id="add_username" class="modal-input" placeholder="VD: staff01" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Vai trò <span class="req">*</span></label>
+                        <select id="add_role" class="modal-input" required>
+                            <option value="">Chọn vai trò</option>
+                            {% for r in roles %}
+                            <option value="{{ r }}">{{ r }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-col-full">
+                        <label class="form-label">Phạm vi kho</label>
+                        <select id="add_scope" class="modal-input">
+                            {% for wh in warehouses %}
+                            <option value="{{ wh }}">{{ wh }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    Bảo mật và trạng thái
+                </div>
+                <div class="form-grid-2">
+                    <div>
+                        <label class="form-label">Mật khẩu ban đầu <span class="req">*</span></label>
+                        <input type="password" id="add_password" class="modal-input" placeholder="Nhập mật khẩu" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Xác nhận mật khẩu <span class="req">*</span></label>
+                        <input type="password" id="add_confirm_password" class="modal-input" placeholder="Nhập lại mật khẩu" required>
+                    </div>
+                </div>
+
+                <label class="checkbox-row">
+                    <input type="checkbox" id="toggleShowPwd" onchange="togglePasswords(this)">
+                    <span>Hiển thị mật khẩu</span>
+                </label>
+
+                <div>
+                    <label class="form-label">Trạng thái tài khoản</label>
+                    <div class="radio-group-wrap">
+                        <label class="radio-label">
+                            <input type="radio" name="account_status" value="Hoạt động" checked>
+                            <span>Hoạt động</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="account_status" value="Chờ kích hoạt">
+                            <span>Chờ kích hoạt</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-actions-bar">
+                    <button type="reset" class="btn-modal-reset">Làm mới</button>
+                    <button type="submit" class="btn-modal-submit" id="btnSubmitForm">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Tạo tài khoản
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL XEM CHI TIẾT & THAO TÁC ADMIN -->
+    <div class="modal-overlay" id="viewDetailModal">
+        <div class="modal-container" style="max-width: 580px;">
+            <div class="modal-header-row">
+                <div>
+                    <h2 class="modal-title">Thông số chi tiết tài khoản</h2>
+                    <p class="modal-subtitle">Dữ liệu định danh ghi nhận trong hệ thống SANOVA</p>
+                </div>
+                <div style="cursor: pointer; color: var(--text-muted); font-size: 18px;" onclick="closeDetailModal()">✕</div>
+            </div>
+
+            <table class="detail-grid-table">
+                <tbody>
+                    <tr>
+                        <td class="col-label">Mã nhân viên:</td>
+                        <td class="col-value" id="view_staff_code">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Họ và tên:</td>
+                        <td class="col-value" id="view_name">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Tên đăng nhập:</td>
+                        <td class="col-value" id="view_username">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Email nội bộ:</td>
+                        <td class="col-value" id="view_email" style="color: var(--brand-teal);">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Vai trò hệ thống:</td>
+                        <td class="col-value" id="view_role">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Phạm vi kho phụ trách:</td>
+                        <td class="col-value" id="view_scope">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Trạng thái:</td>
+                        <td class="col-value" id="view_status">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Thời điểm tạo:</td>
+                        <td class="col-value" id="view_created_at">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Người tạo:</td>
+                        <td class="col-value" id="view_created_by">---</td>
+                    </tr>
+                    <tr>
+                        <td class="col-label">Lần truy cập cuối:</td>
+                        <td class="col-value" id="view_last_login">---</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="modal-actions-bar" style="display: flex; justify-content: space-between; align-items: center; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn-pill btn-pill-danger" id="btnDetailToggleStatus">
+                        Tạm khóa
+                    </button>
+                    <button type="button" class="btn-pill btn-pill-primary" id="btnDetailResetPwd">
+                        Đặt lại mật khẩu
+                    </button>
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="btn-pill btn-pill-secondary" id="btnDetailEdit">
+                        Sửa
+                    </button>
+                    <button type="button" class="btn-pill btn-pill-dark" onclick="closeDetailModal()">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SỬA THÔNG TIN TÀI KHOẢN -->
+    <div class="modal-overlay" id="editUserModal" style="z-index: 10001;">
+        <div class="modal-container" style="max-width: 540px;">
+            <div class="modal-header-row">
+                <div>
+                    <h2 class="modal-title">Cập nhật tài khoản</h2>
+                    <p class="modal-subtitle">Thay đổi thông tin hồ sơ và phân quyền</p>
+                </div>
+                <div style="cursor: pointer; color: var(--text-muted); font-size: 18px;" onclick="closeEditModal()">✕</div>
+            </div>
+
+            <form action="/admin/users/update" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="edit_username" name="username">
+
+                <div class="form-grid-2">
+                    <div>
+                        <label class="form-label">Mã nhân viên (Cố định)</label>
+                        <input type="text" id="edit_staff_code" class="modal-input" readonly style="background: #f8fafc; color: #64748b;">
+                    </div>
+                    <div>
+                        <label class="form-label">Họ và tên <span class="req">*</span></label>
+                        <input type="text" id="edit_name" name="name" class="modal-input" required>
+                    </div>
+                    <div class="form-col-full">
+                        <label class="form-label">Email nội bộ</label>
+                        <input type="email" id="edit_email" name="email" class="modal-input">
+                    </div>
+                    <div>
+                        <label class="form-label">Vai trò hệ thống <span class="req">*</span></label>
+                        <select id="edit_role" name="role" class="modal-input" required>
+                            {% for r in roles %}
+                            <option value="{{ r }}">{{ r }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Phạm vi kho</label>
+                        <select id="edit_scope" name="scope" class="modal-input">
+                            {% for wh in warehouses %}
+                            <option value="{{ wh }}">{{ wh }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-actions-bar" style="margin-top: 18px;">
+                    <button type="button" class="btn-modal-reset" onclick="closeEditModal()">Hủy</button>
+                    <button type="submit" class="btn-modal-submit">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL ĐẶT LẠI MẬT KHẨU -->
+    <div class="modal-overlay" id="resetPasswordModal" style="z-index: 10002;">
+        <div class="modal-container" style="max-width: 420px;">
+            <div class="modal-header-row">
+                <div>
+                    <h2 class="modal-title" id="resetModalTitle">Đặt lại mật khẩu</h2>
+                    <p class="modal-subtitle" id="resetModalDesc">Cấp lại mật khẩu mới cho người dùng</p>
+                </div>
+                <div style="cursor: pointer; color: var(--text-muted); font-size: 18px;" onclick="closeResetModal()">✕</div>
+            </div>
+
+            <form action="/admin/reset-password" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" id="reset_username" name="username">
+
+                <div style="margin-bottom: 18px;">
+                    <label class="form-label">Mật khẩu mới <span class="req">*</span></label>
+                    <input type="password" name="new_password" class="modal-input" placeholder="Nhập tối thiểu 8 ký tự..." required autofocus>
+                </div>
+
+                <div class="modal-actions-bar">
+                    <button type="button" class="btn-modal-reset" onclick="closeResetModal()">Hủy</button>
+                    <button type="submit" class="btn-modal-submit" id="btnResetConfirmSubmit">Xác nhận cấp MK</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast-msg"></div>
+
+    <script>
+        function openAddModal() {
+            const modal = document.getElementById('addUserModal');
+            if (modal) modal.classList.add('active');
+        }
+        function closeAddModal() {
+            const modal = document.getElementById('addUserModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        let currentViewUser = {};
+        function showAccountDetails(u) {
+            currentViewUser = u;
+            document.getElementById('view_staff_code').textContent = u.staff_code || '(Chưa có)';
+            document.getElementById('view_name').textContent = u.name || '';
+            document.getElementById('view_username').textContent = u.username || '';
+            document.getElementById('view_email').textContent = u.email || 'Chưa thiết lập';
+            document.getElementById('view_role').textContent = u.role || '';
+            document.getElementById('view_scope').textContent = u.scope || 'Kho chính - SANOVA';
+            
+            const statusVal = u.status || 'Hoạt động';
+            let statusClass = (statusVal === 'Hoạt động') ? 'pill-active' : (statusVal === 'Tạm khóa' ? 'pill-locked' : 'pill-pending');
+            document.getElementById('view_status').innerHTML = `<span class="status-pill ${statusClass}"><span class="dot"></span> ${statusVal}</span>`;
+
+            document.getElementById('view_created_at').textContent = u.created_at || 'Mặc định';
+            document.getElementById('view_created_by').textContent = u.created_by || 'Admin';
+            document.getElementById('view_last_login').textContent = u.last_login || 'Chưa đăng nhập';
+
+            const toggleBtn = document.getElementById('btnDetailToggleStatus');
+            const resetBtn = document.getElementById('btnDetailResetPwd');
+            const editBtn = document.getElementById('btnDetailEdit');
+
+            const isAdminAccount = (u.role === 'Quản trị viên' || u.username === 'admin' || u.username === 'duc.long');
+            if (isAdminAccount) {
+                toggleBtn.style.display = 'none';
+                resetBtn.textContent = 'Đổi MK';
+            } else {
+                toggleBtn.style.display = 'inline-block';
+                toggleBtn.textContent = (statusVal === 'Hoạt động') ? 'Tạm khóa' : 'Mở khóa';
+                toggleBtn.className = (statusVal === 'Hoạt động') ? 'btn-pill btn-pill-danger' : 'btn-pill btn-pill-unlock';
+
+                toggleBtn.onclick = function() {
+                    const actionText = (statusVal === 'Hoạt động') ? 'khóa' : 'mở khóa';
+                    if (confirm(`Bạn có chắc chắn muốn ${actionText} tài khoản ${u.name} (${u.username})?`)) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `/admin/toggle-status/${u.username}`;
+                        const csrf = document.createElement('input');
+                        csrf.type = 'hidden';
+                        csrf.name = 'csrf_token';
+                        csrf.value = '{{ csrf_token() }}';
+                        form.appendChild(csrf);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                };
+                resetBtn.textContent = 'Đặt lại MK';
+            }
+
+            editBtn.onclick = function() {
+                closeDetailModal();
+                openEditModal(u);
+            };
+
+            resetBtn.onclick = function() {
+                closeDetailModal();
+                openResetModal(u.username, u.name, isAdminAccount);
+            };
+
+            document.getElementById('viewDetailModal').classList.add('active');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('viewDetailModal').classList.remove('active');
+        }
+
+        function togglePasswords(chk) {
+            const t = chk.checked ? 'text' : 'password';
+            document.getElementById('add_password').type = t;
+            document.getElementById('add_confirm_password').type = t;
+        }
+
+        function showToast(msg, isSuccess = true) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast-msg ' + (isSuccess ? 'toast-success' : 'toast-error');
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3500);
+        }
+
+        async function handleCreateUser(e) {
+            e.preventDefault();
+            const staff_code = document.getElementById('add_staff_code').value.trim();
+            const name = document.getElementById('add_name').value.trim();
+            const emailPrefix = document.getElementById('add_email_prefix').value.trim();
+            let email = emailPrefix ? (emailPrefix.split('@')[0] + "@sanova.vn") : "";
+            const username = document.getElementById('add_username').value.trim();
+            const role = document.getElementById('add_role').value;
+            const scope = document.getElementById('add_scope').value;
+            const password = document.getElementById('add_password').value;
+            const confirm_password = document.getElementById('add_confirm_password').value;
+            const status = document.querySelector('input[name="account_status"]:checked').value;
+
+            if (password !== confirm_password) {
+                showToast("Xác nhận mật khẩu không khớp!", false);
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmitForm');
+            btn.disabled = true;
+            btn.textContent = "Đang xử lý...";
+
+            try {
+                const res = await fetch("/admin/api/users/create", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-Token": "{{ csrf_token() }}"
+                    },
+                    body: JSON.stringify({
+                        staff_code, name, email, username, role, scope, password, confirm_password, status
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message, true);
+                    closeAddModal();
+                    document.getElementById('addUserForm').reset();
+                    if (data.stats) {
+                        document.getElementById('stat_total').textContent = data.stats.total;
+                        document.getElementById('stat_active').textContent = data.stats.active;
+                        document.getElementById('stat_locked').textContent = data.stats.locked;
+                        document.getElementById('stat_pending').textContent = data.stats.pending;
+                    }
+                    const u = data.new_user;
+                    let rolePillClass = 'role-staff';
+                    if (u.role === 'Quản trị viên') rolePillClass = 'role-admin';
+                    else if (u.role === 'Quản lý kho') rolePillClass = 'role-manager';
+                    else if (u.role.includes('Điều phối')) rolePillClass = 'role-coord';
+
+                    let statusPillClass = (u.status === 'Hoạt động') ? 'pill-active' : 'pill-pending';
+                    const newRow = document.createElement('tr');
+                    newRow.id = `row-${u.username}`;
+                    newRow.innerHTML = `
+                        <td><strong>${u.staff_code}</strong></td>
+                        <td><strong>${u.name}</strong></td>
+                        <td style="color: #64748b;">${u.username}</td>
+                        <td><span class="role-pill ${rolePillClass}">${u.role}</span></td>
+                        <td><span class="status-pill ${statusPillClass}"><span class="dot"></span> ${u.status}</span></td>
+                        <td style="text-align: center;">
+                            <button type="button" class="btn-view-action" onclick='showAccountDetails(${JSON.stringify(u)})'>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                Xem
+                            </button>
+                        </td>
+                    `;
+                    const tbody = document.getElementById('userTableBody');
+                    tbody.insertBefore(newRow, tbody.firstChild);
+                } else {
+                    showToast(data.message, false);
+                }
+            } catch (err) {
+                showToast("Lỗi hệ thống hoặc kết nối mạng!", false);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Tạo tài khoản`;
+            }
+        }
+
+        function openEditModal(u) {
+            document.getElementById('edit_username').value = u.username;
+            document.getElementById('edit_staff_code').value = u.staff_code || 'NV00125';
+            document.getElementById('edit_name').value = u.name;
+            document.getElementById('edit_email').value = u.email || '';
+            document.getElementById('edit_role').value = u.role;
+            document.getElementById('edit_scope').value = u.scope || 'Kho chính - SANOVA';
+            document.getElementById('editUserModal').classList.add('active');
+        }
+        function closeEditModal() {
+            document.getElementById('editUserModal').classList.remove('active');
+        }
+
+        function openResetModal(uname, name, isAdmin) {
+            document.getElementById('reset_username').value = uname;
+            const title = document.getElementById('resetModalTitle');
+            const desc = document.getElementById('resetModalDesc');
+            const submitBtn = document.getElementById('btnResetConfirmSubmit');
+            if (isAdmin) {
+                title.textContent = 'Đổi mật khẩu tài khoản';
+                desc.textContent = `Nhập mật khẩu mới cho quản trị viên: ${name}`;
+                submitBtn.textContent = 'Cập nhật mật khẩu';
+            } else {
+                title.textContent = 'Đặt lại mật khẩu nhân viên';
+                desc.textContent = `Cấp lại mật khẩu mới cho ${name} (${uname})`;
+                submitBtn.textContent = 'Xác nhận cấp lại';
+            }
+            document.getElementById('resetPasswordModal').classList.add('active');
+        }
+        function closeResetModal() {
+            document.getElementById('resetPasswordModal').classList.remove('active');
+        }
+    </script>
+    <script src="{{ url_for('static', filename='js/admin_notifications.js') }}?v=2"></script>
+</body>
+</html>
