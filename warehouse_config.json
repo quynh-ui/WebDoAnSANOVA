@@ -1,0 +1,1261 @@
+{
+  "default_rules": {
+    "max_boxes": 10,
+    "max_weight_kg": 200,
+    "length_cm": 50,
+    "width_cm": 40,
+    "height_cm": 40,
+    "warn_threshold_pct": 90
+  },
+  "warehouses": [
+    {
+      "warehouse_id": "KHO-01",
+      "warehouse_name": "Kho chính (KHO-01)",
+      "zones": [
+        {
+          "zone_id": "A",
+          "zone_name": "Mỹ phẩm",
+          "racks": [
+            {
+              "rack_id": "A1",
+              "floors": [
+                {
+                  "floor_no": "01",
+                  "slots": [
+                    {
+                      "slot_code": "A1-010",
+                      "current_boxes": 6,
+                      "max_boxes": 15,
+                      "current_weight": 115,
+                      "max_weight": 200.0,
+                      "length_cm": 50.0,
+                      "width_cm": 40.0,
+                      "height_cm": 40.0,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-009",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-008",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-007",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-006",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-005",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-004",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-003",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-002",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-001",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-041",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-042",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                },
+                {
+                  "floor_no": "02",
+                  "slots": [
+                    {
+                      "slot_code": "A1-020",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-019",
+                      "current_boxes": 9,
+                      "max_boxes": 10,
+                      "current_weight": 185,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-018",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-017",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-016",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-015",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-014",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-013",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-012",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-011",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                },
+                {
+                  "floor_no": "03",
+                  "slots": [
+                    {
+                      "slot_code": "A1-030",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-029",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-028",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-027",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-026",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-025",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-024",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-023",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-022",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-021",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-043",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                },
+                {
+                  "floor_no": "04",
+                  "slots": [
+                    {
+                      "slot_code": "A1-040",
+                      "current_boxes": 6,
+                      "max_boxes": 15,
+                      "current_weight": 115,
+                      "max_weight": 200.0,
+                      "length_cm": 50.0,
+                      "width_cm": 40.0,
+                      "height_cm": 40.0,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-039",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-038",
+                      "current_boxes": 9,
+                      "max_boxes": 10,
+                      "current_weight": 185,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-037",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-036",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-035",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-034",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-033",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-032",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A1-031",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "rack_id": "A2",
+              "floors": [
+                {
+                  "floor_no": "01",
+                  "slots": [
+                    {
+                      "slot_code": "A2-010",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-009",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-008",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-007",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-006",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-005",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-004",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-003",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-002",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-001",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                },
+                {
+                  "floor_no": "02",
+                  "slots": [
+                    {
+                      "slot_code": "A2-020",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-019",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-018",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-017",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-016",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-015",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-014",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-013",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-012",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A2-011",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "rack_id": "A3",
+              "floors": [
+                {
+                  "floor_no": "01",
+                  "slots": [
+                    {
+                      "slot_code": "A3-010",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-009",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-008",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-007",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-006",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-005",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-004",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-003",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-002",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "A3-001",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "zone_id": "B",
+          "zone_name": "Chăm sóc da",
+          "racks": [
+            {
+              "rack_id": "B1",
+              "floors": [
+                {
+                  "floor_no": "01",
+                  "slots": [
+                    {
+                      "slot_code": "B1-010",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-009",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-008",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-007",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-006",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-005",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-004",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-003",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-002",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "B1-001",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "zone_id": "C",
+          "zone_name": "Hàng tổng hợp",
+          "racks": [
+            {
+              "rack_id": "C1",
+              "floors": [
+                {
+                  "floor_no": "01",
+                  "slots": [
+                    {
+                      "slot_code": "C1-010",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-009",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-008",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-007",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-006",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-005",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-004",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-003",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-002",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "C1-001",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "warehouse_id": "KHO-RT",
+      "warehouse_name": "Kho trả hàng (KHO-RT)",
+      "zones": [
+        {
+          "zone_id": "RT-A",
+          "zone_name": "Khu tiếp nhận & kiểm định hoàn",
+          "racks": [
+            {
+              "rack_id": "RT1",
+              "floors": [
+                {
+                  "floor_no": "01",
+                  "slots": [
+                    {
+                      "slot_code": "RT1-010",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-009",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-008",
+                      "current_boxes": 6,
+                      "max_boxes": 10,
+                      "current_weight": 115,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-007",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-006",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-005",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-004",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-003",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-002",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    },
+                    {
+                      "slot_code": "RT1-001",
+                      "current_boxes": 0,
+                      "max_boxes": 10,
+                      "current_weight": 0,
+                      "max_weight": 200,
+                      "length_cm": 50,
+                      "width_cm": 40,
+                      "height_cm": 40,
+                      "status": "Đang sử dụng"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiểm kê &amp; điều chỉnh · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #067a6f;
+            --sidebar-hover: rgba(255, 255, 255, 0.07);
+            --bg-page: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-dark: #044e39;
+            --blue: #2563eb;
+            --amber: #d97706;
+            --red: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ================= SIDEBAR CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .sidebar-top { display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar-top::-webkit-scrollbar { width: 0; }
+        .brand-header { display: flex; align-items: center; gap: 11px; padding: 0 10px 22px; }
+        .brand-name { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #ffffff; }
+        .nav-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #10b981; font-weight: 800; padding: 0 12px 10px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .nav-link { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; color: #e2e8f0; text-decoration: none; border-radius: 10px; transition: all 0.18s ease; }
+        .nav-link:hover { background-color: var(--sidebar-hover); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .nav-link-left { display: flex; align-items: center; gap: 11px; }
+        .nav-icon { flex-shrink: 0; color: #cbd5e1; }
+        .nav-link.active .nav-icon, .nav-link:hover .nav-icon { color: #ffffff; }
+        .nav-text-group { display: flex; flex-direction: column; }
+        .nav-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+        .nav-link.active .nav-title { font-weight: 700; }
+        .nav-subtitle { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+        .nav-link.active .nav-subtitle { color: #ccfbf1; }
+        .badge-count { background-color: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; }
+        .sidebar-bottom { padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .logout-link:hover { background-color: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-wrapper { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 20px 26px 34px; }
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 16px; flex-wrap: wrap; }
+        .header-title-area h1 { font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+        .header-title-area p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+
+        .btn-create-session {
+            padding: 10px 16px;
+            background: var(--blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
+            transition: background 0.15s;
+        }
+        .btn-create-session:hover { background: #1d4ed8; }
+
+        .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #334155; position: relative; cursor: pointer; }
+        .bell-dot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1.5px solid #ffffff; }
+        .profile-pill { display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid var(--border); padding: 5px 14px 5px 6px; border-radius: 999px; text-decoration: none; color: var(--text-main); }
+        .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background: #d1fae5; color: #065f46; font-weight: 800; font-size: 12.5px; display: flex; align-items: center; justify-content: center; }
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+        .profile-role { font-size: 11px; color: var(--text-muted); }
+
+        /* ================= 4 THẺ KPI ================= */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 15px 16px;
+            display: flex;
+            align-items: center;
+            gap: 13px;
+        }
+        .kpi-icon {
+            width: 42px; height: 42px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .ic-blue { background: #eff6ff; color: #2563eb; }
+        .ic-sky { background: #f0f9ff; color: #0284c7; }
+        .ic-amber { background: #fffbeb; color: #d97706; }
+        .ic-green { background: #ecfdf5; color: #059669; }
+        .kpi-label { font-size: 12px; font-weight: 600; color: #475569; }
+        .kpi-val { font-size: 23px; font-weight: 800; color: #0f172a; margin-top: 2px; line-height: 1.1; }
+
+        /* ================= WORKSPACE 2 CỘT: TRÁI (2 TAB + BẢNG) / PHẢI (CHI TIẾT ĐẦY ĐỦ) ================= */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 1.38fr 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+        @media (max-width: 1320px) { .workspace-grid { grid-template-columns: 1fr; } }
+
+        .left-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 580px;
+        }
+
+        .tabs-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            padding: 0 18px;
+            gap: 24px;
+            background: #ffffff;
+        }
+        .tab-btn {
+            padding: 14px 4px;
+            border: none;
+            background: transparent;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #64748b;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            position: relative;
+        }
+        .tab-btn:hover { color: #0f172a; }
+        .tab-btn.active { color: var(--blue); }
+        .tab-btn.active::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+            height: 2.5px; background: var(--blue); border-radius: 2px 2px 0 0;
+        }
+
+        .filters-area {
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .filter-row {
+            display: flex;
+            gap: 9px;
+            flex-wrap: wrap;
+        }
+        .search-box {
+            position: relative;
+            flex: 1.5;
+            min-width: 210px;
+        }
+        .search-box svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .search-box input {
+            width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--border);
+            border-radius: 9px; font-size: 12.5px; outline: none;
+        }
+        .search-box input:focus { border-color: var(--blue); }
+
+        .filter-sel, .filter-date {
+            padding: 8px 10px; border: 1px solid var(--border); border-radius: 9px;
+            font-size: 12px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;
+        }
+
+        .table-wrap { flex-grow: 1; overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            text-align: left; padding: 11px 12px; font-size: 11.5px; font-weight: 700;
+            color: #475569; background: #f8fafc; border-bottom: 1px solid var(--border); white-space: nowrap;
+        }
+        .data-table td {
+            padding: 12px; font-size: 12.5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle;
+        }
+        .row-item { cursor: pointer; transition: background 0.14s; }
+        .row-item:hover { background: #f8fafc; }
+        .row-item.selected { background: #eff6ff; }
+        .row-item.selected td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+
+        /* Thanh tiến độ kiểm đếm */
+        .prog-mini-track { width: 84px; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 4px; }
+        .prog-mini-fill { height: 100%; background: var(--blue); border-radius: 999px; }
+        .prog-mini-fill.done { background: var(--emerald); }
+
+        /* Huy hiệu trạng thái */
+        .st-badge {
+            padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+            display: inline-block; white-space: nowrap;
+        }
+        .st-wait { background: #f1f5f9; color: #475569; }
+        .st-counting { background: #dbeafe; color: #1d4ed8; }
+        .st-reconcile { background: #e0e7ff; color: #4338ca; }
+        .st-pending { background: #fef3c7; color: #b45309; }
+        .st-recount { background: #ffedd5; color: #c2410c; }
+        .st-approved { background: #dcfce7; color: #15803d; }
+        .st-rejected { background: #fee2e2; color: #b91c1c; }
+
+        .pagination-bar {
+            margin-top: auto; display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 18px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9;
+        }
+        .page-btns { display: flex; gap: 5px; }
+        .page-btn {
+            min-width: 28px; height: 28px; padding: 0 8px; border: 1px solid var(--border);
+            background: #ffffff; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .page-btn.active { background: var(--blue); color: #ffffff; border-color: var(--blue); }
+
+        /* ================= PANEL CHI TIẾT BÊN PHẢI (ĐẦY ĐỦ 7 NHÓM THÔNG TIN) ================= */
+        .detail-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            position: sticky;
+            top: 0;
+            max-height: calc(100vh - 110px);
+            overflow-y: auto;
+        }
+        .detail-panel::-webkit-scrollbar { width: 5px; }
+        .detail-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .dp-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; margin-bottom: 14px;
+        }
+        .dp-title { font-size: 16px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+
+        .sec-label {
+            font-size: 12.5px; font-weight: 800; color: #0f172a; margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .info-grid-2 {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px;
+            background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 11px;
+            padding: 11px 12px; margin-bottom: 14px; font-size: 12px;
+        }
+        .ig-row { display: flex; justify-content: space-between; gap: 6px; }
+        .ig-k { color: #64748b; }
+        .ig-v { font-weight: 700; color: #0f172a; text-align: right; }
+
+        .diff-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; }
+        .diff-table th {
+            text-align: left; padding: 7px 6px; background: #f8fafc; color: #475569;
+            font-weight: 700; border-bottom: 1px solid var(--border);
+        }
+        .diff-table td { padding: 7px 6px; border-bottom: 1px solid #f1f5f9; }
+
+        .two-cards-row {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+        }
+        .note-box {
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 10px;
+            padding: 10px 12px; font-size: 12px; color: #334155; line-height: 1.45;
+        }
+        .sync-check-box {
+            border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.45;
+        }
+        .sync-ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+        .sync-conflict { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+
+        .hist-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 14px; }
+        .hist-table th { text-align: left; padding: 6px; background: #f8fafc; color: #64748b; border-bottom: 1px solid var(--border); }
+        .hist-table td { padding: 6px; border-bottom: 1px solid #f1f5f9; }
+
+        /* 3 Nút hành động */
+        .actions-3-grid {
+            display: grid; grid-template-columns: 1fr 1fr 1.35fr; gap: 8px;
+        }
+        .btn-act {
+            padding: 10px 10px; border-radius: 9px; font-size: 12.5px; font-weight: 700;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+            transition: all 0.15s;
+        }
+        .btn-recount { background: #ffffff; border: 1px solid #93c5fd; color: #2563eb; }
+        .btn-recount:hover { background: #eff6ff; }
+        .btn-reject { background: #fff5f5; border: 1px solid #fca5a5; color: #dc2626; }
+        .btn-reject:hover { background: #fee2e2; }
+        .btn-approve { background: var(--blue); border: none; color: #ffffff; }
+        .btn-approve:hover { background: #1d4ed8; }
+        .btn-approve:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        /* ================= MODAL TẠO ĐỢT KIỂM KÊ (MẪU 1) ================= */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.52);
+            z-index: 500; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-create-box {
+            background: #ffffff; border-radius: 18px; width: 780px; max-width: 100%;
+            max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
+        }
+        .modal-head {
+            padding: 18px 24px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: flex-start;
+        }
+        .modal-body-2col {
+            padding: 20px 24px; overflow-y: auto;
+            display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px;
+        }
+        @media (max-width: 760px) { .modal-body-2col { grid-template-columns: 1fr; } }
+
+        .fg { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+        .fg label { font-size: 12.5px; font-weight: 700; color: #0f172a; }
+        .fg input, .fg select, .fg textarea {
+            padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 9px; font-size: 13px; outline: none;
+        }
+
+        .radio-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+        .r-pill {
+            padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 9px;
+            font-size: 12px; font-weight: 700; color: #334155; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px; background: #ffffff;
+        }
+        .r-pill.active { background: #eff6ff; border-color: var(--blue); color: var(--blue); }
+
+        .staff-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 9px; min-height: 42px; }
+        .staff-chip {
+            padding: 4px 10px; border-radius: 7px; font-size: 12px; font-weight: 700;
+            background: #e2e8f0; color: #334155; cursor: pointer; user-select: none;
+        }
+        .staff-chip.selected { background: #dbeafe; color: #1d4ed8; }
+
+        .preview-card {
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 14px;
+            padding: 16px; display: flex; flex-direction: column; gap: 11px;
+        }
+        .pv-row { display: flex; justify-content: space-between; font-size: 13px; }
+        .pv-row span { color: #64748b; }
+        .pv-row strong { color: #0f172a; font-weight: 800; }
+
+        .snapshot-warn {
+            background: #fffbeb; border: 1px solid #fde68a; border-radius: 11px;
+            padding: 12px; font-size: 12px; color: #92400e; line-height: 1.45;
+        }
+
+        .modal-foot {
+            padding: 14px 24px; border-top: 1px solid var(--border); background: #f8fafc;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR CỐ ĐỊNH ================= -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">QUẢN LÝ KHO</div>
+
+            <ul class="nav-list">
+                <li><a href="/manager" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><div class="nav-text-group"><span class="nav-title">Tổng quan</span></div></div></a></li>
+                <li><a href="/manager/products" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Danh mục sản phẩm</span></div></div></a></li>
+                <li><a href="/manager/warehouse-config" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"></path><path d="M6 18h12"></path><path d="M6 14h12"></path><rect x="6" y="10" width="12" height="12"></rect></svg><div class="nav-text-group"><span class="nav-title">Cấu hình kho</span></div></div></a></li>
+                <li><a href="/manager/approvals" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Duyệt &amp; xác nhận</span><span class="nav-subtitle">Nhập kho · Bàn giao</span></div></div><span class="badge-count" id="sbBadgeApprovals" style="{% if manager_sidebar.approvals == 0 %}display:none;{% endif %}">{{ manager_sidebar.approvals }}</span></a></li>
+                <li><a href="/manager/inventory" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg><div class="nav-text-group"><span class="nav-title">Giám sát tồn kho</span><span class="nav-subtitle">Box · PCS · OUT · RETURNED</span></div></div></a></li>
+                <li><a href="/manager/stocktake" class="nav-link active"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Kiểm kê &amp; điều chỉnh</span></div></div><span class="badge-count" id="sbBadgeStocktake" style="{% if manager_sidebar.stocktake == 0 %}display:none;{% endif %}">{{ manager_sidebar.stocktake }}</span></a></li>
+                <li><a href="/manager/daily-closing" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9 16 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Chốt tồn cuối ngày</span></div></div></a></li>
+                <li><a href="/manager/reports" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><div class="nav-text-group"><span class="nav-title">Báo cáo &amp; đối soát</span></div></div></a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-bottom">
+            <a href="/manager/profile" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><div class="nav-text-group"><span class="nav-title">Tài khoản cá nhân</span></div></div></a>
+            <a href="/logout" class="nav-link logout-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Đăng xuất</span></div></div></a>
+        </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="main-wrapper">
+        <header class="top-header">
+            <div class="header-title-area">
+                <h1>Kiểm kê &amp; điều chỉnh</h1>
+                <p>Tổ chức đợt kiểm kê, đối chiếu số lượng tại mốc chuẩn và phê duyệt điều chỉnh tồn kho khi có chênh lệch.</p>
+            </div>
+            <div class="header-right">
+                <button type="button" class="btn-create-session" onclick="openCreateSessionModal()">
+                    + Tạo đợt kiểm kê
+                </button>
+                <button type="button" class="bell-btn" title="Thông báo">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span class="bell-dot"></span>
+                </button>
+                <a href="/manager/profile" class="profile-pill">
+                    <div class="avatar-circle">MN</div>
+                    <div class="profile-info">
+                        <span class="profile-name">{{ session.get('user', {}).get('name', 'Nguyễn Minh Nam') }}</span>
+                        <span class="profile-role">Manager</span>
+                    </div>
+                </a>
+            </div>
+        </header>
+
+        <!-- 4 THẺ KPI -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon ic-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg></div>
+                <div><div class="kpi-label">Tổng đợt kiểm kê</div><div class="kpi-val" id="kpiTotalSessions">0</div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon ic-sky"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+                <div><div class="kpi-label">Đang kiểm kê</div><div class="kpi-val" id="kpiCountingSessions">0</div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon ic-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+                <div><div class="kpi-label">Chờ phê duyệt</div><div class="kpi-val" id="kpiPendingApprovals">0</div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon ic-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                <div><div class="kpi-label">Đã hoàn tất</div><div class="kpi-val" id="kpiCompletedSessions">0</div></div>
+            </div>
+        </section>
+
+        <!-- WORKSPACE 2 CỘT -->
+        <div class="workspace-grid">
+            <!-- CỘT TRÁI: 2 TAB NỘI BỘ + BỘ LỌC + BẢNG -->
+            <section class="left-card">
+                <div class="tabs-bar">
+                    <button type="button" class="tab-btn active" id="tabBtnSessions" onclick="switchStocktakeTab('SESSIONS', this)">
+                        &#128203; Đợt kiểm kê (<span id="cntTabSessions">0</span>)
+                    </button>
+                    <button type="button" class="tab-btn" id="tabBtnAdjustments" onclick="switchStocktakeTab('ADJUSTMENTS', this)">
+                        &#9878; Yêu cầu điều chỉnh (<span id="cntTabAdjustments">0</span>)
+                    </button>
+                </div>
+
+                <div class="filters-area">
+                    <div class="filter-row">
+                        <div class="search-box">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input type="text" id="stSearchInp" placeholder="Tìm mã phiếu, mã đợt, SKU, Box..." oninput="applyStocktakeFilters()">
+                        </div>
+                        <select class="filter-sel" id="stScopeFilter" onchange="applyStocktakeFilters()">
+                            <option value="ALL">Kho / Kệ: Tất cả</option>
+                            <option value="Kệ A1">Kệ A1</option>
+                            <option value="Kệ A2">Kệ A2</option>
+                            <option value="Kệ B1">Kệ B1</option>
+                            <option value="Kệ C1">Kệ C1</option>
+                        </select>
+                        <select class="filter-sel" id="stStaffFilter" onchange="applyStocktakeFilters()">
+                            <option value="ALL">Nhân viên: Tất cả</option>
+                            <option value="Lê Văn Hùng">Lê Văn Hùng</option>
+                            <option value="Trần Thị Mai">Trần Thị Mai</option>
+                            <option value="Nguyễn Văn An">Nguyễn Văn An</option>
+                            <option value="Lê Thị Hoa">Lê Thị Hoa</option>
+                        </select>
+                    </div>
+                    <div class="filter-row">
+                        <select class="filter-sel" id="stStatusFilter" onchange="applyStocktakeFilters()">
+                            <option value="ALL">Trạng thái: Tất cả</option>
+                            <option value="Chờ thực hiện">Chờ thực hiện</option>
+                            <option value="Đang kiểm kê">Đang kiểm kê</option>
+                            <option value="Đối chiếu">Đối chiếu</option>
+                            <option value="Chờ phê duyệt">Chờ phê duyệt</option>
+                            <option value="Yêu cầu kiểm lại">Yêu cầu kiểm lại</option>
+                            <option value="Đã duyệt">Đã duyệt</option>
+                            <option value="Từ chối">Từ chối</option>
+                            <option value="Hoàn tất">Hoàn tất</option>
+                        </select>
+                        <input type="date" class="filter-date" id="stDateFilter" onchange="applyStocktakeFilters()">
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead id="stTableHead"></thead>
+                        <tbody id="stTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-bar">
+                    <span id="stPageInfo">Hiển thị 0 bản ghi</span>
+                    <div class="page-btns" id="stPageBtns"></div>
+                </div>
+            </section>
+
+            <!-- CỘT PHẢI: PANEL CHI TIẾT ĐẦY ĐỦ 7 NHÓM THÔNG TIN -->
+            <aside class="detail-panel" id="stDetailPanel">
+                <div style="text-align:center; padding:48px 16px; color:#64748b; font-size:13px;">
+                    Chọn một đợt kiểm kê hoặc yêu cầu điều chỉnh bên trái để xem chi tiết.
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- ================= MODAL TẠO ĐỢT KIỂM KÊ (MẪU 1) ================= -->
+    <div class="modal-overlay" id="createSessionModal">
+        <div class="modal-create-box">
+            <div class="modal-head">
+                <div>
+                    <h2 style="font-size:18px; font-weight:800; color:#0f172a;">Tạo đợt kiểm kê</h2>
+                    <p style="font-size:12.5px; color:#64748b; margin-top:2px;">Thiết lập phạm vi, chốt mốc tồn đối chiếu và phân công nhân viên kiểm đếm.</p>
+                </div>
+                <button type="button" style="background:none;border:none;font-size:22px;cursor:pointer;color:#64748b;" onclick="closeCreateSessionModal()">&times;</button>
+            </div>
+
+            <form onsubmit="submitCreateSession(event)">
+                <div class="modal-body-2col">
+                    <!-- Cột trái Form -->
+                    <div>
+                        <div class="fg">
+                            <label>Loại / Phạm vi kiểm kê <span style="color:#dc2626;">*</span></label>
+                            <div class="radio-pills" id="scopeTypePills">
+                                <button type="button" class="r-pill" data-val="WHOLE" onclick="selectScopeType('WHOLE', this)">Toàn kho</button>
+                                <button type="button" class="r-pill" data-val="ZONE" onclick="selectScopeType('ZONE', this)">Khu vực</button>
+                                <button type="button" class="r-pill active" data-val="RACK" onclick="selectScopeType('RACK', this)">Kệ</button>
+                                <button type="button" class="r-pill" data-val="SLOT" onclick="selectScopeType('SLOT', this)">Vị trí</button>
+                                <button type="button" class="r-pill" data-val="SKU" onclick="selectScopeType('SKU', this)">Tập SKU / Box</button>
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div class="fg">
+                                <label>Ngày bắt đầu <span style="color:#dc2626;">*</span></label>
+                                <input type="date" id="csStartDate" required>
+                            </div>
+                            <div class="fg">
+                                <label>Hạn hoàn thành <span style="color:#dc2626;">*</span></label>
+                                <input type="date" id="csDueDate" required>
+                            </div>
+                        </div>
+
+                        <div class="fg">
+                            <label>Nhân viên thực hiện (chọn 1 hoặc nhiều) <span style="color:#dc2626;">*</span></label>
+                            <div class="staff-chips" id="staffSelectChips">
+                                <span class="staff-chip selected" onclick="this.classList.toggle('selected')">Lê Văn Hùng</span>
+                                <span class="staff-chip selected" onclick="this.classList.toggle('selected')">Trần Thị Mai</span>
+                                <span class="staff-chip" onclick="this.classList.toggle('selected')">Nguyễn Văn An</span>
+                                <span class="staff-chip" onclick="this.classList.toggle('selected')">Lê Thị Hoa</span>
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div class="fg">
+                                <label>Kho <span style="color:#dc2626;">*</span></label>
+                                <select id="csWarehouse" onchange="updateScopePreview()">
+                                    <option value="KHO-01">Kho chính (KHO-01)</option>
+                                    <option value="KHO-RT">Kho trả hàng (KHO-RT)</option>
+                                </select>
+                            </div>
+                            <div class="fg">
+                                <label>Đối tượng phạm vi cụ thể <span style="color:#dc2626;">*</span></label>
+                                <select id="csScopeTarget" onchange="updateScopePreview()">
+                                    <option value="Kệ A1">Kệ A1 (Khu A – Mỹ phẩm)</option>
+                                    <option value="Kệ A2">Kệ A2 (Khu A – Mỹ phẩm)</option>
+                                    <option value="Kệ B1">Kệ B1 (Khu B – Chăm sóc da)</option>
+                                    <option value="Kệ C1">Kệ C1 (Khu C – Hàng tổng hợp)</option>
+                                    <option value="Toàn kho KHO-01">Toàn bộ Kho chính</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="fg" style="margin-bottom:0;">
+                            <label>Ghi chú kế hoạch</label>
+                            <textarea id="csNote" rows="2" placeholder="VD: Kiểm kê định kỳ tháng 11/2026 tại Kệ A1."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải Xem trước phạm vi & Mốc đối chiếu -->
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div class="preview-card">
+                            <div style="font-size:14.5px; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:7px;">
+                                <span style="color:var(--blue);">&#128230;</span> Phạm vi đã chọn
+                            </div>
+                            <div class="pv-row"><span>Kho</span><strong id="pvWarehouse">Kho chính (KHO-01)</strong></div>
+                            <div class="pv-row"><span>Phạm vi</span><strong id="pvTarget">Kệ A1</strong></div>
+                            <div class="pv-row"><span>Số vị trí cần đếm</span><strong id="pvSlots">24 vị trí</strong></div>
+                            <div class="pv-row"><span>Số Box lưu trữ</span><strong id="pvBoxes">186 Box</strong></div>
+                            <div class="pv-row"><span>Tổng tồn lý thuyết</span><strong id="pvPcs">4.820 PCS</strong></div>
+                        </div>
+
+                        <div class="snapshot-warn">
+                            <strong>&#9888; Chốt mốc tồn đối chiếu (StockCountSnapshot):</strong><br>
+                            Hệ thống sẽ lưu lại số tồn lý thuyết theo từng SKU/Box/vị trí tại thời điểm tạo đợt để đối chiếu chênh lệch chính xác, đồng thời chặn tạo đợt trùng lặp trên cùng phạm vi đang kiểm kê.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-foot">
+                    <div style="background:#f1f5f9; padding:7px 12px; border-radius:8px; font-size:12px;">
+                        Mã đợt: <strong style="color:var(--blue);" id="previewNextSessionCode">KK-20261113-001</strong> · Tự sinh không trùng
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" onclick="closeCreateSessionModal()" style="padding:9px 16px; border:1px solid #cbd5e1; background:#fff; border-radius:9px; font-weight:700; font-size:13px; cursor:pointer;">Hủy</button>
+                        <button type="submit" style="padding:9px 18px; border:none; background:var(--blue); color:#fff; border-radius:9px; font-weight:700; font-size:13px; cursor:pointer;">&#10004; Tạo đợt kiểm kê</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let sessionsList = [];
+        let adjustmentsList = [];
+        let filteredRows = [];
+        let activeTab = 'SESSIONS'; // 'SESSIONS' hoặc 'ADJUSTMENTS'
+        let selectedRecordId = null;
+        let currentPage = 1;
+        const pageSize = 10;
+        let selectedScopeType = 'RACK';
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('csStartDate').value = todayStr;
+        document.getElementById('csDueDate').value = todayStr;
+
+        async function loadStocktakeData() {
+            try {
+                const res = await fetch('/manager/api/stocktake');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                sessionsList = data.sessions || [];
+                adjustmentsList = data.adjustments || [];
+
+                document.getElementById('kpiTotalSessions').textContent = data.kpis.total_sessions;
+                document.getElementById('kpiCountingSessions').textContent = data.kpis.counting_sessions;
+                document.getElementById('kpiPendingApprovals').textContent = data.kpis.pending_approvals;
+                document.getElementById('kpiCompletedSessions').textContent = data.kpis.completed_sessions;
+
+                document.getElementById('cntTabSessions').textContent = sessionsList.length;
+                document.getElementById('cntTabAdjustments').textContent = adjustmentsList.length;
+                document.getElementById('previewNextSessionCode').textContent = data.next_session_code || 'KK-20261113-001';
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const preId = urlParams.get('id');
+                if (preId && !selectedRecordId) {
+                    if (preId.startsWith('DC-')) {
+                        activeTab = 'ADJUSTMENTS';
+                        document.getElementById('tabBtnSessions').classList.remove('active');
+                        document.getElementById('tabBtnAdjustments').classList.add('active');
+                    }
+                    selectedRecordId = preId;
+                }
+
+                applyStocktakeFilters();
+            } catch (err) {
+                console.error('Lỗi đồng bộ Kiểm kê & điều chỉnh:', err);
+            }
+        }
+
+        function switchStocktakeTab(tab, btn) {
+            activeTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentPage = 1;
+            selectedRecordId = null;
+            applyStocktakeFilters();
+        }
+
+        function applyStocktakeFilters() {
+            const kw = (document.getElementById('stSearchInp').value || '').trim().toLowerCase();
+            const scopeF = document.getElementById('stScopeFilter').value;
+            const staffF = document.getElementById('stStaffFilter').value;
+            const statusF = document.getElementById('stStatusFilter').value;
+
+            const source = activeTab === 'SESSIONS' ? sessionsList : adjustmentsList;
+
+            filteredRows = source.filter(r => {
+                const textBlob = JSON.stringify(r).toLowerCase();
+                const matchKw = !kw || textBlob.includes(kw);
+                const matchScope = scopeF === 'ALL' || (r.scope || '').includes(scopeF);
+                const matchStaff = staffF === 'ALL' || (r.assignee || r.sender || '').includes(staffF);
+                const matchSt = statusF === 'ALL' || r.status === statusF;
+                return matchKw && matchScope && matchStaff && matchSt;
+            });
+
+            if (filteredRows.length > 0 && !filteredRows.some(x => x.id === selectedRecordId)) {
+                selectedRecordId = filteredRows[0].id;
+            }
+            renderLeftTable();
+            renderRightDetailPanel();
+        }
+
+        function getStatusBadgeHtml(status) {
+            if (status === 'Chờ thực hiện') return `<span class="st-badge st-wait">${status}</span>`;
+            if (status === 'Đang kiểm kê') return `<span class="st-badge st-counting">${status}</span>`;
+            if (status === 'Đối chiếu') return `<span class="st-badge st-reconcile">${status}</span>`;
+            if (status === 'Chờ phê duyệt') return `<span class="st-badge st-pending">${status}</span>`;
+            if (status === 'Yêu cầu kiểm lại') return `<span class="st-badge st-recount">${status}</span>`;
+            if (status === 'Đã duyệt' || status === 'Hoàn tất') return `<span class="st-badge st-approved">${status}</span>`;
+            if (status === 'Từ chối') return `<span class="st-badge st-rejected">${status}</span>`;
+            return `<span class="st-badge st-wait">${status}</span>`;
+        }
+
+        function renderLeftTable() {
+            const thead = document.getElementById('stTableHead');
+            const tbody = document.getElementById('stTableBody');
+            const total = filteredRows.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const start = (currentPage - 1) * pageSize;
+            const pageItems = filteredRows.slice(start, start + pageSize);
+
+            if (activeTab === 'SESSIONS') {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Mã đợt</th>
+                        <th>Phạm vi kiểm kê</th>
+                        <th>Nhân viên</th>
+                        <th>Tiến độ</th>
+                        <th>Chênh lệch</th>
+                        <th>Thời gian</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                `;
+                tbody.innerHTML = pageItems.length ? pageItems.map(s => {
+                    const pct = s.total_slots > 0 ? Math.round((s.counted_slots / s.total_slots) * 100) : 0;
+                    const diffTxt = s.diff_abs_pcs > 0
+                        ? `<strong style="color:#dc2626;">${s.diff_abs_pcs} PCS</strong>`
+                        : `<span style="color:#059669; font-weight:700;">0 PCS</span>`;
+                    return `
+                        <tr class="row-item ${s.id === selectedRecordId ? 'selected' : ''}" onclick="selectRecord('${s.id}')">
+                            <td><strong>${s.id}</strong></td>
+                            <td>${s.scope}</td>
+                            <td>${s.assignee}</td>
+                            <td>
+                                <div style="font-size:11.5px; font-weight:700;">${s.counted_slots}/${s.total_slots} vị trí</div>
+                                <div class="prog-mini-track"><div class="prog-mini-fill ${pct === 100 ? 'done' : ''}" style="width:${pct}%;"></div></div>
+                            </td>
+                            <td>${diffTxt}</td>
+                            <td style="font-size:11.5px; color:#475569;">${s.time_range}</td>
+                            <td>${getStatusBadgeHtml(s.status)}</td>
+                        </tr>
+                    `;
+                }).join('') : '<tr><td colspan="7" style="text-align:center; padding:26px; color:#64748b;">Không có đợt kiểm kê phù hợp.</td></tr>';
+            } else {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Mã yêu cầu</th>
+                        <th>Mã kiểm kê</th>
+                        <th>Phạm vi</th>
+                        <th>Người gửi</th>
+                        <th>Chênh lệch</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                `;
+                tbody.innerHTML = pageItems.length ? pageItems.map(a => {
+                    return `
+                        <tr class="row-item ${a.id === selectedRecordId ? 'selected' : ''}" onclick="selectRecord('${a.id}')">
+                            <td><strong>${a.id}</strong></td>
+                            <td style="color:#475569; font-weight:600;">${a.session_id}</td>
+                            <td>${a.scope}</td>
+                            <td>${a.sender}</td>
+                            <td>
+                                <div style="color:#dc2626; font-weight:800; font-size:11.5px;">-${a.total_shortage} PCS</div>
+                                <div style="color:#059669; font-weight:800; font-size:11.5px;">+${a.total_surplus} PCS</div>
+                            </td>
+                            <td>${getStatusBadgeHtml(a.status)}</td>
+                        </tr>
+                    `;
+                }).join('') : '<tr><td colspan="6" style="text-align:center; padding:26px; color:#64748b;">Không có yêu cầu điều chỉnh phù hợp.</td></tr>';
+            }
+
+            const end = Math.min(start + pageSize, total);
+            document.getElementById('stPageInfo').textContent =
+                total === 0 ? 'Hiển thị 0 bản ghi' : `Hiển thị ${start + 1} – ${end} trên ${total} bản ghi`;
+
+            let btns = '';
+            for (let i = 1; i <= totalPages; i++) {
+                btns += `<button type="button" class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goStPage(${i})">${i}</button>`;
+            }
+            document.getElementById('stPageBtns').innerHTML = btns;
+        }
+
+        function goStPage(p) {
+            currentPage = p;
+            renderLeftTable();
+        }
+
+        function selectRecord(id) {
+            selectedRecordId = id;
+            renderLeftTable();
+            renderRightDetailPanel();
+        }
+
+        function renderRightDetailPanel() {
+            const panel = document.getElementById('stDetailPanel');
+
+            if (activeTab === 'SESSIONS') {
+                const s = sessionsList.find(x => x.id === selectedRecordId);
+                if (!s) {
+                    panel.innerHTML = '<div style="text-align:center; padding:48px 16px; color:#64748b; font-size:13px;">Chọn một đợt kiểm kê bên trái để xem chi tiết.</div>';
+                    return;
+                }
+                const isScopeComplete = s.counted_slots >= s.total_slots;
+                const linkedAdj = adjustmentsList.find(a => a.session_id === s.id);
+
+                panel.innerHTML = `
+                    <div class="dp-head">
+                        <div class="dp-title">&#128203; Chi tiết đợt kiểm kê &nbsp;<span style="color:var(--blue);">${s.id}</span></div>
+                        ${getStatusBadgeHtml(s.status)}
+                    </div>
+
+                    <div class="sec-label">Thông tin kế hoạch &amp; tiến độ kiểm đếm</div>
+                    <div class="info-grid-2">
+                        <div class="ig-row"><span class="ig-k">Phạm vi:</span><span class="ig-v">${s.scope}</span></div>
+                        <div class="ig-row"><span class="ig-k">Loại kiểm kê:</span><span class="ig-v">${s.scope_type_label || 'Theo kệ'}</span></div>
+                        <div class="ig-row"><span class="ig-k">Nhân viên:</span><span class="ig-v">${s.assignee}</span></div>
+                        <div class="ig-row"><span class="ig-k">Tiến độ đếm:</span><span class="ig-v" style="color:${isScopeComplete ? '#059669' : '#d97706'};">${s.counted_slots}/${s.total_slots} vị trí</span></div>
+                        <div class="ig-row"><span class="ig-k">Thời gian:</span><span class="ig-v">${s.time_range}</span></div>
+                        <div class="ig-row"><span class="ig-k">Mốc snapshot:</span><span class="ig-v">${s.snapshot_time || s.time_range}</span></div>
+                    </div>
+
+                    <div class="note-box" style="margin-bottom:14px;">
+                        <strong>Ghi chú đợt kiểm kê:</strong> ${s.note || 'Kiểm kê định kỳ theo kế hoạch kho SANOVA.'}
+                    </div>
+
+                    ${!isScopeComplete ? `
+                        <div class="sync-check-box sync-conflict" style="margin-bottom:14px;">
+                            <strong>&#9888; Chưa hoàn tất phạm vi kiểm đếm (${s.counted_slots}/${s.total_slots} vị trí):</strong><br>
+                            Theo quy định SANOVA, đợt kiểm kê chưa hoàn thành toàn bộ vị trí trong phạm vi sẽ chưa được chuyển sang trạng thái <em>Chờ phê duyệt</em>.
+                        </div>
+                    ` : ''}
+
+                    ${linkedAdj ? `
+                        <button type="button" onclick="jumpToAdjustment('${linkedAdj.id}')" style="width:100%; padding:11px; border:none; border-radius:10px; background:var(--blue); color:#fff; font-weight:700; font-size:13px; cursor:pointer;">
+                            Xem yêu cầu điều chỉnh ${linkedAdj.id} &rarr;
+                        </button>
+                    ` : `
+                        <div style="font-size:12px; color:#64748b; text-align:center; padding:8px; background:#f8fafc; border-radius:9px;">
+                            ${s.status === 'Chờ thực hiện' ? 'Đang chờ nhân viên kho bắt đầu quét QR kiểm đếm.' : 'Chưa phát sinh phiếu đề xuất điều chỉnh tồn kho.'}
+                        </div>
+                    `}
+                `;
+                return;
+            }
+
+            // TAB YÊU CẦU ĐIỀU CHỈNH: ĐẦY ĐỦ 7 NHÓM THÔNG TIN NGHIỆP VỤ
+            const adj = adjustmentsList.find(x => x.id === selectedRecordId);
+            if (!adj) {
+                panel.innerHTML = '<div style="text-align:center; padding:48px 16px; color:#64748b; font-size:13px;">Chọn một yêu cầu điều chỉnh bên trái để thẩm định.</div>';
+                return;
+            }
+
+            const itemsHtml = (adj.items || []).map((it, idx) => {
+                const delta = it.counted_pcs - it.system_pcs;
+                const deltaColor = delta < 0 ? '#dc2626' : (delta > 0 ? '#059669' : '#64748b');
+                const deltaSign = delta > 0 ? `+${delta}` : `${delta}`;
+                return `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td><strong>${it.sku}</strong><br><span style="color:#64748b;font-size:10.5px;">${it.name}</span></td>
+                        <td style="font-family:monospace;">${it.box_code}</td>
+                        <td style="font-family:monospace;">${it.location}</td>
+                        <td style="text-align:right;">${it.system_pcs}</td>
+                        <td style="text-align:right; font-weight:700;">${it.counted_pcs}</td>
+                        <td style="text-align:right; font-weight:800; color:${deltaColor};">${deltaSign}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const histHtml = (adj.history || []).map(h => `
+                <tr>
+                    <td style="color:#64748b; white-space:nowrap;">${h.time}</td>
+                    <td><strong>${h.actor}</strong></td>
+                    <td><span class="st-badge st-counting" style="font-size:10px; padding:2px 7px;">${h.action}</span></td>
+                    <td>${h.note}</td>
+                </tr>
+            `).join('');
+
+            const hasPostMovement = !!adj.has_post_count_movement;
+            const isPendingApproval = adj.status === 'Chờ phê duyệt';
+            const canApprove = isPendingApproval && !hasPostMovement && adj.scope_completed !== false;
+
+            const actionFooterHtml = isPendingApproval ? `
+                <div class="actions-3-grid">
+                    <button type="button" class="btn-act btn-recount" onclick="handleAdjustmentDecision('${adj.id}', 'RECOUNT')">&#8635; Yêu cầu kiểm lại</button>
+                    <button type="button" class="btn-act btn-reject" onclick="handleAdjustmentDecision('${adj.id}', 'REJECT')">&#10005; Từ chối</button>
+                    <button type="button" class="btn-act btn-approve" ${canApprove ? '' : 'disabled'} onclick="handleAdjustmentDecision('${adj.id}', 'APPROVE')">&#10004; Phê duyệt điều chỉnh</button>
+                </div>
+            ` : `
+                <div class="note-box" style="background:#f1f5f9;">
+                    <strong>Trạng thái phiếu:</strong> ${adj.status}
+                    ${adj.reviewed_by ? `<br><strong>Người xử lý:</strong> ${adj.reviewed_by} (${adj.reviewed_at || ''})` : ''}
+                    ${adj.reject_reason ? `<br><span style="color:#dc2626;"><strong>Lý do:</strong> ${adj.reject_reason}</span>` : ''}
+                </div>
+            `;
+
+            panel.innerHTML = `
+                <div class="dp-head">
+                    <div class="dp-title">&#9878; Chi tiết yêu cầu điều chỉnh ${adj.id}</div>
+                    ${getStatusBadgeHtml(adj.status)}
+                </div>
+
+                <!-- 1 & 2. Thông tin yêu cầu & Phạm vi -->
+                <div class="sec-label">Thông tin chung &amp; Phạm vi đối chiếu</div>
+                <div class="info-grid-2">
+                    <div class="ig-row"><span class="ig-k">Mã kiểm kê:</span><span class="ig-v">${adj.session_id}</span></div>
+                    <div class="ig-row"><span class="ig-k">Loại kiểm kê:</span><span class="ig-v">${adj.count_type || 'Theo kệ'}</span></div>
+                    <div class="ig-row"><span class="ig-k">Người gửi:</span><span class="ig-v">${adj.sender}</span></div>
+                    <div class="ig-row"><span class="ig-k">Mốc đối chiếu:</span><span class="ig-v">${adj.snapshot_at}</span></div>
+                    <div class="ig-row"><span class="ig-k">Thời gian gửi:</span><span class="ig-v">${adj.sent_at}</span></div>
+                    <div class="ig-row"><span class="ig-k">Số SKU lệch:</span><span class="ig-v">${(adj.items || []).length} SKU</span></div>
+                    <div class="ig-row"><span class="ig-k">Phạm vi:</span><span class="ig-v">${adj.full_scope_path || adj.scope}</span></div>
+                    <div class="ig-row"><span class="ig-k">Tổng lệch:</span><span class="ig-v"><span style="color:#dc2626;">-${adj.total_shortage} PCS</span> / <span style="color:#059669;">+${adj.total_surplus} PCS</span></span></div>
+                </div>
+
+                <!-- 3 & 4. Chi tiết hàng & Kết quả chênh lệch từng dòng -->
+                <div class="sec-label">Chi tiết chênh lệch (${(adj.items || []).length} SKU)</div>
+                <div style="overflow-x:auto;">
+                    <table class="diff-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>SKU / Sản phẩm</th>
+                                <th>Box</th>
+                                <th>Vị trí</th>
+                                <th style="text-align:right;">Hệ thống</th>
+                                <th style="text-align:right;">Thực tế</th>
+                                <th style="text-align:right;">Lệch</th>
+                            </tr>
+                        </thead>
+                        <tbody>${itemsHtml}</tbody>
+                    </table>
+                </div>
+
+                <!-- 5 & 6. Giải trình của nhân viên & Biến động sau kiểm kê -->
+                <div class="two-cards-row">
+                    <div>
+                        <div class="sec-label">&#128196; Giải trình của nhân viên</div>
+                        <div class="note-box">${adj.explanation}</div>
+                    </div>
+                    <div>
+                        <div class="sec-label">&#128260; Biến động sau kiểm kê</div>
+                        <div class="sync-check-box ${hasPostMovement ? 'sync-conflict' : 'sync-ok'}">
+                            ${hasPostMovement
+                                ? `<strong>&#9888; Phát hiện giao dịch phát sinh!</strong><br>${adj.post_movement_detail || 'Tồn kho hệ thống đã thay đổi sau mốc kiểm kê. Hệ thống khóa duyệt để tránh sai lệch tồn.'}`
+                                : `<strong>&#10004; Không có giao dịch phát sinh</strong><br>Số liệu tồn hiện tại khớp hoàn toàn với thời điểm đối chiếu (${adj.snapshot_at}).`
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. Lịch sử xử lý -->
+                <div class="sec-label">&#128337; Lịch sử xử lý</div>
+                <table class="hist-table">
+                    <thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Hành động</th><th>Nội dung</th></tr></thead>
+                    <tbody>${histHtml}</tbody>
+                </table>
+
+                ${actionFooterHtml}
+            `;
+        }
+
+        function jumpToAdjustment(adjId) {
+            activeTab = 'ADJUSTMENTS';
+            document.getElementById('tabBtnSessions').classList.remove('active');
+            document.getElementById('tabBtnAdjustments').classList.add('active');
+            selectedRecordId = adjId;
+            applyStocktakeFilters();
+        }
+
+        async function handleAdjustmentDecision(adjId, actionType) {
+            let reason = '';
+            if (actionType === 'REJECT') {
+                reason = prompt(`Nhập lý do từ chối yêu cầu điều chỉnh ${adjId} (Bắt buộc):`);
+                if (!reason || !reason.trim()) {
+                    alert('Bắt buộc phải nhập lý do từ chối.');
+                    return;
+                }
+            } else if (actionType === 'RECOUNT') {
+                reason = prompt(`Nhập phạm vi / ghi chú yêu cầu nhân viên kiểm đếm lại cho ${adjId}:`);
+                if (!reason || !reason.trim()) return;
+            } else if (actionType === 'APPROVE') {
+                if (!confirm(`Xác nhận phê duyệt điều chỉnh tồn kho cho phiếu ${adjId}?\nHệ thống sẽ cập nhật tồn kho thực tế duy nhất một lần và ghi lịch sử.`)) return;
+            }
+
+            const res = await fetch(`/manager/api/stocktake/adjustments/${adjId}/decision`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: actionType, reason: reason.trim() })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể xử lý yêu cầu.');
+                return;
+            }
+            alert(data.message);
+            loadStocktakeData();
+            if (typeof syncManagerSidebar === 'function') syncManagerSidebar();
+        }
+
+        /* ================= MODAL TẠO ĐỢT KIỂM KÊ ================= */
+        function openCreateSessionModal() {
+            updateScopePreview();
+            document.getElementById('createSessionModal').classList.add('show');
+        }
+
+        function closeCreateSessionModal() {
+            document.getElementById('createSessionModal').classList.remove('show');
+        }
+
+        function selectScopeType(val, btn) {
+            selectedScopeType = val;
+            document.querySelectorAll('#scopeTypePills .r-pill').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            updateScopePreview();
+        }
+
+        function updateScopePreview() {
+            const wh = document.getElementById('csWarehouse').value;
+            const target = document.getElementById('csScopeTarget').value;
+            document.getElementById('pvWarehouse').textContent = wh === 'KHO-01' ? 'Kho chính (KHO-01)' : 'Kho trả hàng (KHO-RT)';
+            document.getElementById('pvTarget').textContent = target;
+
+            const metricsMap = {
+                'Kệ A1': { slots: '24 vị trí', boxes: '186 Box', pcs: '4.820 PCS' },
+                'Kệ A2': { slots: '20 vị trí', boxes: '140 Box', pcs: '3.650 PCS' },
+                'Kệ B1': { slots: '16 vị trí', boxes: '112 Box', pcs: '2.940 PCS' },
+                'Kệ C1': { slots: '12 vị trí', boxes: '84 Box', pcs: '2.100 PCS' },
+                'Toàn kho KHO-01': { slots: '72 vị trí', boxes: '522 Box', pcs: '13.510 PCS' }
+            };
+            const m = metricsMap[target] || { slots: '20 vị trí', boxes: '120 Box', pcs: '3.200 PCS' };
+            document.getElementById('pvSlots').textContent = m.slots;
+            document.getElementById('pvBoxes').textContent = m.boxes;
+            document.getElementById('pvPcs').textContent = m.pcs;
+        }
+
+        async function submitCreateSession(e) {
+            e.preventDefault();
+            const assignees = [...document.querySelectorAll('#staffSelectChips .staff-chip.selected')].map(el => el.textContent.trim());
+            if (assignees.length === 0) {
+                alert('Vui lòng chọn ít nhất 1 nhân viên thực hiện kiểm kê.');
+                return;
+            }
+
+            const payload = {
+                scope_type: selectedScopeType,
+                warehouse_id: document.getElementById('csWarehouse').value,
+                scope_target: document.getElementById('csScopeTarget').value,
+                start_date: document.getElementById('csStartDate').value,
+                due_date: document.getElementById('csDueDate').value,
+                assignees: assignees,
+                note: document.getElementById('csNote').value.trim()
+            };
+
+            const res = await fetch('/manager/api/stocktake/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể tạo đợt kiểm kê.');
+                return;
+            }
+            alert(data.message);
+            closeCreateSessionModal();
+            loadStocktakeData();
+        }
+
+        loadStocktakeData();
+    </script>
+    <script src="{{ url_for('static', filename='js/manager_sidebar_sync.js') }}"></script>
+</body>
+</html>

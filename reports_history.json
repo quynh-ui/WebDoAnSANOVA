@@ -1,0 +1,154 @@
+[
+  {
+    "id": "BC-20261113-002",
+    "report_type_label": "Báo cáo tổng hợp kho",
+    "filter_summary": "Kỳ 2026-10-31 → 2026-11-13 · Kho: ALL",
+    "created_at": "13/11/2026 23:19",
+    "created_by": "Nguyên Văn C",
+    "result_summary": "6 SKU · Tồn cuối 720 PCS",
+    "snapshot_rows": [
+      {
+        "sku": "SP0001",
+        "name": "Sữa rửa mặt dịu nhẹ 150ml",
+        "category": "Chăm sóc da",
+        "opening_pcs": 105,
+        "inbound_pcs": 50,
+        "outbound_pcs": 35,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "SP0002",
+        "name": "Kem dưỡng ẩm phục hồi 50g",
+        "category": "Chăm sóc da",
+        "opening_pcs": 85,
+        "inbound_pcs": 50,
+        "outbound_pcs": 15,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "CB0001",
+        "name": "Combo Skincare cơ bản",
+        "category": "Combo",
+        "opening_pcs": 85,
+        "inbound_pcs": 50,
+        "outbound_pcs": 15,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "SP0003",
+        "name": "Toner cân bằng da 200ml",
+        "category": "Chăm sóc da",
+        "opening_pcs": 135,
+        "inbound_pcs": 20,
+        "outbound_pcs": 35,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "SP0004",
+        "name": "Serum Vitamin C 30ml",
+        "category": "Chăm sóc da",
+        "opening_pcs": 117,
+        "inbound_pcs": 20,
+        "outbound_pcs": 15,
+        "adj_pcs": -2,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "SP0005",
+        "name": "Mặt nạ dưỡng ẩm (hộp 10 miếng)",
+        "category": "Chăm sóc da",
+        "opening_pcs": 115,
+        "inbound_pcs": 20,
+        "outbound_pcs": 15,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      }
+    ]
+  },
+  {
+    "id": "BC-20261113-001",
+    "report_type_label": "Báo cáo tổng hợp kho",
+    "filter_summary": "Kỳ 2026-10-31 → 2026-11-13 · Kho: ALL",
+    "created_at": "13/11/2026 23:06",
+    "created_by": "Nguyên Văn C",
+    "result_summary": "6 SKU · Tồn cuối 720 PCS",
+    "snapshot_rows": [
+      {
+        "sku": "SP0001",
+        "name": "Sữa rửa mặt dịu nhẹ 150ml",
+        "category": "Chăm sóc da",
+        "opening_pcs": 105,
+        "inbound_pcs": 50,
+        "outbound_pcs": 35,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "SP0002",
+        "name": "Kem dưỡng ẩm phục hồi 50g",
+        "category": "Chăm sóc da",
+        "opening_pcs": 85,
+        "inbound_pcs": 50,
+        "outbound_pcs": 15,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "CB0001",
+        "name": "Combo Skincare cơ bản",
+        "category": "Combo",
+        "opening_pcs": 85,
+        "inbound_pcs": 50,
+        "outbound_pcs": 15,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "SP0003",
+        "name": "Toner cân bằng da 200ml",
+        "category": "Chăm sóc da",
+        "opening_pcs": 135,
+        "inbound_pcs": 20,
+        "outbound_pcs": 35,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "SP0004",
+        "name": "Serum Vitamin C 30ml",
+        "category": "Chăm sóc da",
+        "opening_pcs": 117,
+        "inbound_pcs": 20,
+        "outbound_pcs": 15,
+        "adj_pcs": -2,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      },
+      {
+        "sku": "SP0005",
+        "name": "Mặt nạ dưỡng ẩm (hộp 10 miếng)",
+        "category": "Chăm sóc da",
+        "opening_pcs": 115,
+        "inbound_pcs": 20,
+        "outbound_pcs": 15,
+        "adj_pcs": 0,
+        "closing_pcs": 120,
+        "recon_status": "Khớp"
+      }
+    ]
+  }
+]

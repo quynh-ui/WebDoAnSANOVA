@@ -1,0 +1,182 @@
+{
+  "pending_tickets": [
+    {
+      "id": "BG-0025",
+      "category": "HANDOVER",
+      "partner": "Shopee",
+      "order_or_po": "DH-104582",
+      "qty_primary": "5 đơn",
+      "total_pcs": 45,
+      "sender": "Lê Văn Hùng",
+      "receiver": "Nguyễn Thị Lan (Đối tác vận chuyển)",
+      "sent_at": "26/01/2025 10:20",
+      "note": "Bàn giao theo kế hoạch ngày 26/01.",
+      "status": "Chờ xác nhận",
+      "items": [
+        {
+          "sku": "SP0001",
+          "name": "Sữa rửa mặt dịu nhẹ 150ml",
+          "qty_expected": 20,
+          "qty_packed": 20,
+          "qty_actual": 20
+        },
+        {
+          "sku": "SP0003",
+          "name": "Toner cân bằng da 200ml",
+          "qty_expected": 15,
+          "qty_packed": 15,
+          "qty_actual": 15
+        },
+        {
+          "sku": "CB0001",
+          "name": "Combo Skincare cơ bản",
+          "qty_expected": 10,
+          "qty_packed": 10,
+          "qty_actual": 10
+        }
+      ],
+      "checks": [
+        {
+          "label": "Đã hoàn thành đóng gói",
+          "passed": true
+        },
+        {
+          "label": "Số lượng bàn giao hợp lệ với đơn hàng",
+          "passed": true
+        },
+        {
+          "label": "Đã ghi nhận đầy đủ người nhận và thời gian",
+          "passed": true
+        },
+        {
+          "label": "Không còn vấn đề thiếu hàng chưa xử lý",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "NK-0018",
+      "category": "INBOUND",
+      "partner": "Công ty ABC",
+      "order_or_po": "PO-2025-018",
+      "target_slot": "A1-036",
+      "qty_primary": "8 Box",
+      "total_pcs": 3240,
+      "sender": "Trần Thị Mai",
+      "sent_at": "26/01/2025 09:14",
+      "note": "Hàng đã xếp lên kệ A1-036, chờ Manager xác nhận nhập kho.",
+      "status": "Chờ xác nhận",
+      "items": [
+        {
+          "sku": "SP0001",
+          "name": "Sữa rửa mặt dịu nhẹ 150ml",
+          "qty_expected": 2000,
+          "qty_packed": 2000,
+          "qty_actual": 2000
+        },
+        {
+          "sku": "SP0002",
+          "name": "Kem dưỡng ẩm phục hồi 50g",
+          "qty_expected": 1240,
+          "qty_packed": 1240,
+          "qty_actual": 1240
+        }
+      ],
+      "checks": [
+        {
+          "label": "Đã quét QR xác nhận vị trí kệ A1-036",
+          "passed": true
+        },
+        {
+          "label": "Số lượng thực nhập khớp chứng từ PO",
+          "passed": true
+        },
+        {
+          "label": "Vị trí kệ đáp ứng giới hạn tải trọng & số Box",
+          "passed": true
+        },
+        {
+          "label": "Sản phẩm ở trạng thái Đang sử dụng",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "NK-0017",
+      "category": "INBOUND",
+      "partner": "Công ty DEF",
+      "order_or_po": "PO-2025-017",
+      "target_slot": "A1-037",
+      "qty_primary": "5 Box",
+      "total_pcs": 1800,
+      "sender": "Nguyễn Văn An",
+      "sent_at": "26/01/2025 08:50",
+      "note": "Lô bổ sung hàng chăm sóc da.",
+      "status": "Chờ xác nhận",
+      "items": [
+        {
+          "sku": "SP0003",
+          "name": "Toner cân bằng da 200ml",
+          "qty_expected": 1800,
+          "qty_packed": 1800,
+          "qty_actual": 1800
+        }
+      ],
+      "checks": [
+        {
+          "label": "Đã quét QR xác nhận vị trí kệ A1-037",
+          "passed": true
+        },
+        {
+          "label": "Số lượng thực nhập khớp chứng từ PO",
+          "passed": true
+        },
+        {
+          "label": "Vị trí kệ đáp ứng giới hạn sức chứa",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "processed_tickets": [
+    {
+      "id": "BG-0024",
+      "category": "HANDOVER",
+      "partner": "Lazada",
+      "order_or_po": "DH-104579",
+      "qty_primary": "2 đơn",
+      "total_pcs": 18,
+      "sender": "Lê Thị Hoa",
+      "receiver": "LEX Express",
+      "sent_at": "25/01/2025 17:35",
+      "note": "Bàn giao ca chiều.",
+      "status": "Đã từ chối",
+      "items": [
+        {
+          "sku": "SP0002",
+          "name": "Kem dưỡng ẩm phục hồi 50g",
+          "qty_expected": 18,
+          "qty_packed": 18,
+          "qty_actual": 18
+        }
+      ],
+      "checks": [
+        {
+          "label": "Đã hoàn thành đóng gói",
+          "passed": true
+        },
+        {
+          "label": "Số lượng bàn giao hợp lệ với đơn hàng",
+          "passed": true
+        },
+        {
+          "label": "Đã ghi nhận đầy đủ người nhận và thời gian",
+          "passed": true
+        }
+      ],
+      "reviewed_by": "Nguyên Văn C",
+      "reviewed_at": "13/11/2026 18:03",
+      "reject_reason": "thiếu hàng"
+    }
+  ]
+}

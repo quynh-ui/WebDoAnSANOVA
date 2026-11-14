@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duyệt &amp; xác nhận · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #067a6f;
+            --sidebar-hover: rgba(255, 255, 255, 0.07);
+            --bg-page: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-dark: #044e39;
+            --blue: #2563eb;
+            --amber: #d97706;
+            --red: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ================= SIDEBAR CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .sidebar-top { display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar-top::-webkit-scrollbar { width: 0; }
+        .brand-header { display: flex; align-items: center; gap: 11px; padding: 0 10px 22px; }
+        .brand-name { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #ffffff; }
+        .nav-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #10b981; font-weight: 800; padding: 0 12px 10px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .nav-link { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; color: #e2e8f0; text-decoration: none; border-radius: 10px; transition: all 0.18s ease; }
+        .nav-link:hover { background-color: var(--sidebar-hover); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .nav-link-left { display: flex; align-items: center; gap: 11px; }
+        .nav-icon { flex-shrink: 0; color: #cbd5e1; }
+        .nav-link.active .nav-icon, .nav-link:hover .nav-icon { color: #ffffff; }
+        .nav-text-group { display: flex; flex-direction: column; }
+        .nav-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+        .nav-link.active .nav-title { font-weight: 700; }
+        .nav-subtitle { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+        .nav-link.active .nav-subtitle { color: #ccfbf1; }
+        .badge-count { background-color: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; }
+        .sidebar-bottom { padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .logout-link:hover { background-color: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-wrapper { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 20px 26px 34px; }
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 16px; }
+        .header-title-area h1 { font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+        .header-title-area p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #334155; position: relative; cursor: pointer; }
+        .bell-dot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1.5px solid #ffffff; }
+        .profile-pill { display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid var(--border); padding: 5px 14px 5px 6px; border-radius: 999px; text-decoration: none; color: var(--text-main); }
+        .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background: #d1fae5; color: #065f46; font-weight: 800; font-size: 12.5px; display: flex; align-items: center; justify-content: center; }
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+        .profile-role { font-size: 11px; color: var(--text-muted); }
+
+        /* ================= 2 CỘT CHÍNH: TRÁI (KPI + BẢNG) / PHẢI (CHI TIẾT PHIẾU) ================= */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 1.55fr 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+        @media (max-width: 1280px) {
+            .workspace-grid { grid-template-columns: 1fr; }
+        }
+
+        /* 4 Thẻ KPI */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .kpi-icon {
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .ic-blue { background: #eff6ff; color: #2563eb; }
+        .ic-amber { background: #fffbeb; color: #d97706; }
+        .ic-red { background: #fef2f2; color: #ef4444; }
+        .ic-green { background: #ecfdf5; color: #10b981; }
+        .kpi-label { font-size: 11.5px; font-weight: 600; color: #475569; }
+        .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; line-height: 1.1; }
+
+        /* Card danh sách bên trái (Ghim thanh phân trang ở đáy) */
+        .list-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 560px;
+        }
+
+        .tabs-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            padding: 0 18px;
+            gap: 22px;
+            background: #ffffff;
+        }
+        .tab-btn {
+            padding: 14px 4px;
+            border: none;
+            background: transparent;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #64748b;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            position: relative;
+        }
+        .tab-btn:hover { color: #0f172a; }
+        .tab-btn.active { color: var(--emerald-dark); }
+        .tab-btn.active::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+            height: 2.5px; background: var(--emerald-dark); border-radius: 2px 2px 0 0;
+        }
+
+        .filters-bar {
+            padding: 14px 18px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 220px;
+        }
+        .search-box svg {
+            position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8;
+        }
+        .search-box input {
+            width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--border);
+            border-radius: 9px; font-size: 12.5px; outline: none;
+        }
+        .search-box input:focus { border-color: var(--emerald); }
+
+        .filter-sel {
+            padding: 8px 11px; border: 1px solid var(--border); border-radius: 9px;
+            font-size: 12.5px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;
+        }
+
+        .table-scroll-wrap {
+            flex-grow: 1;
+            overflow-x: auto;
+        }
+
+        /* Bảng phiếu (KHÔNG CÓ CHECKBOX ĐẦU DÒNG) */
+        .approvals-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .approvals-table th {
+            text-align: left;
+            padding: 11px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .approvals-table td {
+            padding: 13px 14px;
+            font-size: 13px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .ticket-row {
+            cursor: pointer;
+            transition: background 0.14s;
+        }
+        .ticket-row:hover { background: #f8fafc; }
+        .ticket-row.selected {
+            background: #ecfdf5;
+        }
+        .ticket-row.selected td:first-child {
+            box-shadow: inset 3px 0 0 var(--emerald);
+        }
+
+        .type-badge {
+            padding: 4px 10px;
+            border-radius: 7px;
+            font-size: 11.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .tb-handover { background: #dcfce7; color: #15803d; }
+        .tb-inbound { background: #dbeafe; color: #1d4ed8; }
+
+        .status-pill {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .sp-pending { background: #fef3c7; color: #b45309; }
+        .sp-approved { background: #dcfce7; color: #15803d; }
+        .sp-rejected { background: #fee2e2; color: #b91c1c; }
+
+        .pagination-bar {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 13px 18px;
+            font-size: 12.5px;
+            color: #64748b;
+            background: #ffffff;
+            border-top: 1px solid #f1f5f9;
+        }
+        .page-btns { display: flex; align-items: center; gap: 5px; }
+        .page-btn {
+            min-width: 30px; height: 30px; padding: 0 9px;
+            border: 1px solid var(--border); background: #ffffff;
+            border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; color: #334155;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .page-btn:hover:not(:disabled):not(.active) { background: #f8fafc; border-color: #cbd5e1; }
+        .page-btn.active { background: var(--emerald-dark); color: #ffffff; border-color: var(--emerald-dark); }
+        .page-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ================= PANEL CHI TIẾT PHIẾU BÊN PHẢI ================= */
+        .detail-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+        }
+        .dp-top-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 15.5px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        .dp-icon-box {
+            width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .dp-code-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 14px;
+        }
+        .dp-code {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dp-sec-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+        .dp-kv-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .dp-kv {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12.5px;
+        }
+        .dp-k { color: #64748b; display: flex; align-items: center; gap: 7px; }
+        .dp-v { font-weight: 700; color: #0f172a; text-align: right; }
+
+        /* Bảng sản phẩm con trong phiếu */
+        .dp-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            font-size: 12px;
+        }
+        .dp-items-table th {
+            text-align: left;
+            padding: 8px 6px;
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border);
+        }
+        .dp-items-table td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #0f172a;
+        }
+
+        /* Khối kiểm tra điều kiện xác nhận */
+        .checklist-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 12px;
+            padding: 13px 14px;
+            margin-bottom: 16px;
+        }
+        .checklist-box.warn {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+        .chk-title {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .chk-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+            color: #1e293b;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .chk-item:last-child { margin-bottom: 0; }
+
+        /* 2 Nút hành động dưới chân panel */
+        .dp-actions {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr;
+            gap: 10px;
+        }
+        .btn-reject {
+            padding: 11px 14px;
+            border-radius: 10px;
+            border: 1px solid #fca5a5;
+            background: #fff5f5;
+            color: #dc2626;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s;
+        }
+        .btn-reject:hover { background: #fee2e2; }
+
+        .btn-confirm {
+            padding: 11px 16px;
+            border-radius: 10px;
+            border: none;
+            background: #0d7a43;
+            color: #ffffff;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            transition: all 0.15s;
+        }
+        .btn-confirm:hover { background: #065f46; }
+        .btn-confirm:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* Modal bắt buộc nhập lý do từ chối */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 460px;
+            max-width: 100%;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .modal-head {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-body { padding: 18px 20px; }
+        .modal-foot {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            background: #f8fafc;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR CỐ ĐỊNH ================= -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">QUẢN LÝ KHO</div>
+
+            <ul class="nav-list">
+                <li><a href="/manager" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><div class="nav-text-group"><span class="nav-title">Tổng quan</span></div></div></a></li>
+                <li><a href="/manager/products" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Danh mục sản phẩm</span></div></div></a></li>
+                <li><a href="/manager/warehouse-config" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"></path><path d="M6 18h12"></path><path d="M6 14h12"></path><rect x="6" y="10" width="12" height="12"></rect></svg><div class="nav-text-group"><span class="nav-title">Cấu hình kho</span></div></div></a></li>
+                <li><a href="/manager/approvals" class="nav-link active"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Duyệt &amp; xác nhận</span><span class="nav-subtitle">Nhập kho · Bàn giao</span></div></div><span class="badge-count" id="sbBadgeApprovals" style="{% if manager_sidebar.approvals == 0 %}display:none;{% endif %}">
+                        {{ manager_sidebar.approvals }}
+                    </span></a></li>
+                <li><a href="/manager/inventory" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg><div class="nav-text-group"><span class="nav-title">Giám sát tồn kho</span><span class="nav-subtitle">Box · PCS · OUT · RETURNED</span></div></div></a></li>
+                <li><a href="/manager/stocktake" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Kiểm kê &amp; điều chỉnh</span></div></div><span class="badge-count" id="sbBadgeStocktake" style="{% if manager_sidebar.stocktake == 0 %}display:none;{% endif %}">
+                        {{ manager_sidebar.stocktake }}
+                    </span></a></li>
+                <li><a href="/manager/daily-closing" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9 16 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Chốt tồn cuối ngày</span></div></div></a></li>
+                <li><a href="/manager/reports" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><div class="nav-text-group"><span class="nav-title">Báo cáo &amp; đối soát</span></div></div></a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-bottom">
+            <a href="/manager/profile" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><div class="nav-text-group"><span class="nav-title">Tài khoản cá nhân</span></div></div></a>
+            <a href="/logout" class="nav-link logout-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Đăng xuất</span></div></div></a>
+        </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="main-wrapper">
+        <header class="top-header">
+            <div class="header-title-area">
+                <h1>Duyệt &amp; xác nhận</h1>
+                <p>Kiểm tra và xác nhận các yêu cầu nhập kho, bàn giao hàng do nhân viên kho gửi.</p>
+            </div>
+            <div class="header-right">
+                <button type="button" class="bell-btn" title="Thông báo">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span class="bell-dot"></span>
+                </button>
+                <a href="/manager/profile" class="profile-pill">
+                    <div class="avatar-circle">MN</div>
+                    <div class="profile-info">
+                        <span class="profile-name">{{ session.get('user', {}).get('name', 'Nguyễn Minh Nam') }}</span>
+                        <span class="profile-role">Manager</span>
+                    </div>
+                </a>
+            </div>
+        </header>
+
+        <div class="workspace-grid">
+            <!-- CỘT TRÁI: 4 THẺ KPI + BẢNG DANH SÁCH PHIẾU -->
+            <div>
+                <section class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon ic-blue"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>
+                        <div><div class="kpi-label">Tổng chờ xác nhận</div><div class="kpi-val" id="statTotalPending">0</div></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon ic-amber"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+                        <div><div class="kpi-label">Nhập kho chờ xác nhận</div><div class="kpi-val" id="statInboundPending">0</div></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon ic-red"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg></div>
+                        <div><div class="kpi-label">Bàn giao chờ xác nhận</div><div class="kpi-val" id="statHandoverPending">0</div></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon ic-green"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                        <div><div class="kpi-label">Đã xử lý hôm nay</div><div class="kpi-val" id="statProcessedToday">0</div></div>
+                    </div>
+                </section>
+
+                <section class="list-card">
+                    <div class="tabs-bar">
+                        <button type="button" class="tab-btn active" onclick="switchApprovalTab('PENDING', this)">
+                            Chờ xác nhận (<span id="tabPendingCount">0</span>)
+                        </button>
+                        <button type="button" class="tab-btn" onclick="switchApprovalTab('PROCESSED', this)">
+                            Đã xử lý (<span id="tabProcessedCount">0</span>)
+                        </button>
+                        <button type="button" class="tab-btn" onclick="switchApprovalTab('HISTORY', this)">
+                            Lịch sử xác nhận
+                        </button>
+                    </div>
+
+                    <div class="filters-bar">
+                        <div class="search-box">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input type="text" id="searchTicketInp" placeholder="Tìm theo mã phiếu, mã đơn, nhà cung cấp..." oninput="applyTicketFilters()">
+                        </div>
+                        <select class="filter-sel" id="filterTypeSel" onchange="applyTicketFilters()">
+                            <option value="ALL">Nghiệp vụ: Tất cả</option>
+                            <option value="INBOUND">Nhập kho</option>
+                            <option value="HANDOVER">Bàn giao</option>
+                        </select>
+                        <select class="filter-sel" id="filterChannelSel" onchange="applyTicketFilters()">
+                            <option value="ALL">Nền tảng: Tất cả</option>
+                            <option value="Shopee">Shopee</option>
+                            <option value="Lazada">Lazada</option>
+                            <option value="TikTok Shop">TikTok Shop</option>
+                            <option value="Nhà cung cấp">Nhà cung cấp</option>
+                        </select>
+                    </div>
+
+                    <div class="table-scroll-wrap">
+                        <!-- KHÔNG CÓ CHECKBOX ĐẦU DÒNG: BẤM TRỰC TIẾP VÀO DÒNG ĐỂ XEM CHI TIẾT -->
+                        <table class="approvals-table">
+                            <thead>
+                                <tr>
+                                    <th>Mã phiếu</th>
+                                    <th>Nghiệp vụ</th>
+                                    <th>Đối tác / Nền tảng</th>
+                                    <th>Số lượng</th>
+                                    <th>Người gửi</th>
+                                    <th>Thời gian gửi</th>
+                                    <th>Trạng thái</th>
+                                    <th style="width: 28px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="ticketsTableBody">
+                                <tr><td colspan="8" style="text-align:center; padding:24px; color:#64748b;">Đang đồng bộ danh sách phiếu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-bar">
+                        <span id="ticketPageInfo">Hiển thị 0 phiếu</span>
+                        <div class="page-btns" id="ticketPageBtns"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- CỘT PHẢI: CHI TIẾT PHIẾU NHẬP KHO / BÀN GIAO -->
+            <aside class="detail-panel" id="detailPanel">
+                <div style="text-align:center; padding: 48px 16px; color:#64748b; font-size:13px;">
+                    Chọn một phiếu ở bảng bên trái để xem chi tiết và thực hiện xác nhận.
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- MODAL BẮT BUỘC NHẬP LÝ DO KHI TỪ CHỐI -->
+    <div class="modal-overlay" id="rejectModal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3 style="font-size:16px; font-weight:800; color:#dc2626;" id="rejectModalTitle">Từ chối phiếu</h3>
+                <button type="button" style="background:none;border:none;font-size:20px;cursor:pointer;color:#64748b;" onclick="closeRejectModal()">&times;</button>
+            </div>
+            <form onsubmit="submitRejectForm(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="rejectTicketId">
+                    <p style="font-size:12.5px; color:#475569; margin-bottom:10px;">
+                        Vui lòng nhập rõ lý do từ chối để nhân viên kho kiểm tra và xử lý lại. Thao tác này sẽ được ghi vào Nhật ký kiểm toán và <strong>không làm thay đổi số liệu tồn kho</strong>.
+                    </p>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#0f172a; margin-bottom:6px;">
+                        Lý do từ chối <span style="color:#dc2626;">*</span>
+                    </label>
+                    <textarea id="rejectReasonInput" rows="4" required placeholder="VD: Sai lệch số lượng thực tế tại bàn giao / Thiếu chứng từ kiểm đếm..." style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:9px; font-size:13px; outline:none;"></textarea>
+                </div>
+                <div class="modal-foot">
+                    <button type="button" onclick="closeRejectModal()" style="padding:8px 14px; border:1px solid #cbd5e1; background:#fff; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer;">Hủy</button>
+                    <button type="submit" style="padding:8px 16px; border:none; background:#dc2626; color:#fff; border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer;">Xác nhận từ chối</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let allTickets = [];
+        let processedTickets = [];
+        let filteredTickets = [];
+        let currentTab = 'PENDING';
+        let selectedTicketId = null;
+        let currentPage = 1;
+        const pageSize = 10; // Tối đa 10 mã phiếu / trang; vượt quá 10 tự động chuyển sang trang tiếp theo
+
+        async function loadApprovalsData() {
+            try {
+                const res = await fetch('/manager/api/approvals');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                allTickets = data.pending_tickets || [];
+                processedTickets = data.processed_tickets || [];
+
+                document.getElementById('statTotalPending').textContent = data.stats.total_pending;
+                document.getElementById('statInboundPending').textContent = data.stats.inbound_pending;
+                document.getElementById('statHandoverPending').textContent = data.stats.handover_pending;
+                document.getElementById('statProcessedToday').textContent = data.stats.processed_today;
+
+                document.getElementById('tabPendingCount').textContent = allTickets.length;
+                document.getElementById('tabProcessedCount').textContent = processedTickets.length;
+
+                if (data.sidebar_badges) {
+                    document.getElementById('sbBadgeApprovals').textContent = data.sidebar_badges.approvals || 0;
+                    document.getElementById('sbBadgeStocktake').textContent = data.sidebar_badges.stocktake || 0;
+                }
+
+                // Kiểm tra query ?id=... trên URL nếu điều hướng từ Dashboard sang
+                const urlParams = new URLSearchParams(window.location.search);
+                const preId = urlParams.get('id');
+                if (preId && !selectedTicketId) selectedTicketId = preId;
+
+                applyTicketFilters();
+            } catch (err) {
+                console.error('Lỗi đồng bộ Duyệt & xác nhận:', err);
+            }
+        }
+
+        function switchApprovalTab(tab, btn) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentPage = 1;
+            applyTicketFilters();
+        }
+
+        function applyTicketFilters() {
+            const kw = (document.getElementById('searchTicketInp').value || '').trim().toLowerCase();
+            const typeF = document.getElementById('filterTypeSel').value;
+            const chF = document.getElementById('filterChannelSel').value;
+
+            const sourceList = currentTab === 'PENDING' ? allTickets : processedTickets;
+
+            filteredTickets = sourceList.filter(t => {
+                const matchKw = !kw ||
+                    t.id.toLowerCase().includes(kw) ||
+                    (t.order_or_po || '').toLowerCase().includes(kw) ||
+                    (t.partner || '').toLowerCase().includes(kw) ||
+                    (t.sender || '').toLowerCase().includes(kw);
+                const matchType = typeF === 'ALL' || t.category === typeF;
+                const matchCh = chF === 'ALL' || (t.partner || '').toLowerCase().includes(chF.toLowerCase()) ||
+                    (chF === 'Nhà cung cấp' && t.category === 'INBOUND');
+                return matchKw && matchType && matchCh;
+            });
+
+            if (filteredTickets.length > 0 && !filteredTickets.some(x => x.id === selectedTicketId)) {
+                selectedTicketId = filteredTickets[0].id;
+            }
+            renderTicketsTable();
+            renderDetailPanel();
+        }
+
+        function renderTicketsTable() {
+            const tbody = document.getElementById('ticketsTableBody');
+            const total = filteredTickets.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const items = filteredTickets.slice(startIdx, startIdx + pageSize);
+
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:28px; color:#64748b;">Không có phiếu nào trong danh sách này.</td></tr>';
+            } else {
+                tbody.innerHTML = items.map(t => {
+                    const isSelected = t.id === selectedTicketId;
+                    const isHandover = t.category === 'HANDOVER';
+                    const typeBadge = isHandover
+                        ? `<span class="type-badge tb-handover">🚚 Bàn giao</span>`
+                        : `<span class="type-badge tb-inbound">📦 Nhập kho</span>`;
+
+                    let statusBadge = `<span class="status-pill sp-pending">${t.status}</span>`;
+                    if (t.status.includes('Đã xác nhận')) statusBadge = `<span class="status-pill sp-approved">${t.status}</span>`;
+                    if (t.status.includes('Từ chối')) statusBadge = `<span class="status-pill sp-rejected">${t.status}</span>`;
+
+                    return `
+                        <tr class="ticket-row ${isSelected ? 'selected' : ''}" onclick="selectTicket('${t.id}')">
+                            <td><strong>${t.id}</strong></td>
+                            <td>${typeBadge}</td>
+                            <td><strong>${t.partner}</strong></td>
+                            <td>
+                                <div style="font-weight:700; color:#0f172a;">${t.qty_primary}</div>
+                                <div style="font-size:11.5px; color:#64748b;">${Number(t.total_pcs).toLocaleString('vi-VN')} PCS</div>
+                            </td>
+                            <td>${t.sender}</td>
+                            <td style="font-size:12px; color:#475569;">${t.sent_at}</td>
+                            <td>${statusBadge}</td>
+                            <td style="color:#64748b; font-weight:700;">&rsaquo;</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            const endIdx = Math.min(startIdx + pageSize, total);
+            document.getElementById('ticketPageInfo').textContent =
+                total === 0 ? 'Hiển thị 0 phiếu' : `Hiển thị ${startIdx + 1} – ${endIdx} trên ${total} phiếu`;
+
+            const pageBtns = document.getElementById('ticketPageBtns');
+            let btns = '';
+            if (totalPages > 1) {
+                btns += `<button type="button" class="page-btn" ${currentPage <= 1 ? 'disabled' : ''} onclick="goPage(${currentPage - 1})">&lsaquo; Trước</button>`;
+            }
+            for (let i = 1; i <= totalPages; i++) {
+                btns += `<button type="button" class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+            }
+            if (totalPages > 1) {
+                btns += `<button type="button" class="page-btn" ${currentPage >= totalPages ? 'disabled' : ''} onclick="goPage(${currentPage + 1})">Sau &rsaquo;</button>`;
+            }
+            pageBtns.innerHTML = btns;
+        }
+
+        function goPage(p) {
+            const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
+            if (p < 1 || p > totalPages) return;
+            currentPage = p;
+            const firstItemOnPage = filteredTickets[(currentPage - 1) * pageSize];
+            if (firstItemOnPage) selectedTicketId = firstItemOnPage.id;
+            renderTicketsTable();
+            renderDetailPanel();
+        }
+
+        function selectTicket(id) {
+            selectedTicketId = id;
+            renderTicketsTable();
+            renderDetailPanel();
+        }
+
+        function renderDetailPanel() {
+            const panel = document.getElementById('detailPanel');
+            const ticket = [...allTickets, ...processedTickets].find(x => x.id === selectedTicketId);
+
+            if (!ticket) {
+                panel.innerHTML = '<div style="text-align:center; padding: 48px 16px; color:#64748b; font-size:13px;">Chọn một phiếu ở bảng bên trái để xem chi tiết.</div>';
+                return;
+            }
+
+            const isHandover = ticket.category === 'HANDOVER';
+            const isPending = ticket.status === 'Chờ xác nhận';
+
+            // Nhãn tiêu đề + nút xác nhận phân biệt rõ Nhập kho vs Bàn giao
+            const headerTitle = isHandover ? 'Chi tiết phiếu bàn giao' : 'Chi tiết phiếu nhập kho';
+            const sectionInfoTitle = isHandover ? 'Thông tin đơn hàng &amp; bàn giao' : 'Thông tin lô hàng &amp; nhập kệ';
+            const confirmBtnLabel = isHandover ? '✓ Xác nhận bàn giao' : '✓ Xác nhận nhập kho';
+
+            const metaRows = isHandover ? `
+                <div class="dp-kv"><span class="dp-k">Mã đơn hàng</span><span class="dp-v">${ticket.order_or_po}</span></div>
+                <div class="dp-kv"><span class="dp-k">Nền tảng</span><span class="dp-v">${ticket.partner}</span></div>
+                <div class="dp-kv"><span class="dp-k">Người bàn giao</span><span class="dp-v">${ticket.sender} (Nhân viên kho)</span></div>
+                <div class="dp-kv"><span class="dp-k">Người nhận (ĐVVC)</span><span class="dp-v">${ticket.receiver || 'Đối tác vận chuyển'}</span></div>
+                <div class="dp-kv"><span class="dp-k">Thời gian bàn giao</span><span class="dp-v">${ticket.sent_at}</span></div>
+                <div class="dp-kv"><span class="dp-k">Ghi chú</span><span class="dp-v">${ticket.note || '-'}</span></div>
+            ` : `
+                <div class="dp-kv"><span class="dp-k">Mã chứng từ / PO</span><span class="dp-v">${ticket.order_or_po}</span></div>
+                <div class="dp-kv"><span class="dp-k">Nhà cung cấp / Nguồn</span><span class="dp-v">${ticket.partner}</span></div>
+                <div class="dp-kv"><span class="dp-k">Vị trí đích lên kệ</span><span class="dp-v" style="color:#059669;">${ticket.target_slot || 'A1-036'}</span></div>
+                <div class="dp-kv"><span class="dp-k">Người lập phiếu</span><span class="dp-v">${ticket.sender} (Nhân viên kho)</span></div>
+                <div class="dp-kv"><span class="dp-k">Thời gian gửi</span><span class="dp-v">${ticket.sent_at}</span></div>
+                <div class="dp-kv"><span class="dp-k">Ghi chú</span><span class="dp-v">${ticket.note || '-'}</span></div>
+            `;
+
+            const itemsRows = (ticket.items || []).map(it => `
+                <tr>
+                    <td><strong>${it.sku}</strong></td>
+                    <td>${it.name}</td>
+                    <td style="text-align:right;">${it.qty_expected}</td>
+                    <td style="text-align:right;">${it.qty_packed}</td>
+                    <td style="text-align:right; font-weight:700;">${it.qty_actual}</td>
+                </tr>
+            `).join('');
+
+            const checks = ticket.checks || [];
+            const allChecksOk = checks.every(c => c.passed);
+
+            const checklistHtml = checks.map(c => `
+                <div class="chk-item">
+                    <span style="color:${c.passed ? '#16a34a' : '#dc2626'}; font-weight:800;">${c.passed ? '✔' : '✖'}</span>
+                    <span>${c.label}</span>
+                </div>
+            `).join('');
+
+            const footerHtml = isPending ? `
+                <div class="dp-actions">
+                    <button type="button" class="btn-reject" onclick="openRejectModal('${ticket.id}')">&#10005; Từ chối</button>
+                    <button type="button" class="btn-confirm" ${allChecksOk ? '' : 'disabled'} onclick="confirmTicket('${ticket.id}')">${confirmBtnLabel}</button>
+                </div>
+            ` : `
+                <div style="background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:11px 13px; font-size:12.5px; color:#334155;">
+                    <div><strong>Kết quả:</strong> ${ticket.status}</div>
+                    <div><strong>Người xử lý:</strong> ${ticket.reviewed_by || 'Nguyễn Minh Nam'} (${ticket.reviewed_at || ''})</div>
+                    ${ticket.reject_reason ? `<div style="color:#dc2626; margin-top:4px;"><strong>Lý do từ chối:</strong> ${ticket.reject_reason}</div>` : ''}
+                </div>
+            `;
+
+            panel.innerHTML = `
+                <div class="dp-top-title">
+                    <span class="dp-icon-box" style="background:${isHandover ? '#dcfce7' : '#dbeafe'}; color:${isHandover ? '#15803d' : '#1d4ed8'};">
+                        ${isHandover ? '🚚' : '📦'}
+                    </span>
+                    <span>${headerTitle}</span>
+                </div>
+
+                <div class="dp-code-row">
+                    <div class="dp-code">${ticket.id}</div>
+                    <span class="status-pill ${isPending ? 'sp-pending' : (ticket.status.includes('Từ chối') ? 'sp-rejected' : 'sp-approved')}">${ticket.status}</span>
+                </div>
+
+                <div class="dp-sec-title">${sectionInfoTitle}</div>
+                <div class="dp-kv-list">${metaRows}</div>
+
+                <div class="dp-sec-title">Danh sách sản phẩm (${(ticket.items || []).length})</div>
+                <table class="dp-items-table">
+                    <thead>
+                        <tr>
+                            <th>Mã SKU</th>
+                            <th>Tên sản phẩm</th>
+                            <th style="text-align:right;">${isHandover ? 'SL đặt' : 'SL chứng từ'}</th>
+                            <th style="text-align:right;">${isHandover ? 'SL đóng gói' : 'SL quét QR'}</th>
+                            <th style="text-align:right;">${isHandover ? 'SL bàn giao' : 'SL thực nhập'}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemsRows}</tbody>
+                </table>
+
+                <div class="checklist-box ${allChecksOk ? '' : 'warn'}">
+                    <div class="chk-title">Kiểm tra điều kiện xác nhận</div>
+                    ${checklistHtml}
+                </div>
+
+                ${footerHtml}
+            `;
+        }
+
+        async function confirmTicket(ticketId) {
+            const ticket = allTickets.find(x => x.id === ticketId);
+            if (!ticket) return;
+            const actionText = ticket.category === 'HANDOVER' ? 'xác nhận bàn giao' : 'xác nhận nhập kho';
+            if (!confirm(`Bạn có chắc chắn muốn ${actionText} cho phiếu ${ticketId}?`)) return;
+
+            const res = await fetch(`/manager/api/approvals/${ticketId}/decision`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ decision: 'APPROVE' })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể xác nhận phiếu.');
+                return;
+            }
+            alert(data.message);
+            selectedTicketId = null;
+            loadApprovalsData();
+            if (typeof syncManagerSidebar === 'function') syncManagerSidebar();
+        }
+
+        function openRejectModal(ticketId) {
+            document.getElementById('rejectTicketId').value = ticketId;
+            document.getElementById('rejectModalTitle').textContent = `Từ chối phiếu ${ticketId}`;
+            document.getElementById('rejectReasonInput').value = '';
+            document.getElementById('rejectModal').classList.add('show');
+        }
+
+        function closeRejectModal() {
+            document.getElementById('rejectModal').classList.remove('show');
+        }
+
+        async function submitRejectForm(e) {
+            e.preventDefault();
+            const ticketId = document.getElementById('rejectTicketId').value;
+            const reason = document.getElementById('rejectReasonInput').value.trim();
+            if (!reason) {
+                alert('Bắt buộc phải nhập lý do từ chối.');
+                return;
+            }
+
+            const res = await fetch(`/manager/api/approvals/${ticketId}/decision`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ decision: 'REJECT', reason: reason })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể từ chối phiếu.');
+                return;
+            }
+            closeRejectModal();
+            selectedTicketId = null;
+            loadApprovalsData();
+            if (typeof syncManagerSidebar === 'function') syncManagerSidebar();
+        }
+
+        loadApprovalsData();
+    </script>
+    <script src="{{ url_for('static', filename='js/manager_sidebar_sync.js') }}"></script>
+</body>
+</html>

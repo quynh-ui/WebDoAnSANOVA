@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chốt tồn cuối ngày · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #067a6f;
+            --sidebar-hover: rgba(255, 255, 255, 0.07);
+            --bg-page: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-dark: #044e39;
+            --blue: #2563eb;
+            --amber: #d97706;
+            --red: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ================= SIDEBAR XANH ĐẬM SANOVA CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .sidebar-top { display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar-top::-webkit-scrollbar { width: 0; }
+        .brand-header { display: flex; align-items: center; gap: 11px; padding: 0 10px 22px; }
+        .brand-name { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #ffffff; }
+        .nav-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #10b981; font-weight: 800; padding: 0 12px 10px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .nav-link { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; color: #e2e8f0; text-decoration: none; border-radius: 10px; transition: all 0.18s ease; }
+        .nav-link:hover { background-color: var(--sidebar-hover); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .nav-link-left { display: flex; align-items: center; gap: 11px; }
+        .nav-icon { flex-shrink: 0; color: #cbd5e1; }
+        .nav-link.active .nav-icon, .nav-link:hover .nav-icon { color: #ffffff; }
+        .nav-text-group { display: flex; flex-direction: column; }
+        .nav-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+        .nav-link.active .nav-title { font-weight: 700; }
+        .nav-subtitle { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+        .nav-link.active .nav-subtitle { color: #ccfbf1; }
+        .badge-count { background-color: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; }
+        .sidebar-bottom { padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .logout-link:hover { background-color: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-wrapper { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 20px 26px 34px; }
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 16px; flex-wrap: wrap; }
+        .header-title-area h1 { font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+        .header-title-area p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+
+        .btn-history-top {
+            padding: 9px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px;
+            font-size: 12.5px; font-weight: 700; color: #0f172a; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 7px; transition: all 0.15s;
+        }
+        .btn-history-top:hover { background: #f8fafc; border-color: #94a3b8; }
+
+        .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #334155; position: relative; cursor: pointer; }
+        .bell-dot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1.5px solid #ffffff; }
+        .profile-pill { display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid var(--border); padding: 5px 14px 5px 6px; border-radius: 999px; text-decoration: none; color: var(--text-main); }
+        .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background: #d1fae5; color: #065f46; font-weight: 800; font-size: 12.5px; display: flex; align-items: center; justify-content: center; }
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+        .profile-role { font-size: 11px; color: var(--text-muted); }
+
+        /* ================= 4 THẺ KPI TỔNG HỢP ================= */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 15px 16px;
+            display: flex;
+            align-items: center;
+            gap: 13px;
+        }
+        .kpi-icon {
+            width: 42px; height: 42px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .ic-blue { background: #eff6ff; color: #2563eb; }
+        .ic-green { background: #ecfdf5; color: #059669; }
+        .ic-red { background: #fef2f2; color: #dc2626; }
+        .ic-amber { background: #fffbeb; color: #d97706; }
+
+        .kpi-label { font-size: 12px; font-weight: 600; color: #475569; }
+        .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 2px; line-height: 1.15; }
+        .kpi-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+        /* ================= WORKSPACE 2 CỘT: TRÁI (DANH SÁCH NGÀY) / PHẢI (CHI TIẾT CHỐT TỒN) ================= */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 1.32fr 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+        @media (max-width: 1280px) { .workspace-grid { grid-template-columns: 1fr; } }
+
+        .left-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 550px;
+        }
+
+        .tabs-bar {
+            display: flex; border-bottom: 1px solid var(--border);
+            padding: 0 18px; gap: 22px; background: #ffffff;
+        }
+        .tab-btn {
+            padding: 14px 4px; border: none; background: transparent;
+            font-size: 13.5px; font-weight: 700; color: #64748b; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 7px; position: relative;
+        }
+        .tab-btn:hover { color: #0f172a; }
+        .tab-btn.active { color: var(--emerald-dark); }
+        .tab-btn.active::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+            height: 2.5px; background: var(--emerald-dark); border-radius: 2px 2px 0 0;
+        }
+
+        .filters-bar {
+            padding: 14px 18px; display: flex; gap: 10px; flex-wrap: wrap;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .filter-sel, .filter-month {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 9px;
+            font-size: 12.5px; font-weight: 600; color: #334155; background: #ffffff; outline: none; cursor: pointer;
+        }
+
+        .table-wrap { flex-grow: 1; overflow-x: auto; }
+        .closing-table { width: 100%; border-collapse: collapse; }
+        .closing-table th {
+            text-align: left; padding: 11px 14px; font-size: 12px; font-weight: 700;
+            color: #475569; background: #f8fafc; border-bottom: 1px solid var(--border); white-space: nowrap;
+        }
+        .closing-table td {
+            padding: 13px 14px; font-size: 13px; border-bottom: 1px solid #f1f5f9; vertical-align: middle;
+        }
+        .day-row { cursor: pointer; transition: background 0.14s; }
+        .day-row:hover { background: #f8fafc; }
+        .day-row.selected { background: #ecfdf5; }
+        .day-row.selected td:first-child {
+            box-shadow: inset 3px 0 0 var(--emerald);
+            color: var(--emerald-dark);
+            font-weight: 800;
+        }
+
+        .st-pill {
+            padding: 4px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+            display: inline-block; white-space: nowrap;
+        }
+        .sp-unclosed { background: #fef3c7; color: #b45309; }
+        .sp-reconciling { background: #dbeafe; color: #1d4ed8; }
+        .sp-closed { background: #dcfce7; color: #15803d; }
+        .sp-issue { background: #fee2e2; color: #b91c1c; }
+
+        .pagination-bar {
+            margin-top: auto; display: flex; justify-content: space-between; align-items: center;
+            padding: 13px 18px; font-size: 12px; color: #64748b; border-top: 1px solid #f1f5f9;
+        }
+        .page-btns { display: flex; gap: 5px; }
+        .page-btn {
+            min-width: 28px; height: 28px; padding: 0 8px; border: 1px solid var(--border);
+            background: #ffffff; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .page-btn.active { background: var(--emerald-dark); color: #ffffff; border-color: var(--emerald-dark); }
+
+        /* ================= CỘT PHẢI: CHI TIẾT CHỐT TỒN CUỐI NGÀY ================= */
+        .detail-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+        }
+        .dp-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; margin-bottom: 14px;
+        }
+        .dp-title { font-size: 17px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+
+        .sec-lbl { font-size: 12.5px; font-weight: 800; color: #0f172a; margin-bottom: 9px; }
+
+        .mini-summary-3 {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;
+        }
+        .ms-box {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 11px;
+            padding: 10px 10px; display: flex; align-items: center; gap: 8px;
+        }
+        .ms-box small { display: block; font-size: 10.5px; color: #64748b; font-weight: 600; }
+        .ms-box strong { font-size: 14.5px; font-weight: 800; color: #0f172a; }
+
+        /* Bảng công thức đối chiếu Tồn đầu -> Tồn cuối */
+        .formula-card {
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 12px;
+            padding: 12px 14px; margin-bottom: 14px; font-size: 12.5px;
+        }
+        .f-row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .f-row.total {
+            border-top: 1px dashed #cbd5e1; margin-top: 6px; padding-top: 8px;
+            font-size: 13.5px; font-weight: 800; color: #0f172a;
+        }
+
+        .flow-2col {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+        }
+        .flow-box {
+            border: 1px solid #e2e8f0; border-radius: 11px; padding: 10px 12px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .flow-box small { display: block; font-size: 11px; color: #64748b; font-weight: 600; }
+        .flow-box strong { font-size: 15px; font-weight: 800; }
+
+        /* Danh sách kiểm tra điều kiện trước khi chốt */
+        .check-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+        .chk-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #1e293b; font-weight: 500; }
+
+        .lock-notice {
+            background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+            padding: 10px 12px; font-size: 12px; color: #1e40af; line-height: 1.45; margin-bottom: 14px;
+        }
+        .lock-notice.locked-done {
+            background: #ecfdf5; border-color: #a7f3d0; color: #065f46;
+        }
+
+        .dp-btn-row {
+            display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px;
+        }
+        .btn-outline-sku {
+            padding: 11px 12px; border-radius: 10px; border: 1px solid #cbd5e1;
+            background: #ffffff; color: #0f172a; font-size: 13px; font-weight: 700;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-outline-sku:hover { background: #f8fafc; }
+
+        .btn-confirm-close {
+            padding: 11px 14px; border-radius: 10px; border: none;
+            background: var(--emerald-dark); color: #ffffff; font-size: 13px; font-weight: 700;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-confirm-close:hover { background: #065f46; }
+        .btn-confirm-close:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        /* ================= MODAL CHI TIẾT THEO SKU ================= */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.52);
+            z-index: 500; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: #ffffff; border-radius: 16px; width: 820px; max-width: 100%;
+            max-height: 88vh; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.22);
+        }
+        .modal-head {
+            padding: 16px 22px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-body { padding: 18px 22px; overflow-y: auto; }
+        .sku-detail-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .sku-detail-table th {
+            text-align: left; padding: 10px 8px; background: #f8fafc; color: #475569;
+            font-weight: 700; border-bottom: 1px solid var(--border);
+        }
+        .sku-detail-table td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR XANH ĐẬM SANOVA CỐ ĐỊNH ================= -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">QUẢN LÝ KHO</div>
+
+            <ul class="nav-list">
+                <li><a href="/manager" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><div class="nav-text-group"><span class="nav-title">Tổng quan</span></div></div></a></li>
+                <li><a href="/manager/products" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Danh mục sản phẩm</span></div></div></a></li>
+                <li><a href="/manager/warehouse-config" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"></path><path d="M6 18h12"></path><path d="M6 14h12"></path><rect x="6" y="10" width="12" height="12"></rect></svg><div class="nav-text-group"><span class="nav-title">Cấu hình kho</span></div></div></a></li>
+                <li><a href="/manager/approvals" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Duyệt &amp; xác nhận</span><span class="nav-subtitle">Nhập kho · Bàn giao</span></div></div><span class="badge-count" id="sbBadgeApprovals" style="{% if manager_sidebar.approvals == 0 %}display:none;{% endif %}">{{ manager_sidebar.approvals }}</span></a></li>
+                <li><a href="/manager/inventory" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg><div class="nav-text-group"><span class="nav-title">Giám sát tồn kho</span><span class="nav-subtitle">Box · PCS · OUT · RETURNED</span></div></div></a></li>
+                <li><a href="/manager/stocktake" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Kiểm kê &amp; điều chỉnh</span></div></div><span class="badge-count" id="sbBadgeStocktake" style="{% if manager_sidebar.stocktake == 0 %}display:none;{% endif %}">{{ manager_sidebar.stocktake }}</span></a></li>
+                <li><a href="/manager/daily-closing" class="nav-link active"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9 16 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Chốt tồn cuối ngày</span></div></div></a></li>
+                <li><a href="/manager/reports" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><div class="nav-text-group"><span class="nav-title">Báo cáo &amp; đối soát</span></div></div></a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-bottom">
+            <a href="/manager/profile" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><div class="nav-text-group"><span class="nav-title">Tài khoản cá nhân</span></div></div></a>
+            <a href="/logout" class="nav-link logout-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Đăng xuất</span></div></div></a>
+        </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="main-wrapper">
+        <!-- 1. HEADER -->
+        <header class="top-header">
+            <div class="header-title-area">
+                <h1>Chốt tồn cuối ngày</h1>
+                <p>Xác nhận số liệu tồn kho cuối ngày làm việc và khóa phiên bản dữ liệu để đối soát.</p>
+            </div>
+            <div class="header-right">
+                <button type="button" class="btn-history-top" onclick="switchClosingTab('HISTORY', document.getElementById('tabHistBtn'))">
+                    &#128337; Xem lịch sử chốt tồn
+                </button>
+                <button type="button" class="bell-btn" title="Thông báo">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span class="bell-dot"></span>
+                </button>
+                <a href="/manager/profile" class="profile-pill">
+                    <div class="avatar-circle">MN</div>
+                    <div class="profile-info">
+                        <span class="profile-name">{{ session.get('user', {}).get('name', 'Nguyễn Minh Nam') }}</span>
+                        <span class="profile-role">Manager</span>
+                    </div>
+                </a>
+            </div>
+        </header>
+
+        <!-- 2. 4 THẺ KPI TỔNG HỢP TRONG NGÀY -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon ic-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+                <div>
+                    <div class="kpi-label">Tồn đầu ngày</div>
+                    <div class="kpi-val" id="kpiOpeningPcs">0</div>
+                    <div class="kpi-sub" id="kpiSelectedDayLbl">Ngày đang chọn</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon ic-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg></div>
+                <div>
+                    <div class="kpi-label">Nhập trong ngày</div>
+                    <div class="kpi-val" style="color:#059669;" id="kpiInboundPcs">+0</div>
+                    <div class="kpi-sub">Đã xác nhận lên kệ</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon ic-red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg></div>
+                <div>
+                    <div class="kpi-label">Giảm tồn trong ngày</div>
+                    <div class="kpi-val" style="color:#dc2626;" id="kpiOutboundPcs">-0</div>
+                    <div class="kpi-sub">Ghi nhận khi Picking</div>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-icon ic-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                <div>
+                    <div class="kpi-label">Tồn cuối ngày (PCS)</div>
+                    <div class="kpi-val" id="kpiClosingPcs">0</div>
+                    <div class="kpi-sub" id="kpiAdjNetSub">Điều chỉnh duyệt: 0 PCS</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- WORKSPACE 2 CỘT -->
+        <div class="workspace-grid">
+            <!-- BÊN TRÁI: DANH SÁCH NGÀY CHỐT & LỊCH SỬ -->
+            <section class="left-card">
+                <div class="tabs-bar">
+                    <button type="button" class="tab-btn active" id="tabDailyBtn" onclick="switchClosingTab('DAILY', this)">
+                        &#128197; Chốt tồn
+                    </button>
+                    <button type="button" class="tab-btn" id="tabHistBtn" onclick="switchClosingTab('HISTORY', this)">
+                        &#128337; Lịch sử chốt tồn
+                    </button>
+                </div>
+
+                <div class="filters-bar">
+                    <input type="month" class="filter-month" id="closingMonthFilter" onchange="renderLeftTable()">
+                    <select class="filter-sel" id="closingStatusFilter" onchange="renderLeftTable()">
+                        <option value="ALL">Trạng thái: Tất cả</option>
+                        <option value="Chưa chốt">Chưa chốt</option>
+                        <option value="Đang đối chiếu">Đang đối chiếu</option>
+                        <option value="Đã chốt">Đã chốt</option>
+                        <option value="Có vấn đề">Có vấn đề</option>
+                    </select>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="closing-table">
+                        <thead id="closingTableHead"></thead>
+                        <tbody id="closingTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-bar">
+                    <span id="closingPageInfo">Hiển thị 0 ngày</span>
+                    <div class="page-btns" id="closingPageBtns"></div>
+                </div>
+            </section>
+
+            <!-- BÊN PHẢI: CHI TIẾT CHỐT TỒN & XÁC NHẬN -->
+            <aside class="detail-panel" id="closingDetailPanel">
+                <div style="text-align:center; padding:48px 16px; color:#64748b; font-size:13px;">
+                    Đang tải dữ liệu chốt tồn cuối ngày...
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- MODAL CHI TIẾT THEO TỪNG SKU TRONG NGÀY CHỐT -->
+    <div class="modal-overlay" id="skuClosingModal" onclick="if(event.target===this) closeSkuModal()">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3 style="font-size:16.5px; font-weight:800;" id="skuModalTitle">Chi tiết đối chiếu tồn kho theo SKU</h3>
+                <button type="button" style="background:none;border:none;font-size:22px;cursor:pointer;color:#64748b;" onclick="closeSkuModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="overflow-x:auto;">
+                    <table class="sku-detail-table">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Tên sản phẩm</th>
+                                <th style="text-align:right;">Tồn đầu</th>
+                                <th style="text-align:right;">Nhập</th>
+                                <th style="text-align:right;">Xuất (Pick)</th>
+                                <th style="text-align:right;">Điều chỉnh</th>
+                                <th style="text-align:right;">Tồn cuối</th>
+                                <th style="text-align:right;">OUT / RET</th>
+                            </tr>
+                        </thead>
+                        <tbody id="skuModalTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dailyRecords = [];
+        let selectedDateIso = null;
+        let activeTab = 'DAILY';
+        let currentPage = 1;
+        const pageSize = 8;
+
+        function formatNum(n) {
+            return Number(n || 0).toLocaleString('vi-VN');
+        }
+
+        async function loadDailyClosingData() {
+            try {
+                const res = await fetch('/manager/api/daily-closing');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                dailyRecords = data.days || [];
+                if (dailyRecords.length > 0 && !selectedDateIso) {
+                    selectedDateIso = dailyRecords[0].date_iso;
+                }
+
+                renderLeftTable();
+                renderRightDetailPanel();
+            } catch (err) {
+                console.error('Lỗi đồng bộ Chốt tồn cuối ngày:', err);
+            }
+        }
+
+        function switchClosingTab(tab, btn) {
+            activeTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            currentPage = 1;
+            renderLeftTable();
+        }
+
+        function getStatusPillHtml(status) {
+            if (status === 'Chưa chốt') return `<span class="st-pill sp-unclosed">Chưa chốt</span>`;
+            if (status === 'Đang đối chiếu') return `<span class="st-pill sp-reconciling">Đang đối chiếu</span>`;
+            if (status === 'Đã chốt') return `<span class="st-pill sp-closed">Đã chốt</span>`;
+            return `<span class="st-pill sp-issue">${status}</span>`;
+        }
+
+        function renderLeftTable() {
+            const monthFilter = document.getElementById('closingMonthFilter').value;
+            const statusFilter = document.getElementById('closingStatusFilter').value;
+
+            let filtered = dailyRecords.filter(d => {
+                const matchMonth = !monthFilter || d.date_iso.startsWith(monthFilter);
+                const matchStatus = statusFilter === 'ALL' || d.status === statusFilter;
+                const matchTab = activeTab === 'DAILY' ? true : (d.status === 'Đã chốt');
+                return matchMonth && matchStatus && matchTab;
+            });
+
+            const total = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const start = (currentPage - 1) * pageSize;
+            const rows = filtered.slice(start, start + pageSize);
+
+            const thead = document.getElementById('closingTableHead');
+            const tbody = document.getElementById('closingTableBody');
+
+            if (activeTab === 'DAILY') {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Ngày chốt</th>
+                        <th>Tổng SKU</th>
+                        <th>Tổng Box</th>
+                        <th>Tồn cuối (PCS)</th>
+                        <th>Biến động trong ngày</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                `;
+                tbody.innerHTML = rows.length ? rows.map(d => {
+                    const isSel = d.date_iso === selectedDateIso;
+                    return `
+                        <tr class="day-row ${isSel ? 'selected' : ''}" onclick="selectClosingDay('${d.date_iso}')">
+                            <td><strong>${d.date_display}</strong></td>
+                            <td>${formatNum(d.total_sku)}</td>
+                            <td>${formatNum(d.total_box)}</td>
+                            <td><strong>${formatNum(d.closing_pcs)}</strong></td>
+                            <td>
+                                <span style="color:#059669; font-weight:700;">+${formatNum(d.inbound_pcs)}</span>
+                                <span style="color:#94a3b8;"> / </span>
+                                <span style="color:#dc2626; font-weight:700;">-${formatNum(d.outbound_pcs)}</span>
+                            </td>
+                            <td>${getStatusPillHtml(d.status)}</td>
+                        </tr>
+                    `;
+                }).join('') : '<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">Không có dữ liệu ngày chốt phù hợp.</td></tr>';
+            } else {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Ngày chốt</th>
+                        <th>Người chốt</th>
+                        <th>Thời gian xác nhận</th>
+                        <th>Tồn cuối khóa sổ</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                `;
+                tbody.innerHTML = rows.length ? rows.map(d => `
+                    <tr class="day-row ${d.date_iso === selectedDateIso ? 'selected' : ''}" onclick="selectClosingDay('${d.date_iso}')">
+                        <td><strong>${d.date_display}</strong></td>
+                        <td>${d.closed_by || 'Nguyễn Minh Nam'}</td>
+                        <td style="font-size:12px; color:#475569;">${d.closed_at || '-'}</td>
+                        <td><strong>${formatNum(d.closing_pcs)} PCS</strong></td>
+                        <td>${getStatusPillHtml(d.status)}</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">Chưa có lịch sử ngày đã chốt.</td></tr>';
+            }
+
+            const end = Math.min(start + pageSize, total);
+            document.getElementById('closingPageInfo').textContent =
+                total === 0 ? 'Hiển thị 0 ngày' : `Hiển thị ${start + 1} – ${end} trên ${total} ngày`;
+
+            let btns = '';
+            for (let i = 1; i <= totalPages; i++) {
+                btns += `<button type="button" class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goClosingPage(${i})">${i}</button>`;
+            }
+            document.getElementById('closingPageBtns').innerHTML = btns;
+        }
+
+        function goClosingPage(p) {
+            currentPage = p;
+            renderLeftTable();
+        }
+
+        function selectClosingDay(dateIso) {
+            selectedDateIso = dateIso;
+            renderLeftTable();
+            renderRightDetailPanel();
+        }
+
+        function renderRightDetailPanel() {
+            const panel = document.getElementById('closingDetailPanel');
+            const day = dailyRecords.find(x => x.date_iso === selectedDateIso);
+            if (!day) return;
+
+            // Đồng bộ 4 thẻ KPI trên đầu theo ngày đang chọn
+            document.getElementById('kpiOpeningPcs').textContent = formatNum(day.opening_pcs);
+            document.getElementById('kpiSelectedDayLbl').textContent = `Ngày ${day.date_display}`;
+            document.getElementById('kpiInboundPcs').textContent = `+${formatNum(day.inbound_pcs)}`;
+            document.getElementById('kpiOutboundPcs').textContent = `-${formatNum(day.outbound_pcs)}`;
+            document.getElementById('kpiClosingPcs').textContent = formatNum(day.closing_pcs);
+            const adjNet = (day.adj_plus_pcs || 0) - (day.adj_minus_pcs || 0);
+            document.getElementById('kpiAdjNetSub').textContent = `Điều chỉnh duyệt: ${adjNet >= 0 ? '+' : ''}${formatNum(adjNet)} PCS`;
+
+            const isClosed = day.status === 'Đã chốt';
+            const checks = day.checks || [];
+            const allChecksOk = checks.every(c => c.passed);
+
+            const checksHtml = checks.map(c => `
+                <div class="chk-row">
+                    <span style="color:${c.passed ? '#059669' : '#dc2626'}; font-weight:800;">${c.passed ? '✔' : '✖'}</span>
+                    <span>${c.label}</span>
+                </div>
+            `).join('');
+
+            const noticeHtml = isClosed ? `
+                <div class="lock-notice locked-done">
+                    <strong>&#128274; Đã khóa sổ kỳ ngày ${day.date_display}:</strong><br>
+                    Người chốt: <strong>${day.closed_by}</strong> lúc <strong>${day.closed_at}</strong>. Số liệu đã lưu thành phiên bản đối soát bất biến.
+                </div>
+            ` : `
+                <div class="lock-notice">
+                    &#9432; Sau khi chốt, số liệu tồn kho ngày <strong>${day.date_display}</strong> sẽ được khóa và dùng cho báo cáo, đối soát. Các phát sinh muộn sẽ ghi nhận ở kỳ kế tiếp.
+                </div>
+            `;
+
+            const confirmBtnHtml = isClosed ? `
+                <button type="button" class="btn-confirm-close" disabled>&#128274; Đã chốt tồn ngày ${day.date_display}</button>
+            ` : `
+                <button type="button" class="btn-confirm-close" ${allChecksOk ? '' : 'disabled'} onclick="confirmDailyClosing('${day.date_iso}', '${day.date_display}')">
+                    &#10004; Chốt tồn cuối ngày
+                </button>
+            `;
+
+            panel.innerHTML = `
+                <div class="dp-header">
+                    <div class="dp-title">&#128203; Chốt tồn ngày ${day.date_display}</div>
+                    ${getStatusPillHtml(day.status)}
+                </div>
+
+                <div class="sec-lbl">Tổng hợp tồn kho cuối ngày (${isClosed ? 'Đã khóa sổ' : 'Dự kiến'})</div>
+                <div class="mini-summary-3">
+                    <div class="ms-box">
+                        <div><small>Tổng SKU</small><strong>${formatNum(day.total_sku)}</strong></div>
+                    </div>
+                    <div class="ms-box">
+                        <div><small>Tổng Box</small><strong>${formatNum(day.total_box)}</strong></div>
+                    </div>
+                    <div class="ms-box">
+                        <div><small>Tồn khả dụng</small><strong style="color:#059669;">${formatNum(day.closing_pcs)} PCS</strong></div>
+                    </div>
+                </div>
+
+                <div class="sec-lbl">Biến động &amp; Công thức đối chiếu trong ngày</div>
+                <div class="flow-2col">
+                    <div class="flow-box">
+                        <span style="color:#059669; font-size:18px; font-weight:800;">&uarr;</span>
+                        <div><small>Nhập kho xác nhận</small><strong style="color:#059669;">+${formatNum(day.inbound_pcs)} PCS</strong></div>
+                    </div>
+                    <div class="flow-box">
+                        <span style="color:#dc2626; font-size:18px; font-weight:800;">&darr;</span>
+                        <div><small>Xuất kho (Picking)</small><strong style="color:#dc2626;">-${formatNum(day.outbound_pcs)} PCS</strong></div>
+                    </div>
+                </div>
+
+                <div class="formula-card">
+                    <div class="f-row"><span>Tồn đầu ngày:</span><strong>${formatNum(day.opening_pcs)} PCS</strong></div>
+                    <div class="f-row"><span>(+) Nhập kho trong ngày:</span><strong style="color:#059669;">+${formatNum(day.inbound_pcs)} PCS</strong></div>
+                    <div class="f-row"><span>(-) Giảm tồn đơn hàng (Picking):</span><strong style="color:#dc2626;">-${formatNum(day.outbound_pcs)} PCS</strong></div>
+                    <div class="f-row"><span>(+/-) Điều chỉnh kiểm kê đã duyệt:</span><strong>+${formatNum(day.adj_plus_pcs)} / -${formatNum(day.adj_minus_pcs)} PCS</strong></div>
+                    <div class="f-row" style="font-size:11.5px; color:#64748b;"><span>Hàng đang xuất (OUT) / Hàng hoàn (RETURNED):</span><span>${formatNum(day.out_pcs)} OUT · ${formatNum(day.returned_pcs)} RETURNED</span></div>
+                    <div class="f-row total"><span>Tồn cuối ngày đối chiếu:</span><span style="color:#044e39;">${formatNum(day.closing_pcs)} PCS</span></div>
+                </div>
+
+                <div class="sec-lbl">Đối soát &amp; kiểm tra điều kiện trước khi chốt</div>
+                <div class="check-list">${checksHtml}</div>
+
+                ${noticeHtml}
+
+                <div class="dp-btn-row">
+                    <button type="button" class="btn-outline-sku" onclick="openSkuDetailModal('${day.date_iso}')">
+                        &#128196; Xem chi tiết tồn kho
+                    </button>
+                    ${confirmBtnHtml}
+                </div>
+            `;
+        }
+
+        async function openSkuDetailModal(dateIso) {
+            const res = await fetch(`/manager/api/daily-closing/${dateIso}/skus`);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            document.getElementById('skuModalTitle').textContent = `Chi tiết đối chiếu tồn kho theo SKU · Ngày ${data.date_display}`;
+            const tbody = document.getElementById('skuModalTableBody');
+            tbody.innerHTML = (data.items || []).map(it => `
+                <tr>
+                    <td><strong>${it.sku}</strong></td>
+                    <td>${it.name}</td>
+                    <td style="text-align:right;">${formatNum(it.opening)}</td>
+                    <td style="text-align:right; color:#059669; font-weight:700;">+${formatNum(it.inbound)}</td>
+                    <td style="text-align:right; color:#dc2626; font-weight:700;">-${formatNum(it.outbound)}</td>
+                    <td style="text-align:right;">${it.adjustment >= 0 ? '+' : ''}${formatNum(it.adjustment)}</td>
+                    <td style="text-align:right; font-weight:800;">${formatNum(it.closing)}</td>
+                    <td style="text-align:right; font-size:11.5px; color:#64748b;">${it.out_qty} / ${it.returned_qty}</td>
+                </tr>
+            `).join('');
+            document.getElementById('skuClosingModal').classList.add('show');
+        }
+
+        function closeSkuModal() {
+            document.getElementById('skuClosingModal').classList.remove('show');
+        }
+
+        async function confirmDailyClosing(dateIso, dateDisplay) {
+            const msg = `Xác nhận CHỐT TỒN CUỐI NGÀY ${dateDisplay}?\n\nLưu ý: Sau khi xác nhận, toàn bộ số liệu tồn kho ngày ${dateDisplay} sẽ được khóa sổ để phục vụ báo cáo và đối soát.`;
+            if (!confirm(msg)) return;
+
+            const res = await fetch(`/manager/api/daily-closing/${dateIso}/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể chốt tồn cuối ngày.');
+                return;
+            }
+            alert(data.message);
+            loadDailyClosingData();
+        }
+
+        loadDailyClosingData();
+    </script>
+    <script src="{{ url_for('static', filename='js/manager_sidebar_sync.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+[
+    {
+        "sku": "SP0001",
+        "name": "Sữa rửa mặt dịu nhẹ 150ml",
+        "category": "Chăm sóc da",
+        "unit": "Chai",
+        "length_cm": 5.5,
+        "width_cm": 4.2,
+        "height_cm": 16.5,
+        "weight_g": 185,
+        "spec": "1 chai / 150 ml · 24 chai / thùng",
+        "status": "Đang sử dụng",
+        "combo_items": []
+    },
+    {
+        "sku": "SP0002",
+        "name": "Kem dưỡng ẩm phục hồi 50g",
+        "category": "Chăm sóc da",
+        "unit": "Hũ",
+        "length_cm": 6.5,
+        "width_cm": 6.5,
+        "height_cm": 5.8,
+        "weight_g": 120,
+        "spec": "1 hũ / 50 g · 36 hũ / thùng",
+        "status": "Đang sử dụng",
+        "combo_items": []
+    },
+    {
+        "sku": "CB0001",
+        "name": "Combo Skincare cơ bản",
+        "category": "Combo",
+        "unit": "Bộ",
+        "length_cm": 18.0,
+        "width_cm": 12.0,
+        "height_cm": 8.0,
+        "weight_g": 410,
+        "spec": "1 combo (2 sản phẩm thành phần)",
+        "status": "Đang sử dụng",
+        "combo_items": [
+            {
+                "sku": "SP0001",
+                "qty": 1,
+                "unit": "Chai"
+            },
+            {
+                "sku": "SP0003",
+                "qty": 1,
+                "unit": "Chai"
+            }
+        ]
+    },
+    {
+        "sku": "SP0003",
+        "name": "Toner cân bằng da 200ml",
+        "category": "Chăm sóc da",
+        "unit": "Chai",
+        "length_cm": 5.2,
+        "width_cm": 5.2,
+        "height_cm": 17.8,
+        "weight_g": 235,
+        "spec": "1 chai / 200 ml",
+        "status": "Đang sử dụng",
+        "combo_items": []
+    },
+    {
+        "sku": "SP0004",
+        "name": "Serum Vitamin C 30ml",
+        "category": "Chăm sóc da",
+        "unit": "Chai",
+        "length_cm": 0,
+        "width_cm": 0,
+        "height_cm": 0,
+        "weight_g": 0,
+        "spec": "1 chai / 30 ml",
+        "status": "Đang sử dụng",
+        "combo_items": []
+    },
+    {
+        "sku": "SP0005",
+        "name": "Mặt nạ dưỡng ẩm (hộp 10 miếng)",
+        "category": "Chăm sóc da",
+        "unit": "Hộp",
+        "length_cm": 14.5,
+        "width_cm": 3.5,
+        "height_cm": 16.0,
+        "weight_g": 310,
+        "spec": "1 hộp / 10 miếng",
+        "status": "Ngừng sử dụng",
+        "combo_items": []
+    }
+]

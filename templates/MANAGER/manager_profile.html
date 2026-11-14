@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tài khoản cá nhân · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #067a6f;
+            --sidebar-hover: rgba(255, 255, 255, 0.07);
+            --bg-page: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-dark: #044e39;
+            --blue: #2563eb;
+            --amber: #d97706;
+            --red: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ================= SIDEBAR XANH ĐẬM 8 MỤC MANAGER SANOVA ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .sidebar-top { display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar-top::-webkit-scrollbar { width: 0; }
+        .brand-header { display: flex; align-items: center; gap: 11px; padding: 0 10px 22px; }
+        .brand-name { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #ffffff; }
+        .nav-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #10b981; font-weight: 800; padding: 0 12px 10px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .nav-link { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; color: #e2e8f0; text-decoration: none; border-radius: 10px; transition: all 0.18s ease; }
+        .nav-link:hover { background-color: var(--sidebar-hover); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .nav-link-left { display: flex; align-items: center; gap: 11px; }
+        .nav-icon { flex-shrink: 0; color: #cbd5e1; }
+        .nav-link.active .nav-icon, .nav-link:hover .nav-icon { color: #ffffff; }
+        .nav-text-group { display: flex; flex-direction: column; }
+        .nav-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+        .nav-link.active .nav-title { font-weight: 700; }
+        .nav-subtitle { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+        .nav-link.active .nav-subtitle { color: #ccfbf1; }
+        .badge-count { background-color: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; }
+        .sidebar-bottom { padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .logout-link:hover { background-color: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-wrapper { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 20px 26px 36px; }
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 16px; flex-wrap: wrap; }
+        .header-title-area { display: flex; align-items: center; gap: 12px; }
+        .header-icon-box {
+            width: 40px; height: 40px; border-radius: 11px; background: #ecfdf5; color: var(--emerald-dark);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .header-title-area h1 { font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+        .header-title-area p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+
+        .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #334155; position: relative; cursor: pointer; }
+        .bell-dot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1.5px solid #ffffff; }
+        .profile-pill { display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid var(--border); padding: 5px 14px 5px 6px; border-radius: 999px; text-decoration: none; color: var(--text-main); }
+        .avatar-circle-sm { width: 32px; height: 32px; border-radius: 50%; background: #d1fae5; color: #065f46; font-weight: 800; font-size: 12.5px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+        .profile-role { font-size: 11px; color: var(--text-muted); }
+
+        /* ================= 4 TABS TRONG CÙNG MỘT TRANG ================= */
+        .tabs-bar {
+            display: flex; gap: 24px; border-bottom: 1px solid var(--border);
+            margin-bottom: 18px; flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 11px 4px; border: none; background: transparent;
+            font-size: 13.5px; font-weight: 700; color: #64748b; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 7px; position: relative;
+        }
+        .tab-btn:hover { color: #0f172a; }
+        .tab-btn.active { color: var(--emerald-dark); }
+        .tab-btn.active::after {
+            content: ''; position: absolute; bottom: -1px; left: 0; right: 0;
+            height: 2.5px; background: var(--emerald-dark); border-radius: 2px 2px 0 0;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ================= BỐ CỤC 2 CỘT: THÔNG TIN TÀI KHOẢN BÊN TRÁI / NỘI DUNG CHI TIẾT BÊN PHẢI ================= */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1.35fr 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+        @media (max-width: 1200px) { .profile-grid { grid-template-columns: 1fr; } }
+
+        .card-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 22px;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 16px; font-weight: 800; color: #0f172a;
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+        }
+
+        /* Hero Avatar */
+        .avatar-hero {
+            display: flex; align-items: center; gap: 18px;
+            padding-bottom: 18px; border-bottom: 1px solid #f1f5f9; margin-bottom: 18px;
+        }
+        .avatar-lg-wrap {
+            position: relative; width: 78px; height: 78px; flex-shrink: 0;
+        }
+        .avatar-lg {
+            width: 78px; height: 78px; border-radius: 50%;
+            background: #dbeafe; color: #1d4ed8; font-size: 26px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            border: 2px solid #bfdbfe;
+        }
+        .avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
+        .cam-btn {
+            position: absolute; bottom: 0; right: 0;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #ffffff; border: 1px solid #cbd5e1; color: #059669;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        }
+        .cam-btn:hover { background: #ecfdf5; }
+
+        .role-pill {
+            display: inline-block; padding: 3px 10px; border-radius: 7px;
+            background: #dbeafe; color: #1d4ed8; font-size: 12px; font-weight: 700; margin: 4px 0 8px;
+        }
+        .status-active-pill {
+            display: inline-block; padding: 3px 10px; border-radius: 7px;
+            background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 700; margin-left: 6px;
+        }
+
+        /* Form fields */
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+        @media (max-width: 680px) { .form-grid-2 { grid-template-columns: 1fr; } }
+
+        .fg { display: flex; flex-direction: column; gap: 6px; }
+        .fg label { font-size: 12.5px; font-weight: 700; color: #0f172a; }
+        .fg input, .fg textarea {
+            padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px;
+            font-size: 13px; color: #0f172a; outline: none; background: #ffffff;
+        }
+        .fg input:focus, .fg textarea:focus { border-color: var(--emerald); }
+        .fg input[readonly], .fg input:disabled {
+            background: #f1f5f9; color: #475569; border-color: #e2e8f0; cursor: not-allowed; font-weight: 600;
+        }
+        .ro-hint { font-size: 11px; color: #64748b; }
+
+        .form-actions {
+            display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;
+        }
+        .btn-cancel {
+            padding: 10px 18px; border: 1px solid #cbd5e1; background: #ffffff;
+            border-radius: 10px; font-size: 13px; font-weight: 700; color: #334155; cursor: pointer;
+        }
+        .btn-save {
+            padding: 10px 20px; border: none; background: var(--emerald-dark);
+            border-radius: 10px; font-size: 13px; font-weight: 700; color: #ffffff; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 7px;
+        }
+        .btn-save:hover { background: #065f46; }
+
+        /* Cột phải: Bảo mật, Tùy chọn thông báo, Nhật ký gần đây */
+        .sec-action-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 13px 14px; border: 1px solid #f1f5f9; border-radius: 12px;
+            background: #f8fafc; cursor: pointer; transition: all 0.15s; margin-bottom: 10px;
+        }
+        .sec-action-row:hover { background: #ecfdf5; border-color: #a7f3d0; }
+        .sec-left { display: flex; align-items: center; gap: 12px; }
+        .sec-icon {
+            width: 38px; height: 38px; border-radius: 10px; background: #eff6ff; color: var(--blue);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+
+        .noti-check-row {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 11px 12px; border: 1px solid #f1f5f9; border-radius: 11px;
+            background: #f8fafc; margin-bottom: 9px; cursor: pointer;
+        }
+        .noti-check-row input[type="checkbox"] {
+            width: 17px; height: 17px; margin-top: 2px; accent-color: var(--emerald-dark); cursor: pointer;
+        }
+
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .mini-table th {
+            text-align: left; padding: 9px 8px; background: #f8fafc; color: #475569;
+            font-weight: 700; border-bottom: 1px solid var(--border);
+        }
+        .mini-table td { padding: 9px 8px; border-bottom: 1px solid #f1f5f9; }
+
+        .act-pill { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-block; }
+        .ap-login { background: #dcfce7; color: #15803d; }
+        .ap-work { background: #dbeafe; color: #1d4ed8; }
+        .ap-fail { background: #fee2e2; color: #b91c1c; }
+
+        /* ================= MODAL ĐỔI MẬT KHẨU (MẪU 5) ================= */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.52);
+            z-index: 500; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-pwd-box {
+            background: #ffffff; border-radius: 18px; width: 460px; max-width: 100%;
+            overflow: hidden; box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
+        }
+        .modal-head {
+            padding: 18px 22px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-body { padding: 20px 22px; }
+        .modal-foot {
+            padding: 14px 22px; border-top: 1px solid var(--border); background: #f8fafc;
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR XANH ĐẬM 8 MỤC MANAGER SANOVA ================= -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">QUẢN LÝ KHO</div>
+
+            <ul class="nav-list">
+                <li><a href="/manager" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><div class="nav-text-group"><span class="nav-title">Tổng quan</span></div></div></a></li>
+                <li><a href="/manager/products" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Danh mục sản phẩm</span></div></div></a></li>
+                <li><a href="/manager/warehouse-config" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"></path><path d="M6 18h12"></path><path d="M6 14h12"></path><rect x="6" y="10" width="12" height="12"></rect></svg><div class="nav-text-group"><span class="nav-title">Cấu hình kho</span></div></div></a></li>
+                <li><a href="/manager/approvals" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Duyệt &amp; xác nhận</span><span class="nav-subtitle">Nhập kho · Bàn giao</span></div></div><span class="badge-count" id="sbBadgeApprovals" style="{% if manager_sidebar.approvals == 0 %}display:none;{% endif %}">{{ manager_sidebar.approvals }}</span></a></li>
+                <li><a href="/manager/inventory" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg><div class="nav-text-group"><span class="nav-title">Giám sát tồn kho</span><span class="nav-subtitle">Box · PCS · OUT · RETURNED</span></div></div></a></li>
+                <li><a href="/manager/stocktake" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Kiểm kê &amp; điều chỉnh</span></div></div><span class="badge-count" id="sbBadgeStocktake" style="{% if manager_sidebar.stocktake == 0 %}display:none;{% endif %}">{{ manager_sidebar.stocktake }}</span></a></li>
+                <li><a href="/manager/daily-closing" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9 16 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Chốt tồn cuối ngày</span></div></div></a></li>
+                <li><a href="/manager/reports" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><div class="nav-text-group"><span class="nav-title">Báo cáo &amp; đối soát</span></div></div></a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-bottom">
+            <a href="/manager/profile" class="nav-link active"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><div class="nav-text-group"><span class="nav-title">Tài khoản cá nhân</span></div></div></a>
+            <a href="/logout" class="nav-link logout-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Đăng xuất</span></div></div></a>
+        </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="main-wrapper">
+        <header class="top-header">
+            <div class="header-title-area">
+                <div class="header-icon-box">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <div>
+                    <h1>Tài khoản cá nhân</h1>
+                    <p>Quản lý thông tin liên hệ cá nhân, bảo mật mật khẩu và theo dõi nhật ký hoạt động điều hành kho.</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <button type="button" class="bell-btn" title="Thông báo">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span class="bell-dot"></span>
+                </button>
+                <a href="/manager/profile" class="profile-pill">
+                    <div class="avatar-circle-sm" id="headerAvatarInitials">MN</div>
+                    <div class="profile-info">
+                        <span class="profile-name" id="headerUserName">{{ session.get('user', {}).get('name', 'Nguyễn Minh Nam') }}</span>
+                        <span class="profile-role">Manager</span>
+                    </div>
+                </a>
+            </div>
+        </header>
+
+        <!-- 4 TABS NỘI BỘ -->
+        <nav class="tabs-bar">
+            <button type="button" class="tab-btn active" id="tabBtnInfo" onclick="switchProfileTab('INFO', this)">
+                &#128100; Thông tin cá nhân
+            </button>
+            <button type="button" class="tab-btn" id="tabBtnSec" onclick="switchProfileTab('SECURITY', this)">
+                &#128274; Bảo mật &amp; Đăng nhập
+            </button>
+            <button type="button" class="tab-btn" id="tabBtnNoti" onclick="switchProfileTab('NOTI', this)">
+                &#128276; Thông báo
+            </button>
+            <button type="button" class="tab-btn" id="tabBtnLogs" onclick="switchProfileTab('LOGS', this)">
+                &#128197; Nhật ký hoạt động
+            </button>
+        </nav>
+
+        <!-- ================= TAB 1: THÔNG TIN CÁ NHÂN (BỐ CỤC 2 CỘT) ================= -->
+        <section id="panelInfo" class="tab-panel active">
+            <div class="profile-grid">
+                <!-- Cột trái: Hồ sơ định danh & Liên hệ -->
+                <div class="card-box">
+                    <div class="card-title">
+                        <span>&#128100; Thông tin cá nhân &amp; Định danh kho</span>
+                        <span style="font-size:11.5px; color:#64748b; font-weight:600;">Trường khóa do Admin quản lý</span>
+                    </div>
+
+                    <div class="avatar-hero">
+                        <div class="avatar-lg-wrap">
+                            <div class="avatar-lg" id="profileAvatarBox">MN</div>
+                            <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="handleAvatarUpload(event)">
+                            <button type="button" class="cam-btn" title="Thay đổi ảnh đại diện" onclick="document.getElementById('avatarFileInput').click()">
+                                &#128247;
+                            </button>
+                        </div>
+                        <div>
+                            <h2 style="font-size:19px; font-weight:800; color:#0f172a;" id="heroFullName">Nguyễn Minh Nam</h2>
+                            <div>
+                                <span class="role-pill" id="heroRoleBadge">Manager</span>
+                                <span class="status-active-pill" id="heroStatusBadge">&#9679; Đang hoạt động</span>
+                            </div>
+                            <div style="font-size:12.5px; color:#475569;">&#9993; <span id="heroEmailText">nam.nguyen@sanova.vn</span> &nbsp;|&nbsp; &#128222; <span id="heroPhoneText">0912 345 678</span></div>
+                        </div>
+                    </div>
+
+                    <form onsubmit="saveManagerProfile(event)">
+                        <!-- Các trường định danh chỉ đọc (Read-only) -->
+                        <div class="form-grid-2">
+                            <div class="fg">
+                                <label>Họ và tên (Chỉ xem)</label>
+                                <input type="text" id="inpFullName" readonly>
+                                <span class="ro-hint">Liên hệ Admin nếu cần điều chỉnh họ tên pháp lý.</span>
+                            </div>
+                            <div class="fg">
+                                <label>Mã nhân viên (Chỉ xem)</label>
+                                <input type="text" id="inpStaffCode" readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="fg">
+                                <label>Tên đăng nhập (Chỉ xem)</label>
+                                <input type="text" id="inpUsername" readonly>
+                            </div>
+                            <div class="fg">
+                                <label>Vai trò &amp; Phòng ban (Chỉ xem)</label>
+                                <input type="text" id="inpRoleDept" readonly>
+                            </div>
+                        </div>
+
+                        <div class="fg" style="margin-bottom:14px;">
+                            <label>Phạm vi kho được phân quyền (Chỉ xem)</label>
+                            <input type="text" id="inpWarehouseScope" readonly>
+                            <span class="ro-hint">Phạm vi kho do Admin cấp phát; Manager không thể tự mở rộng kho truy cập.</span>
+                        </div>
+
+                        <!-- Các trường được phép chỉnh sửa: Email, Số điện thoại, Ghi chú -->
+                        <div class="form-grid-2">
+                            <div class="fg">
+                                <label>Email liên hệ <span style="color:#dc2626;">*</span></label>
+                                <input type="email" id="inpEmail" required placeholder="nhap.email@sanova.vn">
+                            </div>
+                            <div class="fg">
+                                <label>Số điện thoại <span style="color:#dc2626;">*</span></label>
+                                <input type="text" id="inpPhone" required placeholder="09xx xxx xxx">
+                            </div>
+                        </div>
+
+                        <div class="fg">
+                            <label>Ghi chú cá nhân</label>
+                            <textarea id="inpBioNote" rows="2" maxlength="255" placeholder="Nhập ghi chú công việc hoặc thông tin liên hệ bổ sung (tối đa 255 ký tự)..."></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-cancel" onclick="loadManagerProfile()">Khôi phục</button>
+                            <button type="submit" class="btn-save">&#10004; Lưu thay đổi</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Cột phải: Tóm tắt Bảo mật, Tùy chọn thông báo & Nhật ký gần đây -->
+                <div>
+                    <!-- 1. Bảo mật tài khoản -->
+                    <div class="card-box">
+                        <div class="card-title"><span>&#128737; Bảo mật tài khoản</span></div>
+                        <div class="sec-action-row" onclick="openChangePasswordModal()">
+                            <div class="sec-left">
+                                <div class="sec-icon">&#128273;</div>
+                                <div>
+                                    <div style="font-size:13.5px; font-weight:700; color:#0f172a;">Đổi mật khẩu</div>
+                                    <div style="font-size:11.5px; color:#64748b;" id="lastPwdChangedText">Lần đổi gần nhất: Chưa ghi nhận</div>
+                                </div>
+                            </div>
+                            <span style="font-weight:800; color:#64748b;">&rsaquo;</span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Tùy chọn thông báo cá nhân -->
+                    <div class="card-box">
+                        <div class="card-title">
+                            <span>&#128276; Tùy chọn thông báo</span>
+                            <button type="button" onclick="saveNotificationPrefs()" style="padding:5px 11px; border:none; border-radius:7px; background:#ecfdf5; color:#059669; font-size:11.5px; font-weight:700; cursor:pointer;">Lưu tùy chọn</button>
+                        </div>
+                        <label class="noti-check-row">
+                            <input type="checkbox" id="prefTasks" checked>
+                            <div>
+                                <div style="font-size:13px; font-weight:700; color:#0f172a;">Thông báo nghiệp vụ kho cần duyệt</div>
+                                <div style="font-size:11.5px; color:#64748b;">Phiếu nhập kho, bàn giao và kiểm kê chờ xác nhận</div>
+                            </div>
+                        </label>
+                        <label class="noti-check-row">
+                            <input type="checkbox" id="prefAlerts" checked>
+                            <div>
+                                <div style="font-size:13px; font-weight:700; color:#0f172a;">Cảnh báo tồn thấp &amp; sức chứa kệ</div>
+                                <div style="font-size:11.5px; color:#64748b;">SKU dưới ngưỡng tối thiểu và vị trí kệ sắp đầy</div>
+                            </div>
+                        </label>
+                        <label class="noti-check-row" style="margin-bottom:0;">
+                            <input type="checkbox" id="prefClosing" checked>
+                            <div>
+                                <div style="font-size:13px; font-weight:700; color:#0f172a;">Nhắc nhở chốt tồn cuối ngày</div>
+                                <div style="font-size:11.5px; color:#64748b;">Cảnh báo khi kết thúc ca chưa khóa sổ ngày</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- 3. Nhật ký hoạt động gần đây -->
+                    <div class="card-box" style="margin-bottom:0;">
+                        <div class="card-title">
+                            <span>&#128337; Nhật ký hoạt động gần đây</span>
+                            <a onclick="switchProfileTab('LOGS', document.getElementById('tabBtnLogs'))" style="font-size:12px; color:#2563eb; cursor:pointer;">Xem tất cả &rarr;</a>
+                        </div>
+                        <table class="mini-table">
+                            <thead><tr><th>Thời gian</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+                            <tbody id="recentPersonalLogsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: BẢO MẬT & LỊCH SỬ ĐĂNG NHẬP ================= -->
+        <section id="panelSecurity" class="tab-panel">
+            <div class="profile-grid">
+                <div class="card-box">
+                    <div class="card-title"><span>&#128274; Chính sách mật khẩu &amp; An toàn phiên</span></div>
+                    <p style="font-size:13px; color:#475569; line-height:1.55; margin-bottom:14px;">
+                        Mật khẩu của tài khoản Manager được mã hóa một chiều (Hash) trên hệ thống SANOVA. Khi đổi mật khẩu, hệ thống yêu cầu xác minh mật khẩu hiện tại và giới hạn tối đa 5 lần thử sai liên tiếp.
+                    </p>
+                    <button type="button" class="btn-save" onclick="openChangePasswordModal()">&#128273; Đổi mật khẩu ngay</button>
+                </div>
+
+                <div class="card-box">
+                    <div class="card-title"><span>&#128187; Lịch sử đăng nhập tài khoản</span></div>
+                    <table class="mini-table">
+                        <thead><tr><th>Thời gian</th><th>Thiết bị / Trình duyệt</th><th>Kết quả</th></tr></thead>
+                        <tbody id="loginHistoryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: TÙY CHỌN THÔNG BÁO ================= -->
+        <section id="panelNoti" class="tab-panel">
+            <div class="card-box" style="max-width:680px;">
+                <div class="card-title"><span>&#128276; Cấu hình nhận thông báo điều hành kho</span></div>
+                <p style="font-size:12.5px; color:#64748b; margin-bottom:14px;">
+                    Tùy chỉnh các nhóm thông báo hiển thị tại quả chuông điều hành của bạn.
+                </p>
+                <label class="noti-check-row">
+                    <input type="checkbox" id="prefTabTasks" checked>
+                    <div>
+                        <div style="font-size:13px; font-weight:700;">Yêu cầu Duyệt &amp; xác nhận (Nhập kho · Bàn giao)</div>
+                        <div style="font-size:11.5px; color:#64748b;">Nhận thông báo ngay khi nhân viên kho gửi phiếu mới</div>
+                    </div>
+                </label>
+                <label class="noti-check-row">
+                    <input type="checkbox" id="prefTabStocktake" checked>
+                    <div>
+                        <div style="font-size:13px; font-weight:700;">Yêu cầu điều chỉnh sau kiểm kê</div>
+                        <div style="font-size:11.5px; color:#64748b;">Nhận thông báo khi phát sinh chênh lệch PCS cần thẩm định</div>
+                    </div>
+                </label>
+                <label class="noti-check-row">
+                    <input type="checkbox" id="prefTabClosing" checked>
+                    <div>
+                        <div style="font-size:13px; font-weight:700;">Nhắc lịch Chốt tồn cuối ngày</div>
+                        <div style="font-size:11.5px; color:#64748b;">Thông báo nhắc đối soát và khóa sổ tồn kho cuối ngày</div>
+                    </div>
+                </label>
+                <div class="form-actions">
+                    <button type="button" class="btn-save" onclick="saveNotificationPrefs(true)">&#10004; Lưu cấu hình thông báo</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: NHẬT KÝ HOẠT ĐỘNG CÁ NHÂN ================= -->
+        <section id="panelLogs" class="tab-panel">
+            <div class="card-box">
+                <div class="card-title"><span>&#128197; Toàn bộ lịch sử thao tác cá nhân của Manager</span></div>
+                <table class="mini-table">
+                    <thead><tr><th>Thời gian</th><th>Phân hệ</th><th>Hành động thực hiện</th><th>Đối tượng</th><th>Kết quả</th></tr></thead>
+                    <tbody id="fullPersonalLogsBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= MODAL ĐỔI MẬT KHẨU (MẪU 5) ================= -->
+    <div class="modal-overlay" id="changePwdModal">
+        <div class="modal-pwd-box">
+            <div class="modal-head">
+                <h3 style="font-size:17px; font-weight:800; color:#0f172a;">&#128274; Đổi mật khẩu</h3>
+                <button type="button" style="background:none;border:none;font-size:22px;cursor:pointer;color:#64748b;" onclick="closeChangePasswordModal()">&times;</button>
+            </div>
+            <form onsubmit="submitChangePassword(event)">
+                <div class="modal-body">
+                    <div class="fg" style="margin-bottom:14px;">
+                        <label>Mật khẩu hiện tại <span style="color:#dc2626;">*</span></label>
+                        <input type="password" id="pwdCurrent" required placeholder="Nhập mật khẩu hiện tại">
+                    </div>
+                    <div class="fg" style="margin-bottom:14px;">
+                        <label>Mật khẩu mới <span style="color:#dc2626;">*</span></label>
+                        <input type="password" id="pwdNew" required minlength="6" placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)">
+                    </div>
+                    <div class="fg" style="margin-bottom:6px;">
+                        <label>Xác nhận mật khẩu mới <span style="color:#dc2626;">*</span></label>
+                        <input type="password" id="pwdConfirm" required minlength="6" placeholder="Nhập lại mật khẩu mới">
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button type="button" class="btn-cancel" onclick="closeChangePasswordModal()">Hủy</button>
+                    <button type="submit" class="btn-save">&#10004; Cập nhật mật khẩu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchProfileTab(tab, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            if (tab === 'INFO') document.getElementById('panelInfo').classList.add('active');
+            if (tab === 'SECURITY') document.getElementById('panelSecurity').classList.add('active');
+            if (tab === 'NOTI') document.getElementById('panelNoti').classList.add('active');
+            if (tab === 'LOGS') document.getElementById('panelLogs').classList.add('active');
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('pwdCurrent').value = '';
+            document.getElementById('pwdNew').value = '';
+            document.getElementById('pwdConfirm').value = '';
+            document.getElementById('changePwdModal').classList.add('show');
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePwdModal').classList.remove('show');
+        }
+
+        async function loadManagerProfile() {
+            try {
+                const res = await fetch('/manager/api/profile');
+                if (!res.ok) return;
+                const data = await res.json();
+                const u = data.profile;
+
+                document.getElementById('headerUserName').textContent = u.full_name;
+                document.getElementById('heroFullName').textContent = u.full_name;
+                document.getElementById('heroEmailText').textContent = u.email;
+                document.getElementById('heroPhoneText').textContent = u.phone;
+                document.getElementById('heroRoleBadge').textContent = u.role_label;
+
+                // Khóa cứng trường quản trị
+                document.getElementById('inpFullName').value = u.full_name;
+                document.getElementById('inpStaffCode').value = u.staff_code;
+                document.getElementById('inpUsername').value = u.username;
+                document.getElementById('inpRoleDept').value = `${u.role_label} · ${u.department}`;
+                document.getElementById('inpWarehouseScope').value = u.warehouse_scope;
+
+                // Trường được phép sửa
+                document.getElementById('inpEmail').value = u.email;
+                document.getElementById('inpPhone').value = u.phone;
+                document.getElementById('inpBioNote').value = u.note || '';
+
+                if (u.last_password_changed) {
+                    document.getElementById('lastPwdChangedText').textContent = `Lần đổi gần nhất: ${u.last_password_changed}`;
+                }
+
+                // Avatar
+                const initials = u.full_name.trim().split(' ').slice(-2).map(w => w[0]).join('').toUpperCase();
+                if (u.avatar_url) {
+                    document.getElementById('profileAvatarBox').innerHTML = `<img src="${u.avatar_url}" alt="Avatar">`;
+                    document.getElementById('headerAvatarInitials').innerHTML = `<img src="${u.avatar_url}" style="width:100%;height:100%;object-fit:cover;">`;
+                } else {
+                    document.getElementById('profileAvatarBox').textContent = initials;
+                    document.getElementById('headerAvatarInitials').textContent = initials;
+                }
+
+                // Tùy chọn thông báo
+                const prefs = u.noti_prefs || {};
+                document.getElementById('prefTasks').checked = prefs.tasks !== false;
+                document.getElementById('prefAlerts').checked = prefs.alerts !== false;
+                document.getElementById('prefClosing').checked = prefs.closing !== false;
+
+                // Nhật ký hoạt động cá nhân
+                const logs = data.activity_logs || [];
+                document.getElementById('recentPersonalLogsBody').innerHTML = logs.slice(0, 4).map(l => `
+                    <tr>
+                        <td style="color:#64748b; white-space:nowrap;">${l.time}</td>
+                        <td><span class="act-pill ${l.is_login ? 'ap-login' : 'ap-work'}">${l.action}</span></td>
+                        <td>${l.target}</td>
+                    </tr>
+                `).join('') || '<tr><td colspan="3" style="text-align:center;color:#64748b;">Chưa có hoạt động nào.</td></tr>';
+
+                document.getElementById('fullPersonalLogsBody').innerHTML = logs.map(l => `
+                    <tr>
+                        <td style="color:#64748b; white-space:nowrap;">${l.time}</td>
+                        <td><strong>${l.category}</strong></td>
+                        <td>${l.action}</td>
+                        <td>${l.target}</td>
+                        <td><span class="act-pill ap-login">${l.status}</span></td>
+                    </tr>
+                `).join('');
+
+                // Lịch sử đăng nhập
+                const logins = data.login_history || [];
+                document.getElementById('loginHistoryTableBody').innerHTML = logins.map(lg => `
+                    <tr>
+                        <td style="color:#64748b; white-space:nowrap;">${lg.time}</td>
+                        <td>${lg.device}</td>
+                        <td><span class="act-pill ${lg.success ? 'ap-login' : 'ap-fail'}">${lg.result}</span></td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error('Lỗi tải hồ sơ Manager:', err);
+            }
+        }
+
+        async function saveManagerProfile(e) {
+            e.preventDefault();
+            const payload = {
+                email: document.getElementById('inpEmail').value.trim(),
+                phone: document.getElementById('inpPhone').value.trim(),
+                note: document.getElementById('inpBioNote').value.trim()
+            };
+            const res = await fetch('/manager/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể cập nhật thông tin cá nhân.');
+                return;
+            }
+            alert(data.message);
+            loadManagerProfile();
+        }
+
+        async function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('avatar', file);
+            const res = await fetch('/manager/api/profile/avatar', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể tải ảnh đại diện.');
+                return;
+            }
+            loadManagerProfile();
+        }
+
+        async function saveNotificationPrefs(fromTab = false) {
+            const payload = {
+                tasks: fromTab ? document.getElementById('prefTabTasks').checked : document.getElementById('prefTasks').checked,
+                alerts: fromTab ? document.getElementById('prefTabStocktake').checked : document.getElementById('prefAlerts').checked,
+                closing: fromTab ? document.getElementById('prefTabClosing').checked : document.getElementById('prefClosing').checked
+            };
+            const res = await fetch('/manager/api/profile/notifications', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            alert(data.message || 'Đã lưu tùy chọn thông báo.');
+        }
+
+        async function submitChangePassword(e) {
+            e.preventDefault();
+            const current_password = document.getElementById('pwdCurrent').value;
+            const new_password = document.getElementById('pwdNew').value;
+            const confirm_password = document.getElementById('pwdConfirm').value;
+
+            if (new_password !== confirm_password) {
+                alert('Xác nhận mật khẩu mới không khớp.');
+                return;
+            }
+
+            const res = await fetch('/manager/api/profile/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_password, new_password, confirm_password })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể đổi mật khẩu.');
+                return;
+            }
+            alert(data.message);
+            closeChangePasswordModal();
+            loadManagerProfile();
+        }
+
+        loadManagerProfile();
+    </script>
+    <script src="{{ url_for('static', filename='js/manager_sidebar_sync.js') }}"></script>
+</body>
+</html>

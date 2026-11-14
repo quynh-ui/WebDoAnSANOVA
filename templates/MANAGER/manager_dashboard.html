@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tổng quan kho hàng · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #067a6f;
+            --sidebar-hover: rgba(255, 255, 255, 0.07);
+            --bg-page: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-dark: #044e39;
+            --blue: #2563eb;
+            --purple: #7c3aed;
+            --amber: #d97706;
+            --red: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ================= 1. SIDEBAR CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar-top::-webkit-scrollbar { width: 0; }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 0 10px 22px;
+        }
+        .brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #ffffff;
+        }
+
+        .nav-category {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #10b981;
+            font-weight: 800;
+            padding: 0 12px 10px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 13px;
+            color: #e2e8f0;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.18s ease;
+        }
+        .nav-link:hover {
+            background-color: var(--sidebar-hover);
+            color: #ffffff;
+        }
+        .nav-link.active {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+        }
+
+        .nav-link-left {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+        .nav-icon { flex-shrink: 0; color: #cbd5e1; }
+        .nav-link.active .nav-icon, .nav-link:hover .nav-icon { color: #ffffff; }
+        .nav-text-group { display: flex; flex-direction: column; }
+        .nav-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+        .nav-link.active .nav-title { font-weight: 700; }
+        .nav-subtitle { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+        .nav-link.active .nav-subtitle { color: #ccfbf1; }
+
+        .badge-count {
+            background-color: #ef4444;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 21px;
+            height: 21px;
+            padding: 0 6px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-bottom {
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .logout-link:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        /* ================= 2. VÙNG NỘI DUNG CHÍNH ================= */
+        .main-wrapper {
+            flex-grow: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 22px 28px 36px;
+        }
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* --- KHU VỰC 1: HEADER --- */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            gap: 16px;
+        }
+        .header-title-area h1 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+        }
+        .header-title-area p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .live-sync-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .header-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .header-user-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Chuông thông báo */
+        .noti-wrapper { position: relative; }
+        .bell-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            color: #334155;
+            transition: all 0.15s;
+        }
+        .bell-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .bell-dot {
+            position: absolute;
+            top: 8px;
+            right: 9px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            border: 1.5px solid #ffffff;
+        }
+
+        .noti-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 48px;
+            width: 340px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+            z-index: 200;
+            overflow: hidden;
+        }
+        .noti-dropdown.show { display: block; }
+        .noti-head {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .noti-list { max-height: 280px; overflow-y: auto; }
+        .noti-item {
+            padding: 11px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 12.5px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            cursor: pointer;
+        }
+        .noti-item:hover { background: #f8fafc; }
+        .noti-item.unread { background: #f0fdf4; }
+        .noti-time { font-size: 11px; color: var(--text-muted); }
+
+        /* Profile Manager Pill */
+        .profile-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            padding: 5px 14px 5px 6px;
+            border-radius: 999px;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+        .avatar-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #d1fae5;
+            color: #065f46;
+            font-weight: 800;
+            font-size: 12.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+        .profile-role { font-size: 11px; color: var(--text-muted); }
+
+        /* Bộ lọc ngày */
+        .date-filter-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 10px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #334155;
+        }
+        .date-filter-box input[type="date"] {
+            border: none;
+            outline: none;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #0f172a;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        /* ================= KHU VỰC 2: 6 THẺ KPI ================= */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 1440px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 15px 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+        }
+
+        .kpi-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .kpi-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .ic-blue { background: #eff6ff; color: #2563eb; }
+        .ic-amber { background: #fffbeb; color: #d97706; }
+        .ic-sky { background: #f0f9ff; color: #0284c7; }
+        .ic-indigo { background: #eef2ff; color: #4f46e5; }
+        .ic-orange { background: #fff7ed; color: #ea580c; }
+        .ic-green { background: #ecfdf5; color: #059669; }
+
+        .kpi-label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #475569;
+            line-height: 1.25;
+        }
+        .kpi-main-val {
+            font-size: 23px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.4px;
+        }
+        .kpi-sub-row {
+            margin-top: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .text-up { color: #059669; }
+        .text-muted-sm { color: #64748b; font-weight: 500; }
+
+        .closing-pill-ok {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #059669;
+            font-size: 12.5px;
+            font-weight: 700;
+            margin-top: 6px;
+            text-decoration: none;
+        }
+        .closing-pill-pending {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #d97706;
+            font-size: 12.5px;
+            font-weight: 700;
+            margin-top: 6px;
+            text-decoration: none;
+        }
+
+        /* ================= CARD CHUNG ================= */
+        .card-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .link-all {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #0284c7;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .link-all:hover { text-decoration: underline; }
+
+        /* ================= KHU VỰC 3: CÔNG VIỆC CẦN XỬ LÝ ================= */
+        .task-filter-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .tab-chip {
+            padding: 5px 11px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            color: #475569;
+            cursor: pointer;
+        }
+        .tab-chip.active {
+            background: #033928;
+            color: #ffffff;
+            border-color: #033928;
+        }
+
+        .tasks-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .tasks-table th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+        }
+        .tasks-table td {
+            padding: 12px;
+            font-size: 13px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .tasks-table tr:last-child td { border-bottom: none; }
+        .tasks-table tr:hover { background: #f8fafc; }
+
+        .task-icon-badge {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ti-red { background: #fef2f2; color: #dc2626; }
+        .ti-purple { background: #f5f3ff; color: #7c3aed; }
+        .ti-blue { background: #eff6ff; color: #2563eb; }
+        .ti-amber { background: #fffbeb; color: #d97706; }
+
+        .type-pill {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .tp-inbound { background: #dbeafe; color: #1d4ed8; }
+        .tp-handover { background: #e0e7ff; color: #4338ca; }
+        .tp-stocktake { background: #ede9fe; color: #6d28d9; }
+        .tp-shortage { background: #fee2e2; color: #b91c1c; }
+
+        .status-pill {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .sp-wait { background: #fef3c7; color: #b45309; }
+        .sp-urgent { background: #fee2e2; color: #b91c1c; }
+        .dot-sm { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        .btn-action-sm {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #0284c7;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.15s;
+        }
+        .btn-action-sm:hover {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #0284c7;
+        }
+
+        /* ================= KHU VỰC 4 & 5: BIỂU ĐỒ & LƯU TRỮ ================= */
+        .mid-grid {
+            display: grid;
+            grid-template-columns: 1.45fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 1200px) {
+            .mid-grid { grid-template-columns: 1fr; }
+        }
+
+        .range-switch {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 8px;
+        }
+        .range-btn {
+            border: none;
+            background: transparent;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .range-btn.active {
+            background: #ffffff;
+            color: #0f172a;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .lg-box { width: 12px; height: 12px; border-radius: 3px; }
+        .lg-line { width: 14px; height: 3px; background: #7c3aed; border-radius: 2px; }
+
+        .chart-svg-wrap {
+            width: 100%;
+            height: 220px;
+            position: relative;
+        }
+
+        /* Khu vực 5: Tình trạng lưu trữ */
+        .storage-body {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding-top: 8px;
+        }
+        .donut-box {
+            width: 145px;
+            height: 145px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .donut-inner {
+            width: 106px;
+            height: 106px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .donut-pct { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+        .donut-lbl { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px; }
+
+        .storage-metrics {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .metric-row { display: flex; flex-direction: column; gap: 5px; }
+        .metric-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12.5px;
+        }
+        .metric-left { display: flex; align-items: center; gap: 8px; color: #334155; }
+        .metric-left strong { color: #0f172a; font-weight: 800; }
+        .metric-pct { font-weight: 700; color: #0f172a; }
+        .progress-track {
+            width: 100%;
+            height: 7px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: #10b981;
+            transition: width 0.4s ease;
+        }
+        .progress-fill.warn { background: #f59e0b; }
+        .progress-fill.danger { background: #ef4444; }
+
+        .overload-alert {
+            margin-top: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .alert-normal { background: #ecfdf5; color: #065f46; }
+        .alert-warn { background: #fef2f2; color: #b91c1c; }
+
+        /* ================= KHU VỰC 6 & 7: ĐƠN HÀNG + CHỐT TỒN + HOẠT ĐỘNG ================= */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1.55fr 1fr 1.15fr;
+            gap: 20px;
+        }
+        @media (max-width: 1360px) {
+            .bottom-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Khu vực 6: Pipeline tiến độ đơn hàng */
+        .order-pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin-top: 14px;
+        }
+        .pipe-step {
+            flex: 1;
+            border-radius: 12px;
+            padding: 14px 8px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 82px;
+        }
+        .ps-gray { background: #f1f5f9; color: #334155; }
+        .ps-blue { background: #e0f2fe; color: #0369a1; }
+        .ps-purple { background: #f3e8ff; color: #7e22ce; }
+        .ps-amber { background: #fef3c7; color: #b45309; }
+        .ps-green { background: #dcfce7; color: #15803d; }
+
+        .pipe-num { font-size: 20px; font-weight: 800; line-height: 1.2; }
+        .pipe-lbl { font-size: 11px; font-weight: 700; margin-top: 4px; line-height: 1.2; }
+        .pipe-arrow { color: #94a3b8; font-weight: 800; font-size: 14px; }
+
+        /* Khu vực 7A: Chốt tồn cuối ngày */
+        .closing-box-inner {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: calc(100% - 34px);
+        }
+        .closing-date-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .closing-date-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13.5px;
+            font-weight: 700;
+        }
+        .badge-unclosed {
+            background: #fef3c7;
+            color: #b45309;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+        .badge-closed {
+            background: #dcfce7;
+            color: #15803d;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+        .closing-meta {
+            font-size: 12.5px;
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 14px;
+        }
+        .btn-closing-cta {
+            width: 100%;
+            padding: 11px;
+            background: var(--emerald-dark);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-closing-cta:hover { background: #065f46; }
+
+        /* Khu vực 7B: Hoạt động gần đây */
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .act-item {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .act-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .act-left { display: flex; align-items: flex-start; gap: 10px; }
+        .act-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .ai-green { background: #dcfce7; color: #16a34a; }
+        .ai-blue { background: #dbeafe; color: #2563eb; }
+        .ai-purple { background: #f3e8ff; color: #9333ea; }
+        .act-text { font-size: 12.5px; font-weight: 600; color: #1e293b; line-height: 1.35; }
+        .act-time { font-size: 11.5px; color: #94a3b8; white-space: nowrap; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR QUẢN LÝ KHO (CỐ ĐỊNH) ================= -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">QUẢN LÝ KHO</div>
+
+            <ul class="nav-list">
+                <li>
+                    <a href="/manager" class="nav-link active">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            <div class="nav-text-group"><span class="nav-title">Tổng quan</span></div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/products" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                            <div class="nav-text-group"><span class="nav-title">Danh mục sản phẩm</span></div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/warehouse-config" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"></path><path d="M6 18h12"></path><path d="M6 14h12"></path><rect x="6" y="10" width="12" height="12"></rect></svg>
+                            <div class="nav-text-group"><span class="nav-title">Cấu hình kho</span></div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/approvals" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                            <div class="nav-text-group">
+                                <span class="nav-title">Duyệt & xác nhận</span>
+                                <span class="nav-subtitle">Nhập kho · Bàn giao</span>
+                            </div>
+                        </div>
+                        <span class="badge-count" id="sbBadgeApprovals" style="{% if manager_sidebar.approvals == 0 %}display:none;{% endif %}">
+                            {{ manager_sidebar.approvals }}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/inventory" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+                            <div class="nav-text-group">
+                                <span class="nav-title">Giám sát tồn kho</span>
+                                <span class="nav-subtitle">Box · PCS · OUT · RETURNED</span>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/stocktake" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                            <div class="nav-text-group"><span class="nav-title">Kiểm kê & điều chỉnh</span></div>
+                        </div>
+                        <span class="badge-count" id="sbBadgeStocktake" style="{% if manager_sidebar.stocktake == 0 %}display:none;{% endif %}">
+                            {{ manager_sidebar.stocktake }}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/daily-closing" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9 16 2 2 4-4"></path></svg>
+                            <div class="nav-text-group"><span class="nav-title">Chốt tồn cuối ngày</span></div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/reports" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            <div class="nav-text-group"><span class="nav-title">Báo cáo & đối soát</span></div>
+                        </div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-bottom">
+            <a href="/manager/profile" class="nav-link">
+                <div class="nav-link-left">
+                    <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <div class="nav-text-group"><span class="nav-title">Tài khoản cá nhân</span></div>
+                </div>
+            </a>
+            <a href="/logout" class="nav-link logout-link">
+                <div class="nav-link-left">
+                    <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <div class="nav-text-group"><span class="nav-title">Đăng xuất</span></div>
+                </div>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ================= VÙNG NỘI DUNG DASHBOARD ================= -->
+    <main class="main-wrapper">
+
+        <!-- 1. HEADER -->
+        <header class="top-header">
+            <div class="header-title-area">
+                <h1>Tổng quan kho hàng</h1>
+                <p>
+                    <span class="live-sync-dot" title="Đang đồng bộ thời gian thực"></span>
+                    Giám sát nhập – xuất – tồn, tiến độ đơn hàng và các công việc cần xử lý
+                </p>
+            </div>
+
+            <div class="header-controls">
+                <div class="header-user-row">
+                    <!-- Chuông thông báo -->
+                    <div class="noti-wrapper">
+                        <button type="button" class="bell-btn" id="managerBellBtn" title="Thông báo điều hành kho">
+                            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                            <span class="bell-dot" id="managerBellDot"></span>
+                        </button>
+                        <div class="noti-dropdown" id="managerNotiDropdown">
+                            <div class="noti-head">
+                                <span>Thông báo kho (<span id="notiCountTxt">0</span>)</span>
+                                <a href="/manager/approvals" style="font-size: 11.5px; color: #059669; text-decoration: none;">Xử lý ngay</a>
+                            </div>
+                            <div class="noti-list" id="managerNotiList"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tài khoản Manager -->
+                    <a href="/manager/profile" class="profile-pill">
+                        <div class="avatar-circle" id="managerInitials">MN</div>
+                        <div class="profile-info">
+                            <span class="profile-name" id="managerDisplayName">{{ session.get('user', {}).get('name', 'Nguyễn Minh Nam') }}</span>
+                            <span class="profile-role">Manager</span>
+                        </div>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </a>
+                </div>
+
+                <!-- Bộ lọc ngày -->
+                <div class="date-filter-box">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span id="dateLabelPrefix">Hôm nay,</span>
+                    <input type="date" id="dashboardDateFilter" onchange="onDateFilterChange()">
+                </div>
+            </div>
+        </header>
+
+        <!-- 2. THẺ THỐNG KÊ KPI (6 THẺ ĐỒNG BỘ TỰ ĐỘNG) -->
+        <section class="kpi-grid">
+            <!-- KPI 1: Tổng tồn kho (PCS) -->
+            <div class="kpi-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon ic-blue">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    </div>
+                    <span class="kpi-label">Tồn kho (PCS)</span>
+                </div>
+                <div>
+                    <div class="kpi-main-val" id="kpiTotalPcs">0</div>
+                    <div class="kpi-sub-row text-up" id="kpiPcsTrend">↑ 0% so với hôm qua</div>
+                </div>
+            </div>
+
+            <!-- KPI 2: Box đang lưu trữ -->
+            <div class="kpi-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon ic-amber">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+                    </div>
+                    <span class="kpi-label">Box đang lưu trữ</span>
+                </div>
+                <div>
+                    <div class="kpi-main-val" id="kpiTotalBoxes">0</div>
+                    <div class="kpi-sub-row text-up" id="kpiBoxTrend">↑ 0%</div>
+                </div>
+            </div>
+
+            <!-- KPI 3: Nhập kho hôm nay -->
+            <div class="kpi-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon ic-sky">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </div>
+                    <span class="kpi-label">Nhập kho <span class="text-muted-sm">(hôm nay)</span></span>
+                </div>
+                <div>
+                    <div class="kpi-main-val" style="font-size: 18px;" id="kpiInboundDetail">0 Box · 0 PCS</div>
+                    <div class="kpi-sub-row text-muted-sm" id="kpiInboundTickets">0 phiếu đã xác nhận</div>
+                </div>
+            </div>
+
+            <!-- KPI 4: Xuất kho hôm nay -->
+            <div class="kpi-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon ic-indigo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    </div>
+                    <span class="kpi-label">Xuất kho <span class="text-muted-sm">(hôm nay)</span></span>
+                </div>
+                <div>
+                    <div class="kpi-main-val" style="font-size: 18px;" id="kpiOutboundDetail">0 đơn · 0 PCS</div>
+                    <div class="kpi-sub-row text-muted-sm">Trừ tồn thực tế tại Picking</div>
+                </div>
+            </div>
+
+            <!-- KPI 5: Công việc chờ xử lý -->
+            <div class="kpi-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon ic-orange">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                    </div>
+                    <span class="kpi-label">Công việc chờ xử lý</span>
+                </div>
+                <div>
+                    <div class="kpi-main-val" id="kpiPendingTasks">0</div>
+                    <div class="kpi-sub-row text-muted-sm" id="kpiPendingBreakdown">Nhập · Bàn giao · Kiểm kê</div>
+                </div>
+            </div>
+
+            <!-- KPI 6: Trạng thái chốt tồn -->
+            <div class="kpi-card">
+                <div class="kpi-top">
+                    <div class="kpi-icon ic-green">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9 16 2 2 4-4"></path></svg>
+                    </div>
+                    <span class="kpi-label">Trạng thái chốt tồn</span>
+                </div>
+                <div>
+                    <a href="/manager/daily-closing" id="kpiClosingStatus" class="closing-pill-ok">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                        <span>Đang kiểm tra...</span>
+                    </a>
+                    <div class="kpi-sub-row text-muted-sm" id="kpiClosingSub">Nhấn để xem biên bản chốt</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. CÔNG VIỆC CẦN MANAGER XỬ LÝ -->
+        <section class="card-box">
+            <div class="card-header">
+                <h2 class="card-title">Công việc cần Manager xử lý (<span id="taskTotalHeader">0</span>)</h2>
+                <a href="/manager/approvals" class="link-all">Xem tất cả &rarr;</a>
+            </div>
+
+            <!-- Bộ lọc nhanh 4 nhóm công việc -->
+            <div class="task-filter-tabs">
+                <button type="button" class="tab-chip active" onclick="filterTasks('ALL', this)">Tất cả (<span id="cntAll">0</span>)</button>
+                <button type="button" class="tab-chip" onclick="filterTasks('INBOUND', this)">Phiếu nhập chờ xác nhận (<span id="cntIn">0</span>)</button>
+                <button type="button" class="tab-chip" onclick="filterTasks('HANDOVER', this)">Bàn giao chờ xác nhận (<span id="cntHandover">0</span>)</button>
+                <button type="button" class="tab-chip" onclick="filterTasks('STOCKTAKE', this)">Kiểm kê chờ duyệt (<span id="cntStocktake">0</span>)</button>
+                <button type="button" class="tab-chip" onclick="filterTasks('SHORTAGE', this)">Cảnh báo thiếu hàng (<span id="cntShortage">0</span>)</button>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="tasks-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 44px;"></th>
+                            <th>Mã nghiệp vụ</th>
+                            <th>Loại công việc</th>
+                            <th>Nội dung</th>
+                            <th>Thời gian</th>
+                            <th>Trạng thái</th>
+                            <th style="text-align: right;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksTableBody">
+                        <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Đang đồng bộ danh sách công việc...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 4 & 5. BIẾN ĐỘNG NHẬP-XUẤT-TỒN & TÌNH TRẠNG LƯU TRỮ -->
+        <section class="mid-grid">
+            <!-- Khu vực 4: Biểu đồ biến động nhập - xuất - tồn (7 ngày / 30 ngày) -->
+            <div class="card-box" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <h2 class="card-title" id="chartTitle">Biến động nhập – xuất – tồn (7 ngày gần nhất)</h2>
+                    <div class="range-switch">
+                        <button type="button" class="range-btn active" id="btnRange7" onclick="switchChartRange(7)">7 ngày</button>
+                        <button type="button" class="range-btn" id="btnRange30" onclick="switchChartRange(30)">30 ngày</button>
+                    </div>
+                </div>
+
+                <div class="chart-legend">
+                    <div class="legend-item"><span class="lg-box" style="background: #10b981;"></span> Nhập (PCS)</div>
+                    <div class="legend-item"><span class="lg-box" style="background: #2563eb;"></span> Xuất (PCS)</div>
+                    <div class="legend-item"><span class="lg-line"></span> Tồn kho (PCS)</div>
+                </div>
+
+                <div class="chart-svg-wrap" id="flowChartContainer"></div>
+            </div>
+
+            <!-- Khu vực 5: Tình trạng lưu trữ -->
+            <div class="card-box" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <h2 class="card-title">Tình trạng lưu trữ</h2>
+                    <a href="/manager/warehouse-config" class="link-all" style="font-size: 12px;">Sơ đồ kệ &rarr;</a>
+                </div>
+
+                <div class="storage-body">
+                    <div class="donut-box" id="storageDonut">
+                        <div class="donut-inner">
+                            <span class="donut-pct" id="storageOverallPct">0%</span>
+                            <span class="donut-lbl">Sử dụng<br>sức chứa</span>
+                        </div>
+                    </div>
+
+                    <div class="storage-metrics">
+                        <!-- 1. Số Box đang lưu trữ -->
+                        <div class="metric-row">
+                            <div class="metric-info">
+                                <span class="metric-left">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                    <span><strong id="stBoxUsed">0</strong> / <span id="stBoxCap">0</span> Box</span>
+                                </span>
+                                <span class="metric-pct" id="stBoxPct">0%</span>
+                            </div>
+                            <div class="progress-track"><div class="progress-fill" id="stBoxBar" style="width: 0%;"></div></div>
+                        </div>
+
+                        <!-- 2. Vị trí kệ đã sử dụng -->
+                        <div class="metric-row">
+                            <div class="metric-info">
+                                <span class="metric-left">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+                                    <span><strong id="stShelfUsed">0</strong> / <span id="stShelfCap">0</span> Vị trí (kệ)</span>
+                                </span>
+                                <span class="metric-pct" id="stShelfPct">0%</span>
+                            </div>
+                            <div class="progress-track"><div class="progress-fill" id="stShelfBar" style="width: 0%;"></div></div>
+                        </div>
+
+                        <!-- 3. Tải trọng -->
+                        <div class="metric-row">
+                            <div class="metric-info">
+                                <span class="metric-left">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M6 18h12"></path><path d="M12 3v3"></path><circle cx="12" cy="7" r="1"></circle><path d="M5 18l2-9h10l2 9"></path></svg>
+                                    <span><strong id="stWeightUsed">0</strong> / <span id="stWeightCap">0</span> kg</span>
+                                </span>
+                                <span class="metric-pct" id="stWeightPct">0%</span>
+                            </div>
+                            <div class="progress-track"><div class="progress-fill" id="stWeightBar" style="width: 0%;"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cảnh báo quá tải tự động -->
+                <div class="overload-alert alert-normal" id="overloadAlertBox">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    <span id="overloadAlertText">Tải trọng và mật độ kệ trong ngưỡng vận hành an toàn.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6 & 7. TIẾN ĐỘ XỬ LÝ ĐƠN HÀNG + CHỐT TỒN CUỐI NGÀY + HOẠT ĐỘNG GẦN ĐÂY -->
+        <section class="bottom-grid">
+            <!-- Khu vực 6: Tiến độ xử lý đơn hàng hôm nay -->
+            <div class="card-box" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <h2 class="card-title">Tiến độ xử lý đơn hàng hôm nay</h2>
+                    <span style="font-size: 12px; font-weight: 700; color: #64748b;">Tổng: <strong id="ordTotalCount" style="color: #0f172a;">0</strong> đơn</span>
+                </div>
+
+                <div class="order-pipeline">
+                    <div class="pipe-step ps-gray">
+                        <span class="pipe-num" id="ordWaitPick">0</span>
+                        <span class="pipe-lbl">Chờ lấy hàng</span>
+                    </div>
+                    <span class="pipe-arrow">&rsaquo;</span>
+                    <div class="pipe-step ps-blue">
+                        <span class="pipe-num" id="ordPicking">0</span>
+                        <span class="pipe-lbl">Đang lấy hàng</span>
+                    </div>
+                    <span class="pipe-arrow">&rsaquo;</span>
+                    <div class="pipe-step ps-purple">
+                        <span class="pipe-num" id="ordPrepack">0</span>
+                        <span class="pipe-lbl">Pre-packing / Combo</span>
+                    </div>
+                    <span class="pipe-arrow">&rsaquo;</span>
+                    <div class="pipe-step ps-amber">
+                        <span class="pipe-num" id="ordPacking">0</span>
+                        <span class="pipe-lbl">Đang đóng gói</span>
+                    </div>
+                    <span class="pipe-arrow">&rsaquo;</span>
+                    <div class="pipe-step ps-green">
+                        <span class="pipe-num" id="ordHandover">0</span>
+                        <span class="pipe-lbl">Chờ bàn giao</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Khu vực 7A: Chốt tồn cuối ngày -->
+            <div class="card-box" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <h2 class="card-title">Chốt tồn cuối ngày</h2>
+                </div>
+                <div class="closing-box-inner">
+                    <div>
+                        <div class="closing-date-row">
+                            <div class="closing-date-left">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                <span id="closingCurrentDate">Ngày --/--/----</span>
+                            </div>
+                            <span class="badge-unclosed" id="closingStatusBadge">Chưa chốt</span>
+                        </div>
+                        <div class="closing-meta">
+                            <div>Tồn kho hiện tại: <strong id="closingCurrentPcs">0</strong> PCS</div>
+                            <div>Đối chiếu nhập – xuất: <strong id="closingReconcileStatus">Đang thực hiện</strong></div>
+                        </div>
+                    </div>
+                    <a href="/manager/daily-closing" class="btn-closing-cta">Xem chi tiết &amp; Thực hiện chốt tồn &rarr;</a>
+                </div>
+            </div>
+
+            <!-- Khu vực 7B: Hoạt động gần đây -->
+            <div class="card-box" style="margin-bottom: 0;">
+                <div class="card-header">
+                    <h2 class="card-title">Hoạt động gần đây</h2>
+                    <a href="/manager/reports" class="link-all" style="font-size: 12px;">Xem tất cả &rarr;</a>
+                </div>
+                <div class="activity-list" id="recentActivitiesList">
+                    <div style="font-size: 12.5px; color: #64748b;">Đang tải lịch sử thao tác...</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= JAVASCRIPT ĐỒNG BỘ DỮ LIỆU TỰ ĐỘNG ================= -->
+    <script>
+        let currentChartRange = 7;
+        let currentTaskFilter = 'ALL';
+        let cachedDashboardData = null;
+
+        // Khởi tạo ngày mặc định hôm nay trên bộ lọc
+        const dateInput = document.getElementById('dashboardDateFilter');
+        const todayIso = new Date().toISOString().split('T')[0];
+        dateInput.value = todayIso;
+
+        // Toggle dropdown chuông thông báo
+        const bellBtn = document.getElementById('managerBellBtn');
+        const notiDropdown = document.getElementById('managerNotiDropdown');
+        bellBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notiDropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', () => notiDropdown.classList.remove('show'));
+
+        function formatNum(n) {
+            return Number(n || 0).toLocaleString('vi-VN');
+        }
+
+        function onDateFilterChange() {
+            const selected = dateInput.value;
+            document.getElementById('dateLabelPrefix').textContent = (selected === todayIso) ? 'Hôm nay,' : 'Ngày';
+            fetchManagerDashboard();
+        }
+
+        function switchChartRange(days) {
+            currentChartRange = days;
+            document.getElementById('btnRange7').classList.toggle('active', days === 7);
+            document.getElementById('btnRange30').classList.toggle('active', days === 30);
+            document.getElementById('chartTitle').textContent = `Biến động nhập – xuất – tồn (${days} ngày gần nhất)`;
+            fetchManagerDashboard();
+        }
+
+        function filterTasks(group, btn) {
+            currentTaskFilter = group;
+            document.querySelectorAll('.tab-chip').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            if (cachedDashboardData) renderTasksTable(cachedDashboardData.tasks);
+        }
+
+        async function fetchManagerDashboard() {
+            try {
+                const selectedDate = dateInput.value || todayIso;
+                const res = await fetch(`/manager/api/dashboard?date=${selectedDate}&range=${currentChartRange}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                cachedDashboardData = data;
+
+                renderHeaderAndNotifications(data);
+                renderKpis(data.kpis);
+                renderTasksTable(data.tasks);
+                renderFlowChart(data.chart);
+                renderStorageStatus(data.storage);
+                renderOrderProgress(data.orders);
+                renderClosingAndActivities(data.closing, data.activities, data.kpis.total_pcs);
+            } catch (err) {
+                console.error('Lỗi đồng bộ Dashboard Manager:', err);
+            }
+        }
+
+        function renderHeaderAndNotifications(data) {
+            if (data.manager_name) {
+                document.getElementById('managerDisplayName').textContent = data.manager_name;
+                const parts = data.manager_name.trim().split(' ');
+                const initials = parts.length >= 2
+                    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                    : data.manager_name.slice(0, 2).toUpperCase();
+                document.getElementById('managerInitials').textContent = initials;
+            }
+
+            const notis = data.notifications || [];
+            document.getElementById('notiCountTxt').textContent = notis.length;
+            document.getElementById('managerBellDot').style.display = notis.length > 0 ? 'block' : 'none';
+
+            const notiListEl = document.getElementById('managerNotiList');
+            if (notis.length === 0) {
+                notiListEl.innerHTML = '<div style="padding: 16px; text-align: center; font-size: 12.5px; color: #64748b;">Không có cảnh báo mới</div>';
+            } else {
+                notiListEl.innerHTML = notis.map(n => `
+                    <div class="noti-item unread" onclick="window.location.href='${n.url}'">
+                        <strong style="color: #0f172a;">${n.title}</strong>
+                        <span style="color: #475569;">${n.message}</span>
+                        <span class="noti-time">${n.time}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderKpis(k) {
+            document.getElementById('kpiTotalPcs').textContent = formatNum(k.total_pcs);
+            document.getElementById('kpiPcsTrend').textContent = `↑ +${k.pcs_growth_pct}% so với hôm qua`;
+
+            document.getElementById('kpiTotalBoxes').textContent = formatNum(k.total_boxes);
+            document.getElementById('kpiBoxTrend').textContent = `↑ +${k.box_growth_pct}%`;
+
+            document.getElementById('kpiInboundDetail').textContent = `${formatNum(k.inbound_boxes)} Box · ${formatNum(k.inbound_pcs)} PCS`;
+            document.getElementById('kpiInboundTickets').textContent = `${k.inbound_confirmed_tickets} phiếu đã xác nhận`;
+
+            document.getElementById('kpiOutboundDetail').textContent = `${formatNum(k.outbound_orders)} đơn · ${formatNum(k.outbound_pcs)} PCS`;
+
+            document.getElementById('kpiPendingTasks').textContent = k.pending_tasks_total;
+            document.getElementById('kpiPendingBreakdown').textContent =
+                `${k.pending_inbound} nhập · ${k.pending_handover} bàn giao · ${k.pending_stocktake} kiểm kê`;
+
+            // Đồng bộ badge đỏ ở Sidebar
+            document.getElementById('sbBadgeApprovals').textContent = (k.pending_inbound + k.pending_handover);
+            document.getElementById('sbBadgeStocktake').textContent = k.pending_stocktake;
+
+            const closingEl = document.getElementById('kpiClosingStatus');
+            if (k.prev_day_closed) {
+                closingEl.className = 'closing-pill-ok';
+                closingEl.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg><span>Đã chốt ngày ${k.last_closed_date} &rsaquo;</span>`;
+            } else {
+                closingEl.className = 'closing-pill-pending';
+                closingEl.innerHTML = `<span>Chưa chốt kỳ trước &rsaquo;</span>`;
+            }
+        }
+
+        function renderTasksTable(tasks) {
+            const counts = { ALL: tasks.length, INBOUND: 0, HANDOVER: 0, STOCKTAKE: 0, SHORTAGE: 0 };
+            tasks.forEach(t => { if (counts[t.group] !== undefined) counts[t.group]++; });
+
+            document.getElementById('taskTotalHeader').textContent = tasks.length;
+            document.getElementById('cntAll').textContent = counts.ALL;
+            document.getElementById('cntIn').textContent = counts.INBOUND;
+            document.getElementById('cntHandover').textContent = counts.HANDOVER;
+            document.getElementById('cntStocktake').textContent = counts.STOCKTAKE;
+            document.getElementById('cntShortage').textContent = counts.SHORTAGE;
+
+            const filtered = currentTaskFilter === 'ALL' ? tasks : tasks.filter(t => t.group === currentTaskFilter);
+            const tbody = document.getElementById('tasksTableBody');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 20px;">Không có công việc tồn đọng trong nhóm này.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(t => {
+                let iconCls = 'ti-blue', pillCls = 'tp-inbound', stCls = 'sp-wait';
+                if (t.group === 'HANDOVER') { iconCls = 'ti-blue'; pillCls = 'tp-handover'; }
+                if (t.group === 'STOCKTAKE') { iconCls = 'ti-purple'; pillCls = 'tp-stocktake'; }
+                if (t.group === 'SHORTAGE') { iconCls = 'ti-red'; pillCls = 'tp-shortage'; stCls = 'sp-urgent'; }
+
+                return `
+                    <tr>
+                        <td>
+                            <span class="task-icon-badge ${iconCls}">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                            </span>
+                        </td>
+                        <td><strong>${t.code}</strong></td>
+                        <td><span class="type-pill ${pillCls}">${t.type_label}</span></td>
+                        <td>${t.description}</td>
+                        <td style="color: #475569; font-size: 12.5px;">${t.time}</td>
+                        <td><span class="status-pill ${stCls}"><span class="dot-sm"></span>${t.status_label}</span></td>
+                        <td style="text-align: right;">
+                            <a href="${t.action_url}" class="btn-action-sm">${t.action_text}</a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderFlowChart(series) {
+            const container = document.getElementById('flowChartContainer');
+            if (!series || series.length === 0) return;
+
+            const W = 620, H = 215;
+            const padL = 42, padR = 16, padT = 18, padB = 28;
+            const chartW = W - padL - padR;
+            const chartH = H - padT - padB;
+
+            const maxVal = Math.max(...series.map(d => Math.max(d.inbound, d.outbound, d.stock)), 10000);
+            const yMax = Math.ceil(maxVal / 10000) * 10000;
+
+            let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="none">`;
+
+            // Lưới ngang + Nhãn trục Y
+            for (let i = 0; i <= 4; i++) {
+                const val = (yMax / 4) * i;
+                const y = padT + chartH - (chartH * (val / yMax));
+                svg += `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>`;
+                svg += `<text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="10.5" fill="#64748b" font-weight="600">${val === 0 ? '0' : (val / 1000) + 'K'}</text>`;
+            }
+
+            const stepW = chartW / series.length;
+            const barW = Math.min(18, Math.max(5, stepW * 0.28));
+            let linePoints = [];
+
+            series.forEach((d, idx) => {
+                const cx = padL + stepW * idx + stepW / 2;
+
+                // Cột Nhập (Xanh lá)
+                const hIn = (d.inbound / yMax) * chartH;
+                const yIn = padT + chartH - hIn;
+                svg += `<rect x="${cx - barW - 1.5}" y="${yIn}" width="${barW}" height="${hIn}" rx="3" fill="#10b981">
+                    <title>${d.label} - Nhập: ${formatNum(d.inbound)} PCS</title>
+                </rect>`;
+
+                // Cột Xuất (Xanh dương)
+                const hOut = (d.outbound / yMax) * chartH;
+                const yOut = padT + chartH - hOut;
+                svg += `<rect x="${cx + 1.5}" y="${yOut}" width="${barW}" height="${hOut}" rx="3" fill="#2563eb">
+                    <title>${d.label} - Xuất: ${formatNum(d.outbound)} PCS</title>
+                </rect>`;
+
+                // Điểm đường Tồn kho (Tím)
+                const yStock = padT + chartH - ((d.stock / yMax) * chartH);
+                linePoints.push({ x: cx, y: yStock, val: d.stock, label: d.label });
+
+                // Nhãn trục X (nếu 30 ngày thì cách 4 ngày hiện 1 nhãn cho thoáng)
+                if (series.length <= 10 || idx % 4 === 0 || idx === series.length - 1) {
+                    svg += `<text x="${cx}" y="${H - 6}" text-anchor="middle" font-size="10.5" fill="#64748b" font-weight="600">${d.label}</text>`;
+                }
+            });
+
+            // Đường nối Tồn kho
+            const pathD = linePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+            svg += `<path d="${pathD}" fill="none" stroke="#7c3aed" stroke-width="2.2"/>`;
+
+            linePoints.forEach(p => {
+                svg += `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#ffffff" stroke="#7c3aed" stroke-width="2.2">
+                    <title>${p.label} - Tồn kho: ${formatNum(p.val)} PCS</title>
+                </circle>`;
+            });
+
+            svg += `</svg>`;
+            container.innerHTML = svg;
+        }
+
+        function renderStorageStatus(st) {
+            const boxPct = Math.round((st.boxes_used / st.boxes_cap) * 1000) / 10;
+            const shelfPct = Math.round((st.shelves_used / st.shelves_cap) * 1000) / 10;
+            const weightPct = Math.round((st.weight_used / st.weight_cap) * 1000) / 10;
+            const overallPct = Math.round((boxPct + shelfPct + weightPct) / 3);
+
+            document.getElementById('storageOverallPct').textContent = `${overallPct}%`;
+            const donutColor = overallPct >= 90 ? '#ef4444' : (overallPct >= 85 ? '#f59e0b' : '#10b981');
+            document.getElementById('storageDonut').style.background =
+                `conic-gradient(${donutColor} 0% ${overallPct}%, #e2e8f0 ${overallPct}% 100%)`;
+
+            document.getElementById('stBoxUsed').textContent = formatNum(st.boxes_used);
+            document.getElementById('stBoxCap').textContent = formatNum(st.boxes_cap);
+            document.getElementById('stBoxPct').textContent = `${boxPct}%`;
+            setProgressBar('stBoxBar', boxPct);
+
+            document.getElementById('stShelfUsed').textContent = formatNum(st.shelves_used);
+            document.getElementById('stShelfCap').textContent = formatNum(st.shelves_cap);
+            document.getElementById('stShelfPct').textContent = `${shelfPct}%`;
+            setProgressBar('stShelfBar', shelfPct);
+
+            document.getElementById('stWeightUsed').textContent = formatNum(st.weight_used);
+            document.getElementById('stWeightCap').textContent = formatNum(st.weight_cap);
+            document.getElementById('stWeightPct').textContent = `${weightPct}%`;
+            setProgressBar('stWeightBar', weightPct);
+
+            // Cảnh báo quá tải tự động khi bất kỳ chỉ số nào >= 85%
+            const alertBox = document.getElementById('overloadAlertBox');
+            const alertText = document.getElementById('overloadAlertText');
+            const maxMetric = Math.max(boxPct, shelfPct, weightPct);
+
+            if (maxMetric >= 85) {
+                alertBox.className = 'overload-alert alert-warn';
+                alertText.textContent = `Cảnh báo: Mật độ vị trí kệ đạt ${shelfPct}% (tiệm cận ngưỡng đầy 85%). Cần tối ưu dồn kệ.`;
+            } else {
+                alertBox.className = 'overload-alert alert-normal';
+                alertText.textContent = `Tải trọng và mật độ lưu trữ trong ngưỡng an toàn (${overallPct}%).`;
+            }
+        }
+
+        function setProgressBar(elId, pct) {
+            const el = document.getElementById(elId);
+            el.style.width = `${Math.min(100, pct)}%`;
+            el.className = 'progress-fill' + (pct >= 90 ? ' danger' : (pct >= 85 ? ' warn' : ''));
+        }
+
+        function renderOrderProgress(ord) {
+            const total = ord.waiting_pick + ord.picking + ord.prepacking + ord.packing + ord.waiting_handover;
+            document.getElementById('ordTotalCount').textContent = total;
+            document.getElementById('ordWaitPick').textContent = String(ord.waiting_pick).padStart(2, '0');
+            document.getElementById('ordPicking').textContent = String(ord.picking).padStart(2, '0');
+            document.getElementById('ordPrepack').textContent = String(ord.prepacking).padStart(2, '0');
+            document.getElementById('ordPacking').textContent = String(ord.packing).padStart(2, '0');
+            document.getElementById('ordHandover').textContent = String(ord.waiting_handover).padStart(2, '0');
+        }
+
+        function renderClosingAndActivities(closing, activities, currentPcs) {
+            document.getElementById('closingCurrentDate').textContent = `Ngày ${closing.date_display}`;
+            document.getElementById('closingCurrentPcs').textContent = formatNum(currentPcs);
+            document.getElementById('closingReconcileStatus').textContent = closing.reconcile_text;
+
+            const badge = document.getElementById('closingStatusBadge');
+            if (closing.is_closed) {
+                badge.className = 'badge-closed';
+                badge.textContent = 'Đã chốt tồn';
+            } else {
+                badge.className = 'badge-unclosed';
+                badge.textContent = 'Chưa chốt';
+            }
+
+            const actList = document.getElementById('recentActivitiesList');
+            if (!activities || activities.length === 0) {
+                actList.innerHTML = '<div style="font-size: 12.5px; color: #64748b;">Chưa có hoạt động kho nào hôm nay.</div>';
+                return;
+            }
+
+            actList.innerHTML = activities.map(a => {
+                let icClass = 'ai-green';
+                if (a.type === 'PACK') icClass = 'ai-blue';
+                if (a.type === 'STOCKTAKE') icClass = 'ai-purple';
+                return `
+                    <div class="act-item">
+                        <div class="act-left">
+                            <span class="act-icon ${icClass}">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </span>
+                            <span class="act-text">${a.text}</span>
+                        </div>
+                        <span class="act-time">${a.time}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Chạy lần đầu & tự đồng bộ mỗi 5 giây không cần F5
+        fetchManagerDashboard();
+        setInterval(fetchManagerDashboard, 5000);
+    </script>
+    <script src="{{ url_for('static', filename='js/manager_sidebar_sync.js') }}"></script>
+</body>
+</html>

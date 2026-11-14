@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh mục sản phẩm · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #067a6f;
+            --sidebar-hover: rgba(255, 255, 255, 0.07);
+            --bg-page: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-dark: #044e39;
+            --blue: #2563eb;
+            --amber: #d97706;
+            --red: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ================= SIDEBAR CỐ ĐỊNH ĐỒNG BỘ ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar-top::-webkit-scrollbar { width: 0; }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 0 10px 22px;
+        }
+        .brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #ffffff;
+        }
+
+        .nav-category {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #10b981;
+            font-weight: 800;
+            padding: 0 12px 10px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 13px;
+            color: #e2e8f0;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.18s ease;
+        }
+        .nav-link:hover {
+            background-color: var(--sidebar-hover);
+            color: #ffffff;
+        }
+        .nav-link.active {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+        }
+
+        .nav-link-left {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+        .nav-icon { flex-shrink: 0; color: #cbd5e1; }
+        .nav-link.active .nav-icon, .nav-link:hover .nav-icon { color: #ffffff; }
+        .nav-text-group { display: flex; flex-direction: column; }
+        .nav-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+        .nav-link.active .nav-title { font-weight: 700; }
+        .nav-subtitle { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+        .nav-link.active .nav-subtitle { color: #ccfbf1; }
+
+        .badge-count {
+            background-color: #ef4444;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 21px;
+            height: 21px;
+            padding: 0 6px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-bottom {
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .logout-link:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-wrapper {
+            flex-grow: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 22px 28px 36px;
+        }
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* 1. HEADER */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 16px;
+        }
+        .header-title-area h1 {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+        }
+        .header-title-area p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .profile-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            padding: 5px 14px 5px 6px;
+            border-radius: 999px;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+        .avatar-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #d1fae5;
+            color: #065f46;
+            font-weight: 800;
+            font-size: 12.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+        .profile-role { font-size: 11px; color: var(--text-muted); }
+
+        /* 2. THỐNG KÊ (5 THẺ CHUẨN NGHIỆP VỤ DANH MỤC) */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 1360px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 15px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .ic-purple { background: #f3e8ff; color: #7c3aed; }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+        }
+        .kpi-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .ic-blue { background: #eff6ff; color: #2563eb; }
+        .ic-green { background: #ecfdf5; color: #059669; }
+        .ic-amber { background: #fffbeb; color: #d97706; }
+        .ic-red { background: #fef2f2; color: #dc2626; }
+
+        .kpi-label { font-size: 12.5px; font-weight: 600; color: #64748b; }
+        .kpi-val { font-size: 24px; font-weight: 800; color: #0f172a; margin-top: 2px; }
+        .kpi-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+        /* 3. TOOLBAR TÌM KIẾM, BỘ LỌC & HÀNH ĐỘNG */
+        .toolbar-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .filters-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+        .search-box {
+            position: relative;
+            min-width: 280px;
+            flex: 1;
+            max-width: 380px;
+        }
+        .search-box svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 9px 12px 9px 36px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            font-size: 13px;
+            outline: none;
+            color: #0f172a;
+        }
+        .search-box input:focus { border-color: #059669; }
+
+        .filter-select {
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            background: #ffffff;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .actions-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn {
+            padding: 9px 14px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            border: 1px solid transparent;
+            transition: all 0.15s;
+            text-decoration: none;
+        }
+        .btn-outline {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+        .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
+        .btn-primary {
+            background: var(--emerald-dark);
+            color: #ffffff;
+        }
+        .btn-primary:hover { background: #065f46; }
+
+        /* 4. BẢNG DANH MỤC SẢN PHẨM */
+        .table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .products-table th {
+            text-align: left;
+            padding: 13px 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .products-table td {
+            padding: 13px 16px;
+            font-size: 13px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .products-table tr:hover { background: #f8fafc; }
+
+        .sku-code {
+            font-weight: 800;
+            color: #0f172a;
+            font-family: monospace;
+            font-size: 13.5px;
+        }
+        .prod-name-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .prod-title {
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .combo-tag {
+            background: #f3e8ff;
+            color: #7e22ce;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 5px;
+        }
+        .missing-tag {
+            background: #fef2f2;
+            color: #dc2626;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 5px;
+        }
+        .prod-sub {
+            font-size: 11.5px;
+            color: #64748b;
+        }
+
+        .group-pill {
+            padding: 4px 10px;
+            border-radius: 7px;
+            font-size: 11.5px;
+            font-weight: 700;
+            background: #eff6ff;
+            color: #1d4ed8;
+            display: inline-block;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .st-active { background: #dcfce7; color: #15803d; }
+        .st-inactive { background: #fee2e2; color: #b91c1c; }
+        .dot-status { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+        .row-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        .icon-btn {
+            padding: 6px 10px;
+            border-radius: 7px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .icon-btn:hover { background: #f1f5f9; color: #0f172a; }
+        .icon-btn.warn:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+        .icon-btn.restore:hover { background: #ecfdf5; color: #059669; border-color: #6ee7b7; }
+
+        .pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            background: #ffffff;
+            border-top: 1px solid var(--border);
+            font-size: 12.5px;
+            color: #64748b;
+        }
+        .page-btns { display: flex; gap: 6px; }
+        .page-btn {
+            padding: 5px 11px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            border-radius: 7px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            color: #334155;
+        }
+        .page-btn.active {
+            background: var(--emerald-dark);
+            color: #ffffff;
+            border-color: var(--emerald-dark);
+        }
+
+        /* ================= MODAL THÊM / SỬA & PANEL CHI TIẾT ================= */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+
+        .modal-box {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 680px;
+            max-width: 100%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+            overflow: hidden;
+        }
+        .modal-head {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-head h3 { font-size: 17px; font-weight: 800; }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #64748b;
+        }
+        .modal-body {
+            padding: 20px 22px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .form-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .form-group label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #334155;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 9px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+        .form-group input:disabled {
+            background: #f1f5f9;
+            color: #64748b;
+            cursor: not-allowed;
+        }
+        .lock-hint {
+            font-size: 11px;
+            color: #d97706;
+            font-weight: 600;
+        }
+
+        /* Khu vực thành phần Combo */
+        .combo-builder {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .combo-builder.show { display: flex; }
+        .combo-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 34px;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .modal-foot {
+            padding: 14px 22px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        /* Slide-over Chi tiết & Lịch sử thay đổi */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            z-index: 600;
+            justify-content: flex-end;
+        }
+        .drawer-overlay.show { display: flex; }
+        .drawer-panel {
+            width: 520px;
+            max-width: 100%;
+            height: 100vh;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -8px 0 28px rgba(0, 0, 0, 0.15);
+        }
+        .drawer-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .detail-section {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .detail-section h4 {
+            font-size: 13px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .kv-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 13px;
+        }
+        .kv-row:last-child { border-bottom: none; }
+        .kv-key { color: #64748b; }
+        .kv-val { font-weight: 700; color: #0f172a; }
+
+        .readonly-stock-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item {
+            padding: 9px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 12.5px;
+        }
+        .history-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= SIDEBAR CỐ ĐỊNH ================= -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">QUẢN LÝ KHO</div>
+
+            <ul class="nav-list">
+                <li>
+                    <a href="/manager" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            <div class="nav-text-group"><span class="nav-title">Tổng quan</span></div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/products" class="nav-link active">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                            <div class="nav-text-group"><span class="nav-title">Danh mục sản phẩm</span></div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/warehouse-config" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"></path><path d="M6 18h12"></path><path d="M6 14h12"></path><rect x="6" y="10" width="12" height="12"></rect></svg>
+                            <div class="nav-text-group"><span class="nav-title">Cấu hình kho</span></div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/approvals" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                            <div class="nav-text-group">
+                                <span class="nav-title">Duyệt & xác nhận</span>
+                                <span class="nav-subtitle">Nhập kho · Bàn giao</span>
+                            </div>
+                        </div>
+                        <span class="badge-count" id="sbBadgeApprovals" style="{% if manager_sidebar.approvals == 0 %}display:none;{% endif %}">
+                            {{ manager_sidebar.approvals }}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/inventory" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+                            <div class="nav-text-group">
+                                <span class="nav-title">Giám sát tồn kho</span>
+                                <span class="nav-subtitle">Box · PCS · OUT · RETURNED</span>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/stocktake" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                            <div class="nav-text-group"><span class="nav-title">Kiểm kê & điều chỉnh</span></div>
+                        </div>
+                        <span class="badge-count" id="sbBadgeStocktake" style="{% if manager_sidebar.stocktake == 0 %}display:none;{% endif %}">
+                            {{ manager_sidebar.stocktake }}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/daily-closing" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9 16 2 2 4-4"></path></svg>
+                            <div class="nav-text-group"><span class="nav-title">Chốt tồn cuối ngày</span></div>
+                        </div>
+                    </a>
+                </li>
+                <li>
+                    <a href="/manager/reports" class="nav-link">
+                        <div class="nav-link-left">
+                            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            <div class="nav-text-group"><span class="nav-title">Báo cáo & đối soát</span></div>
+                        </div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-bottom">
+            <a href="/manager/profile" class="nav-link">
+                <div class="nav-link-left">
+                    <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <div class="nav-text-group"><span class="nav-title">Tài khoản cá nhân</span></div>
+                </div>
+            </a>
+            <a href="/logout" class="nav-link logout-link">
+                <div class="nav-link-left">
+                    <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    <div class="nav-text-group"><span class="nav-title">Đăng xuất</span></div>
+                </div>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="main-wrapper">
+        <!-- 1. HEADER -->
+        <header class="top-header">
+            <div class="header-title-area">
+                <h1>Danh mục sản phẩm</h1>
+                <p>Quản lý mã SKU, quy cách kích thước, trọng lượng và thuộc tính chuẩn phục vụ lưu trữ kho</p>
+            </div>
+            <div class="header-right">
+                <a href="/manager/profile" class="profile-pill">
+                    <div class="avatar-circle">MN</div>
+                    <div class="profile-info">
+                        <span class="profile-name">{{ session.get('user', {}).get('name', 'Nguyễn Minh Nam') }}</span>
+                        <span class="profile-role">Manager</span>
+                    </div>
+                </a>
+            </div>
+        </header>
+
+        <!-- 2. THỐNG KÊ (5 THẺ CHUẨN NGHIỆP VỤ KHO) -->
+        <section class="kpi-grid">
+            <!-- Thẻ 1: Tổng SKU -->
+            <div class="kpi-card" onclick="quickFilterStatus('ALL')">
+                <div class="kpi-icon ic-blue">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Tổng SKU</div>
+                    <div class="kpi-val" id="statTotalSku">0</div>
+                    <div class="kpi-sub">Toàn bộ danh mục chuẩn</div>
+                </div>
+            </div>
+
+            <!-- Thẻ 2: Đang sử dụng -->
+            <div class="kpi-card" onclick="quickFilterStatus('Đang sử dụng')">
+                <div class="kpi-icon ic-green">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Đang sử dụng</div>
+                    <div class="kpi-val" id="statActiveSku">0</div>
+                    <div class="kpi-sub">Được phép nhập / xuất</div>
+                </div>
+            </div>
+
+            <!-- Thẻ 3: Ngừng sử dụng -->
+            <div class="kpi-card" onclick="quickFilterStatus('Ngừng sử dụng')">
+                <div class="kpi-icon ic-amber">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Ngừng sử dụng</div>
+                    <div class="kpi-val" id="statInactiveSku">0</div>
+                    <div class="kpi-sub">Khóa chọn phiếu mới</div>
+                </div>
+            </div>
+
+            <!-- Thẻ 4: SKU thiếu thông tin -->
+            <div class="kpi-card" onclick="quickFilterStatus('MISSING')">
+                <div class="kpi-icon ic-red">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">SKU thiếu thông tin</div>
+                    <div class="kpi-val" id="statMissingSku" style="color: #dc2626;">0</div>
+                    <div class="kpi-sub">Thiếu KT / trọng lượng</div>
+                </div>
+            </div>
+
+            <!-- Thẻ 5: Có biến thể (Combo) -->
+            <div class="kpi-card" onclick="quickFilterCombo()">
+                <div class="kpi-icon ic-purple">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                </div>
+                <div>
+                    <div class="kpi-label">Có biến thể (Combo)</div>
+                    <div class="kpi-val" id="statComboSku" style="color: #7c3aed;">0</div>
+                    <div class="kpi-sub">Định mức Pre-packing</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. TÌM KIẾM, BỘ LỌC & HÀNH ĐỘNG -->
+        <section class="toolbar-card">
+            <div class="filters-group">
+                <div class="search-box">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="searchInput" placeholder="Tìm theo mã SKU, tên sản phẩm..." oninput="applyFilters()">
+                </div>
+
+                <select class="filter-select" id="groupFilter" onchange="applyFilters()">
+                    <option value="ALL">Nhóm sản phẩm: Tất cả</option>
+                </select>
+
+                <select class="filter-select" id="statusFilter" onchange="applyFilters()">
+                    <option value="ALL">Trạng thái: Tất cả</option>
+                    <option value="Đang sử dụng">Đang sử dụng</option>
+                    <option value="Ngừng sử dụng">Ngừng sử dụng</option>
+                    <option value="MISSING">SKU thiếu thông tin</option>
+                </select>
+            </div>
+
+            <div class="actions-group">
+                <input type="file" id="excelImportInput" accept=".csv,.xlsx" style="display:none" onchange="handleImportExcel(event)">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('excelImportInput').click()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Nhập từ Excel
+                </button>
+                <a href="/manager/api/products/export" class="btn btn-outline">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Xuất Excel
+                </a>
+                <button type="button" class="btn btn-primary" onclick="openProductModal('CREATE')">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Thêm sản phẩm
+                </button>
+            </div>
+        </section>
+
+        <!-- 4. BẢNG DANH MỤC SẢN PHẨM -->
+        <section class="table-card">
+            <div style="overflow-x: auto;">
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th>Mã SKU</th>
+                            <th>Tên sản phẩm</th>
+                            <th>Nhóm sản phẩm</th>
+                            <th>Đơn vị tính</th>
+                            <th>Kích thước (D × R × C)</th>
+                            <th>Trọng lượng</th>
+                            <th>Trạng thái</th>
+                            <th style="text-align: right;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody">
+                        <tr><td colspan="8" style="text-align:center; padding: 24px; color:#64748b;">Đang đồng bộ danh mục sản phẩm...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination-bar">
+                <span id="pageInfoText">Hiển thị 0 sản phẩm</span>
+                <div class="page-btns" id="pageButtons"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= MODAL THÊM / CHỈNH SỬA SẢN PHẨM ================= -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3 id="modalTitle">Thêm sản phẩm mới</h3>
+                <button type="button" class="close-btn" onclick="closeProductModal()">&times;</button>
+            </div>
+            <form id="productForm" onsubmit="submitProductForm(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="formMode" value="CREATE">
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Mã SKU <span style="color:#dc2626">*</span></label>
+                            <input type="text" id="inpSku" required placeholder="VD: SP0006 hoặc CB0002" style="text-transform: uppercase;">
+                            <span class="lock-hint" id="skuLockHint" style="display:none;">🔒 Đã khóa mã SKU vì sản phẩm đã phát sinh giao dịch kho.</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Tên sản phẩm <span style="color:#dc2626">*</span></label>
+                            <input type="text" id="inpName" required placeholder="VD: Sữa rửa mặt dịu nhẹ 150ml">
+                        </div>
+                    </div>
+
+                    <div class="form-grid-3">
+                        <div class="form-group">
+                            <label>Nhóm sản phẩm <span style="color:#dc2626">*</span></label>
+                            <select id="inpCategory" required onchange="toggleComboSection()">
+                                <option value="Chăm sóc da">Chăm sóc da</option>
+                                <option value="Đồ gia dụng">Đồ gia dụng</option>
+                                <option value="Phụ kiện">Phụ kiện</option>
+                                <option value="Bao bì & Đóng gói">Bao bì &amp; Đóng gói</option>
+                                <option value="Combo">Combo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Đơn vị tính chuẩn <span style="color:#dc2626">*</span></label>
+                            <select id="inpUnit" required>
+                                <option value="PCS">PCS</option>
+                                <option value="Chai">Chai</option>
+                                <option value="Hũ">Hũ</option>
+                                <option value="Hộp">Hộp</option>
+                                <option value="Bộ">Bộ</option>
+                                <option value="Túi">Túi</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Trạng thái</label>
+                            <select id="inpStatus">
+                                <option value="Đang sử dụng">Đang sử dụng</option>
+                                <option value="Ngừng sử dụng">Ngừng sử dụng</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Kích thước chuẩn (cm) & Trọng lượng (g) phục vụ kiểm soát sức chứa kho -->
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label>Kích thước: Dài × Rộng × Cao (cm)</label>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                                <input type="number" step="0.1" min="0" id="inpLength" placeholder="Dài">
+                                <input type="number" step="0.1" min="0" id="inpWidth" placeholder="Rộng">
+                                <input type="number" step="0.1" min="0" id="inpHeight" placeholder="Cao">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Trọng lượng 1 sản phẩm (gram)</label>
+                            <input type="number" step="1" min="0" id="inpWeight" placeholder="VD: 180">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Quy cách đóng gói / Ghi chú kho vận</label>
+                        <input type="text" id="inpSpec" placeholder="VD: 1 chai / 150ml · 24 chai / thùng">
+                    </div>
+
+                    <!-- Thành phần Combo (chỉ định nghĩa cấu trúc, Pre-packing thực hiện ở đơn hàng) -->
+                    <div class="combo-builder" id="comboBuilderBox">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:12.5px; color:#6d28d9;">Thành phần định mức Combo (Phục vụ Pre-packing đơn hàng)</strong>
+                            <button type="button" class="btn btn-outline" style="padding:4px 9px; font-size:11.5px;" onclick="addComboItemRow()">+ Thêm SKU con</button>
+                        </div>
+                        <div id="comboItemsContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+                    </div>
+                </div>
+
+                <div class="modal-foot">
+                    <button type="button" class="btn btn-outline" onclick="closeProductModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary" id="btnSaveProduct">Lưu thông tin sản phẩm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= DRAWER CHI TIẾT SẢN PHẨM & LỊCH SỬ THAY ĐỔI ================= -->
+    <div class="drawer-overlay" id="detailDrawer" onclick="if(event.target===this) closeDetailDrawer()">
+        <div class="drawer-panel">
+            <div class="modal-head">
+                <h3 id="drawerSkuTitle">Chi tiết sản phẩm</h3>
+                <button type="button" class="close-btn" onclick="closeDetailDrawer()">&times;</button>
+            </div>
+            <div class="drawer-body" id="drawerContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let allProducts = [];
+        let filteredProducts = [];
+        let currentPage = 1;
+        const pageSize = 10;
+
+        async function loadProducts() {
+            try {
+                const res = await fetch('/manager/api/products');
+                if (!res.ok) return;
+                const data = await res.json();
+                allProducts = data.products || [];
+
+                // Cập nhật badge sidebar
+                if (data.sidebar_badges) {
+                    document.getElementById('sbBadgeApprovals').textContent = data.sidebar_badges.approvals || 0;
+                    document.getElementById('sbBadgeStocktake').textContent = data.sidebar_badges.stocktake || 0;
+                }
+
+                updateStats();
+                populateGroupFilter();
+                applyFilters();
+            } catch (err) {
+                console.error('Lỗi tải danh mục sản phẩm:', err);
+            }
+        }
+
+        function isMissingInfo(p) {
+            return !p.unit || !p.length_cm || !p.width_cm || !p.height_cm || !p.weight_g ||
+                   (p.category === 'Combo' && (!p.combo_items || p.combo_items.length === 0));
+        }
+
+        function updateStats() {
+            const total = allProducts.length;
+            const active = allProducts.filter(p => p.status === 'Đang sử dụng').length;
+            const inactive = allProducts.filter(p => p.status === 'Ngừng sử dụng').length;
+            const missing = allProducts.filter(p => isMissingInfo(p)).length;
+
+            document.getElementById('statTotalSku').textContent = total;
+            document.getElementById('statActiveSku').textContent = active;
+            document.getElementById('statInactiveSku').textContent = inactive;
+            document.getElementById('statMissingSku').textContent = missing;
+        }
+
+        function populateGroupFilter() {
+            const select = document.getElementById('groupFilter');
+            const currentVal = select.value;
+            const groups = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
+            select.innerHTML = '<option value="ALL">Nhóm sản phẩm: Tất cả</option>' +
+                groups.map(g => `<option value="${g}">${g}</option>`).join('');
+            if (groups.includes(currentVal)) select.value = currentVal;
+        }
+
+        function quickFilterStatus(st) {
+            document.getElementById('statusFilter').value = st;
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const kw = document.getElementById('searchInput').value.trim().toLowerCase();
+            const grp = document.getElementById('groupFilter').value;
+            const st = document.getElementById('statusFilter').value;
+
+            filteredProducts = allProducts.filter(p => {
+                const matchKw = !kw || p.sku.toLowerCase().includes(kw) || p.name.toLowerCase().includes(kw);
+                const matchGrp = grp === 'ALL' || p.category === grp;
+                let matchSt = true;
+                if (st === 'MISSING') matchSt = isMissingInfo(p);
+                else if (st !== 'ALL') matchSt = p.status === st;
+                return matchKw && matchGrp && matchSt;
+            });
+
+            currentPage = 1;
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('productsTableBody');
+            const total = filteredProducts.length;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const pageItems = filteredProducts.slice(startIdx, startIdx + pageSize);
+
+            if (pageItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 28px; color:#64748b;">Không tìm thấy sản phẩm phù hợp điều kiện lọc.</td></tr>';
+            } else {
+                tbody.innerHTML = pageItems.map(p => {
+                    const missing = isMissingInfo(p);
+                    const dimText = (p.length_cm && p.width_cm && p.height_cm)
+                        ? `${p.length_cm} × ${p.width_cm} × ${p.height_cm} cm`
+                        : '<span style="color:#dc2626; font-weight:600;">Chưa cập nhật</span>';
+                    const weightText = p.weight_g
+                        ? `${Number(p.weight_g).toLocaleString('vi-VN')} g`
+                        : '<span style="color:#dc2626; font-weight:600;">Thiếu</span>';
+
+                    const isActive = p.status === 'Đang sử dụng';
+                    const statusHtml = isActive
+                        ? `<span class="status-badge st-active"><span class="dot-status"></span>Đang sử dụng</span>`
+                        : `<span class="status-badge st-inactive"><span class="dot-status"></span>Ngừng sử dụng</span>`;
+
+                    const toggleBtn = isActive
+                        ? `<button type="button" class="icon-btn warn" onclick="toggleProductStatus('${p.sku}', 'Ngừng sử dụng')">Ngừng dùng</button>`
+                        : `<button type="button" class="icon-btn restore" onclick="toggleProductStatus('${p.sku}', 'Đang sử dụng')">Kích hoạt</button>`;
+
+                    return `
+                        <tr>
+                            <td><span class="sku-code">${p.sku}</span></td>
+                            <td>
+                                <div class="prod-name-cell">
+                                    <div class="prod-title">
+                                        <span>${p.name}</span>
+                                        ${p.category === 'Combo' ? `<span class="combo-tag">Combo (${(p.combo_items||[]).length} SP)</span>` : ''}
+                                        ${missing ? `<span class="missing-tag">Thiếu thông tin</span>` : ''}
+                                    </div>
+                                    <span class="prod-sub">${p.spec || 'Chưa ghi chú quy cách'}</span>
+                                </div>
+                            </td>
+                            <td><span class="group-pill">${p.category}</span></td>
+                            <td><strong>${p.unit || '-'}</strong></td>
+                            <td>${dimText}</td>
+                            <td>${weightText}</td>
+                            <td>${statusHtml}</td>
+                            <td>
+                                <div class="row-actions">
+                                    <button type="button" class="icon-btn" onclick="openDetailDrawer('${p.sku}')">Xem</button>
+                                    <button type="button" class="icon-btn" onclick="openProductModal('EDIT', '${p.sku}')">Sửa</button>
+                                    ${toggleBtn}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            const endIdx = Math.min(startIdx + pageSize, total);
+            document.getElementById('pageInfoText').textContent =
+                total === 0 ? 'Hiển thị 0 sản phẩm' : `Hiển thị ${startIdx + 1} – ${endIdx} trên ${total} sản phẩm`;
+
+            const pageBtns = document.getElementById('pageButtons');
+            let btnsHtml = '';
+            for (let i = 1; i <= totalPages; i++) {
+                btnsHtml += `<button type="button" class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            pageBtns.innerHTML = btnsHtml;
+        }
+
+        function goToPage(p) {
+            currentPage = p;
+            renderTable();
+        }
+
+        /* ================= MODAL THÊM / SỬA ================= */
+        function openProductModal(mode, sku = '') {
+            document.getElementById('formMode').value = mode;
+            const skuInput = document.getElementById('inpSku');
+            const lockHint = document.getElementById('skuLockHint');
+            document.getElementById('comboItemsContainer').innerHTML = '';
+
+            if (mode === 'CREATE') {
+                document.getElementById('modalTitle').textContent = 'Thêm sản phẩm mới vào danh mục';
+                document.getElementById('productForm').reset();
+                skuInput.disabled = false;
+                lockHint.style.display = 'none';
+                toggleComboSection();
+            } else {
+                const prod = allProducts.find(x => x.sku === sku);
+                if (!prod) return;
+                document.getElementById('modalTitle').textContent = `Chỉnh sửa thông tin: ${prod.sku}`;
+                skuInput.value = prod.sku;
+                document.getElementById('inpName').value = prod.name;
+                document.getElementById('inpCategory').value = prod.category;
+                document.getElementById('inpUnit').value = prod.unit;
+                document.getElementById('inpStatus').value = prod.status;
+                document.getElementById('inpLength').value = prod.length_cm || '';
+                document.getElementById('inpWidth').value = prod.width_cm || '';
+                document.getElementById('inpHeight').value = prod.height_cm || '';
+                document.getElementById('inpWeight').value = prod.weight_g || '';
+                document.getElementById('inpSpec').value = prod.spec || '';
+
+                // Quy tắc nghiệp vụ: Không cho sửa Mã SKU khi đã phát sinh giao dịch/tồn kho
+                if (prod.has_transactions) {
+                    skuInput.disabled = true;
+                    lockHint.style.display = 'block';
+                } else {
+                    skuInput.disabled = false;
+                    lockHint.style.display = 'none';
+                }
+
+                toggleComboSection();
+                if (prod.category === 'Combo' && prod.combo_items) {
+                    prod.combo_items.forEach(c => addComboItemRow(c.sku, c.qty));
+                }
+            }
+
+            document.getElementById('productModal').classList.add('show');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('show');
+        }
+
+        function toggleComboSection() {
+            const isCombo = document.getElementById('inpCategory').value === 'Combo';
+            const box = document.getElementById('comboBuilderBox');
+            box.classList.toggle('show', isCombo);
+            if (isCombo && document.getElementById('comboItemsContainer').children.length === 0) {
+                addComboItemRow();
+            }
+        }
+
+        function addComboItemRow(selectedSku = '', qty = 1) {
+            const singleOptions = allProducts
+                .filter(p => p.category !== 'Combo' && p.status === 'Đang sử dụng')
+                .map(p => `<option value="${p.sku}" ${p.sku === selectedSku ? 'selected' : ''}>${p.sku} · ${p.name}</option>`)
+                .join('');
+
+            const row = document.createElement('div');
+            row.className = 'combo-row';
+            row.innerHTML = `
+                <select class="combo-sku-sel">${singleOptions}</select>
+                <input type="number" class="combo-qty-inp" min="1" value="${qty}" placeholder="Số lượng">
+                <button type="button" class="icon-btn warn" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            document.getElementById('comboItemsContainer').appendChild(row);
+        }
+
+        async function submitProductForm(e) {
+            e.preventDefault();
+            const mode = document.getElementById('formMode').value;
+            const sku = document.getElementById('inpSku').value.trim().toUpperCase();
+            const category = document.getElementById('inpCategory').value;
+
+            const comboItems = [];
+            if (category === 'Combo') {
+                document.querySelectorAll('#comboItemsContainer .combo-row').forEach(r => {
+                    const cSku = r.querySelector('.combo-sku-sel').value;
+                    const cQty = parseInt(r.querySelector('.combo-qty-inp').value, 10) || 1;
+                    if (cSku) comboItems.push({ sku: cSku, qty: cQty });
+                });
+            }
+
+            const payload = {
+                sku: sku,
+                name: document.getElementById('inpName').value.trim(),
+                category: category,
+                unit: document.getElementById('inpUnit').value,
+                status: document.getElementById('inpStatus').value,
+                length_cm: parseFloat(document.getElementById('inpLength').value) || 0,
+                width_cm: parseFloat(document.getElementById('inpWidth').value) || 0,
+                height_cm: parseFloat(document.getElementById('inpHeight').value) || 0,
+                weight_g: parseFloat(document.getElementById('inpWeight').value) || 0,
+                spec: document.getElementById('inpSpec').value.trim(),
+                combo_items: comboItems
+            };
+
+            const url = mode === 'CREATE' ? '/manager/api/products' : `/manager/api/products/${sku}`;
+            const method = mode === 'CREATE' ? 'POST' : 'PUT';
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Có lỗi xảy ra khi lưu sản phẩm.');
+                return;
+            }
+            closeProductModal();
+            loadProducts();
+        }
+
+        async function toggleProductStatus(sku, newStatus) {
+            const msg = newStatus === 'Ngừng sử dụng'
+                ? `Xác nhận chuyển sản phẩm ${sku} sang trạng thái "Ngừng sử dụng"?\nSản phẩm này sẽ không thể chọn cho các phiếu nhập/xuất mới.`
+                : `Kích hoạt lại sản phẩm ${sku} sang trạng thái "Đang sử dụng"?`;
+            if (!confirm(msg)) return;
+
+            const res = await fetch(`/manager/api/products/${sku}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể cập nhật trạng thái.');
+                return;
+            }
+            loadProducts();
+        }
+
+        /* ================= DRAWER CHI TIẾT & LỊCH SỬ ================= */
+        async function openDetailDrawer(sku) {
+            const res = await fetch(`/manager/api/products/${sku}`);
+            if (!res.ok) return;
+            const p = await res.json();
+
+            document.getElementById('drawerSkuTitle').textContent = `${p.sku} · ${p.name}`;
+
+            const comboHtml = (p.category === 'Combo' && p.combo_items && p.combo_items.length)
+                ? `<div class="detail-section">
+                    <h4>Thành phần định mức Combo</h4>
+                    ${p.combo_items.map(c => `<div class="kv-row"><span class="kv-key">${c.sku}</span><span class="kv-val">× ${c.qty} ${c.unit || 'PCS'}</span></div>`).join('')}
+                   </div>`
+                : '';
+
+            const historyHtml = (p.history && p.history.length)
+                ? p.history.map(h => `
+                    <div class="history-item">
+                        <div style="display:flex; justify-content:space-between; font-weight:700; color:#0f172a;">
+                            <span>${h.action}</span>
+                            <span style="font-size:11px; color:#64748b; font-weight:500;">${h.timestamp}</span>
+                        </div>
+                        <div style="color:#475569; margin-top:2px;">Người thực hiện: <strong>${h.actor}</strong></div>
+                        ${h.changes ? `<div style="color:#059669; font-size:11.5px; margin-top:2px;">${h.changes}</div>` : ''}
+                    </div>
+                  `).join('')
+                : '<div style="font-size:12.5px; color:#64748b;">Chưa có lịch sử chỉnh sửa danh mục.</div>';
+
+            document.getElementById('drawerContent').innerHTML = `
+                <div class="readonly-stock-box">
+                    <div>
+                        <div style="font-size:11.5px; font-weight:700; color:#166534;">TỒN KHO HIỆN TẠI (CHỈ ĐỌC · ĐỒNG BỘ TỪ GIÁM SÁT TỒN)</div>
+                        <div style="font-size:11.5px; color:#15803d; margin-top:2px;">Trạng thái danh mục độc lập với trạng thái tồn kho</div>
+                    </div>
+                    <div style="font-size:20px; font-weight:800; color:#14532d;">${Number(p.current_stock_pcs || 0).toLocaleString('vi-VN')} PCS</div>
+                </div>
+
+                <div class="detail-section">
+                    <h4>Thông tin định danh &amp; Đặc tính lưu kho</h4>
+                    <div class="kv-row"><span class="kv-key">Mã SKU</span><span class="kv-val">${p.sku}</span></div>
+                    <div class="kv-row"><span class="kv-key">Nhóm sản phẩm</span><span class="kv-val">${p.category}</span></div>
+                    <div class="kv-row"><span class="kv-key">Đơn vị tính chuẩn</span><span class="kv-val">${p.unit}</span></div>
+                    <div class="kv-row"><span class="kv-key">Kích thước (D × R × C)</span><span class="kv-val">${p.length_cm || 0} × ${p.width_cm || 0} × ${p.height_cm || 0} cm</span></div>
+                    <div class="kv-row"><span class="kv-key">Trọng lượng 1 SP</span><span class="kv-val">${p.weight_g || 0} gram</span></div>
+                    <div class="kv-row"><span class="kv-key">Quy cách</span><span class="kv-val">${p.spec || '-'}</span></div>
+                    <div class="kv-row"><span class="kv-key">Trạng thái sử dụng</span><span class="kv-val">${p.status}</span></div>
+                    <div class="kv-row"><span class="kv-key">Ràng buộc giao dịch</span><span class="kv-val">${p.has_transactions ? 'Đã phát sinh giao dịch (Khóa sửa SKU / Cấm xóa cứng)' : 'Chưa phát sinh giao dịch'}</span></div>
+                </div>
+
+                ${comboHtml}
+
+                <div class="detail-section">
+                    <h4>Lịch sử thay đổi danh mục (Audit Trail)</h4>
+                    ${historyHtml}
+                </div>
+            `;
+
+            document.getElementById('detailDrawer').classList.add('show');
+        }
+
+        function closeDetailDrawer() {
+            document.getElementById('detailDrawer').classList.remove('show');
+        }
+
+        async function handleImportExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch('/manager/api/products/import', { method: 'POST', body: formData });
+            const data = await res.json();
+            alert(data.message || data.error);
+            event.target.value = '';
+            loadProducts();
+        }
+
+        loadProducts();
+        function updateStats() {
+            const total = allProducts.length;
+            const active = allProducts.filter(p => p.status === 'Đang sử dụng').length;
+            const inactive = allProducts.filter(p => p.status === 'Ngừng sử dụng').length;
+            const missing = allProducts.filter(p => isMissingInfo(p)).length;
+            const combo = allProducts.filter(p => p.category === 'Combo' || (p.combo_items && p.combo_items.length > 0)).length;
+
+            document.getElementById('statTotalSku').textContent = total;
+            document.getElementById('statActiveSku').textContent = active;
+            document.getElementById('statInactiveSku').textContent = inactive;
+            document.getElementById('statMissingSku').textContent = missing;
+            document.getElementById('statComboSku').textContent = combo;
+        }
+
+        function quickFilterStatus(st) {
+            document.getElementById('groupFilter').value = 'ALL';
+            document.getElementById('statusFilter').value = st;
+            applyFilters();
+        }
+
+        function quickFilterCombo() {
+            document.getElementById('statusFilter').value = 'ALL';
+            document.getElementById('groupFilter').value = 'Combo';
+            applyFilters();
+        }
+    </script>\
+    <script src="{{ url_for('static', filename='js/manager_sidebar_sync.js') }}"></script>
+</body>
+</html>

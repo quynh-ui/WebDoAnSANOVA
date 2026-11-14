@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cấu hình kho · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #067a6f;
+            --sidebar-hover: rgba(255, 255, 255, 0.07);
+            --bg-page: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --emerald: #059669;
+            --emerald-dark: #044e39;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ================= SIDEBAR CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+        .sidebar-top { display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar-top::-webkit-scrollbar { width: 0; }
+        .brand-header { display: flex; align-items: center; gap: 11px; padding: 0 10px 22px; }
+        .brand-name { font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #ffffff; }
+        .nav-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #10b981; font-weight: 800; padding: 0 12px 10px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .nav-link { display: flex; align-items: center; justify-content: space-between; padding: 10px 13px; color: #e2e8f0; text-decoration: none; border-radius: 10px; transition: all 0.18s ease; }
+        .nav-link:hover { background-color: var(--sidebar-hover); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .nav-link-left { display: flex; align-items: center; gap: 11px; }
+        .nav-icon { flex-shrink: 0; color: #cbd5e1; }
+        .nav-link.active .nav-icon, .nav-link:hover .nav-icon { color: #ffffff; }
+        .nav-text-group { display: flex; flex-direction: column; }
+        .nav-title { font-size: 13.5px; font-weight: 600; line-height: 1.3; }
+        .nav-link.active .nav-title { font-weight: 700; }
+        .nav-subtitle { font-size: 10.5px; color: #94a3b8; margin-top: 2px; }
+        .nav-link.active .nav-subtitle { color: #ccfbf1; }
+        .badge-count { background-color: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; min-width: 21px; height: 21px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; }
+        .sidebar-bottom { padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12); display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        .logout-link:hover { background-color: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+        /* ================= MAIN CONTENT ================= */
+        .main-wrapper { flex-grow: 1; height: 100vh; overflow-y: auto; padding: 20px 26px 34px; }
+        .main-wrapper::-webkit-scrollbar { width: 6px; }
+        .main-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 16px; }
+        .header-title-area h1 { font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px; }
+        .header-title-area p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #ffffff; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #334155; position: relative; cursor: pointer; }
+        .bell-dot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; border: 1.5px solid #ffffff; }
+        .profile-pill { display: flex; align-items: center; gap: 10px; background: #ffffff; border: 1px solid var(--border); padding: 5px 14px 5px 6px; border-radius: 999px; text-decoration: none; color: var(--text-main); }
+        .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background: #d1fae5; color: #065f46; font-weight: 800; font-size: 12.5px; display: flex; align-items: center; justify-content: center; }
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+        .profile-role { font-size: 11px; color: var(--text-muted); }
+
+        /* 5 THẺ KPI */
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
+        @media (max-width: 1360px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+        .kpi-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 15px 16px; display: flex; align-items: center; gap: 13px; }
+        .kpi-icon { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ic-blue { background: #eff6ff; color: #2563eb; }
+        .ic-amber { background: #fffbeb; color: #d97706; }
+        .ic-red { background: #fef2f2; color: #ef4444; }
+        .ic-green { background: #ecfdf5; color: #10b981; }
+        .ic-purple { background: #f3e8ff; color: #7c3aed; }
+        .kpi-label { font-size: 12px; font-weight: 600; color: #475569; }
+        .kpi-val-row { display: flex; align-items: baseline; gap: 6px; margin-top: 3px; }
+        .kpi-val { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+        .kpi-pct { font-size: 12px; font-weight: 600; color: #64748b; }
+
+        /* THANH TAB & HÀNH ĐỘNG */
+        .tabs-toolbar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 0 16px; min-height: 54px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .tabs-list { display: flex; gap: 20px; height: 54px; }
+        .tab-btn { height: 100%; border: none; background: transparent; font-size: 13.5px; font-weight: 700; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; position: relative; transition: color 0.15s; }
+        .tab-btn:hover { color: #0f172a; }
+        .tab-btn.active { color: var(--emerald-dark); }
+        .tab-btn.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2.5px; background: var(--emerald-dark); border-radius: 2px 2px 0 0; }
+
+        .toolbar-actions { display: flex; align-items: center; gap: 8px; position: relative; padding: 8px 0; }
+        .btn { padding: 8px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; transition: all 0.15s; text-decoration: none; }
+        .btn-outline { background: #ffffff; border-color: #cbd5e1; color: #334155; }
+        .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
+        .btn-primary { background: var(--emerald-dark); color: #ffffff; }
+        .btn-primary:hover { background: #065f46; }
+
+        .add-dropdown { display: none; position: absolute; right: 0; top: 46px; width: 235px; background: #ffffff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14); z-index: 200; padding: 6px; }
+        .add-dropdown.show { display: block; }
+        .add-opt { width: 100%; text-align: left; background: none; border: none; padding: 9px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: #1e293b; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .add-opt:hover { background: #ecfdf5; color: #065f46; }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ================= TAB 1: SƠ ĐỒ KHO 3 CỘT ================= */
+        .map-grid { display: grid; grid-template-columns: 270px 1.5fr 325px; gap: 16px; align-items: stretch; }
+        @media (max-width: 1280px) { .map-grid { grid-template-columns: 1fr; } }
+
+        .panel-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; }
+        .panel-title { font-size: 15.5px; font-weight: 800; color: #0f172a; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Cột trái: Cây cấu trúc gập/mở mượt */
+        .tree-node-root {
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 13.5px; font-weight: 800; color: #0f172a;
+            padding: 8px 8px; border-radius: 9px; cursor: pointer;
+            transition: background 0.15s; user-select: none;
+        }
+        .tree-node-root:hover { background: #f1f5f9; }
+        .tree-node-left { display: flex; align-items: center; gap: 8px; }
+        .chevron-icon {
+            display: inline-block; width: 14px; text-align: center;
+            transition: transform 0.22s ease; color: #475569; font-size: 12px;
+        }
+        .chevron-icon.expanded { transform: rotate(90deg); }
+
+        .tree-children {
+            overflow: hidden;
+            transition: max-height 0.25s ease, opacity 0.2s ease;
+        }
+        .tree-children.collapsed {
+            display: none;
+        }
+
+        .zone-group { padding-left: 14px; margin-top: 4px; }
+        .zone-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 8px; font-size: 13px; font-weight: 700; color: #1e293b;
+            cursor: pointer; border-radius: 8px; transition: background 0.15s; user-select: none;
+        }
+        .zone-header:hover { background: #f8fafc; }
+        .zone-count-tag { font-size: 11px; font-weight: 600; color: #94a3b8; }
+
+        .rack-list { list-style: none; padding-left: 18px; margin-top: 3px; display: flex; flex-direction: column; gap: 3px; }
+        .rack-btn {
+            width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent;
+            border-radius: 9px; font-size: 13px; font-weight: 600; color: #334155;
+            cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+            transition: all 0.14s;
+        }
+        .rack-btn:hover { background: #f1f5f9; color: #0f172a; }
+        .rack-btn.active { background: #e6f7ef; color: #065f46; font-weight: 800; }
+
+        .tree-divider { height: 1px; background: #f1f5f9; margin: 12px 0; }
+
+        /* Cột giữa: Kệ & Tầng (hỗ trợ 5 vị trí thu gọn / 10 vị trí mở rộng) */
+        .rack-top-bar {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+        }
+        .rack-top-left { display: flex; align-items: flex-start; gap: 12px; }
+        .rack-icon-lg {
+            width: 36px; height: 36px; border-radius: 9px; background: #f1f5f9; color: #334155;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+        }
+        .rack-meta-line { font-size: 12.5px; color: #475569; margin-top: 3px; }
+        .rack-meta-line strong { color: #0f172a; }
+
+        .expand-toggle-btn {
+            padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1;
+            background: #ffffff; color: #0f172a; font-size: 12px; font-weight: 700;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: all 0.15s;
+        }
+        .expand-toggle-btn:hover { background: #f8fafc; border-color: #059669; color: #059669; }
+        .expand-toggle-btn.is-expanded { background: #ecfdf5; border-color: #059669; color: #065f46; }
+
+        .legend-bar {
+            display: flex; justify-content: flex-end; gap: 16px; flex-wrap: wrap;
+            font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 14px;
+        }
+        .lg-item { display: inline-flex; align-items: center; gap: 6px; }
+        .lg-sq { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+        .floor-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 11px; }
+        .floor-label-box {
+            width: 78px; padding: 11px 6px; background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: 10px; text-align: center; font-size: 12.5px; font-weight: 700;
+            color: #1e293b; flex-shrink: 0; cursor: pointer; user-select: none;
+            transition: background 0.15s;
+        }
+        .floor-label-box:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .floor-sub-cnt { display: block; font-size: 10px; font-weight: 600; color: #64748b; margin-top: 2px; }
+
+        .slots-strip {
+            flex: 1; background: #f8fafc; border-radius: 12px; padding: 8px;
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+        }
+
+        .slot-tile {
+            padding: 10px 4px; border-radius: 9px; text-align: center; font-size: 12px;
+            font-weight: 800; cursor: pointer; border: 1.5px solid transparent;
+            transition: transform 0.12s, box-shadow 0.12s; user-select: none;
+        }
+        .slot-tile:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
+        .slot-tile.selected { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.2); }
+
+        .st-used { background: #74e39a; color: #064e3b; }
+        .st-empty { background: #e2e8f0; color: #1e293b; }
+        .st-warn { background: #fcd34d; color: #78350f; }
+        .st-locked { background: #cbd5e1; color: #64748b; text-decoration: line-through; }
+
+        /* Cột phải: Inspector */
+        .btn-edit-pill {
+            display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px;
+            border-radius: 8px; border: 1px solid #bfdbfe; background: #eff6ff;
+            color: #2563eb; font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .btn-edit-pill:hover { background: #dbeafe; }
+
+        .info-rows { display: flex; flex-direction: column; gap: 11px; margin-top: 4px; }
+        .info-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding-bottom: 9px; border-bottom: 1px solid #f1f5f9; }
+        .info-row:last-child { border-bottom: none; }
+        .info-k { color: #475569; font-weight: 500; }
+        .info-v { font-weight: 800; color: #0f172a; text-align: right; }
+
+        .usage-footer { margin-top: auto; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+        .usage-top { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; margin-bottom: 8px; }
+        .usage-bar-row { display: flex; align-items: center; gap: 10px; }
+        .usage-track { flex: 1; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+        .usage-fill { height: 100%; background: #10b981; border-radius: 999px; transition: width 0.3s ease; }
+        .usage-pct-txt { font-size: 13px; font-weight: 800; color: #059669; }
+
+        /* TAB 2 & 3 */
+        .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .filter-bar input, .filter-bar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 9px; font-size: 13px; outline: none; background: #ffffff; }
+        .filter-bar input { min-width: 260px; flex: 1; max-width: 360px; }
+
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 14px; font-size: 12px; font-weight: 700; color: #475569; background: #f8fafc; border-bottom: 1px solid var(--border); }
+        .data-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+        .data-table tr:hover { background: #f8fafc; }
+
+        .st-pill { padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; display: inline-block; }
+        .sp-active { background: #dcfce7; color: #15803d; }
+        .sp-locked { background: #fef3c7; color: #b45309; }
+        .sp-stopped { background: #fee2e2; color: #b91c1c; }
+
+        .rules-grid { display: grid; grid-template-columns: 1fr 1.25fr; gap: 18px; }
+        @media (max-width: 1100px) { .rules-grid { grid-template-columns: 1fr; } }
+        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+        .form-group label { font-size: 12px; font-weight: 700; color: #334155; }
+        .form-group input, .form-group select { padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
+
+        /* MODAL */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); z-index: 500; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.show { display: flex; }
+        .modal-box { background: #ffffff; border-radius: 16px; width: 520px; max-width: 100%; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+        .modal-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-head h3 { font-size: 16px; font-weight: 800; }
+        .modal-body { padding: 18px 20px; max-height: 75vh; overflow-y: auto; }
+        .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); background: #f8fafc; display: flex; justify-content: flex-end; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR CỐ ĐỊNH -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">QUẢN LÝ KHO</div>
+
+            <ul class="nav-list">
+                <li><a href="/manager" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><div class="nav-text-group"><span class="nav-title">Tổng quan</span></div></div></a></li>
+                <li><a href="/manager/products" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Danh mục sản phẩm</span></div></div></a></li>
+                <li><a href="/manager/warehouse-config" class="nav-link active"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"></path><path d="M6 18h12"></path><path d="M6 14h12"></path><rect x="6" y="10" width="12" height="12"></rect></svg><div class="nav-text-group"><span class="nav-title">Cấu hình kho</span></div></div></a></li>
+                <li><a href="/manager/approvals" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Duyệt &amp; xác nhận</span><span class="nav-subtitle">Nhập kho · Bàn giao</span></div></div><span class="badge-count" id="sbBadgeApprovals" style="{% if manager_sidebar.approvals == 0 %}display:none;{% endif %}">
+                                {{ manager_sidebar.approvals }}
+                            </span></a></li>
+                <li><a href="/manager/inventory" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg><div class="nav-text-group"><span class="nav-title">Giám sát tồn kho</span><span class="nav-subtitle">Box · PCS · OUT · RETURNED</span></div></div></a></li>
+                <li><a href="/manager/stocktake" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Kiểm kê &amp; điều chỉnh</span></div></div><span class="badge-count" id="sbBadgeStocktake" style="{% if manager_sidebar.stocktake == 0 %}display:none;{% endif %}">
+                            {{ manager_sidebar.stocktake }}
+                        </span>
+                        </a></li>
+                <li><a href="/manager/daily-closing" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="m9 16 2 2 4-4"></path></svg><div class="nav-text-group"><span class="nav-title">Chốt tồn cuối ngày</span></div></div></a></li>
+                <li><a href="/manager/reports" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><div class="nav-text-group"><span class="nav-title">Báo cáo &amp; đối soát</span></div></div></a></li>
+            </ul>
+        </div>
+
+        <div class="sidebar-bottom">
+            <a href="/manager/profile" class="nav-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg><div class="nav-text-group"><span class="nav-title">Tài khoản cá nhân</span></div></div></a>
+            <a href="/logout" class="nav-link logout-link"><div class="nav-link-left"><svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg><div class="nav-text-group"><span class="nav-title">Đăng xuất</span></div></div></a>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-wrapper">
+        <header class="top-header">
+            <div class="header-title-area">
+                <h1>Cấu hình kho</h1>
+                <p>Quản lý cấu trúc Kho chính (KHO-01) &amp; Kho trả hàng (KHO-RT), kệ, tầng, vị trí và sức chứa lưu trữ</p>
+            </div>
+            <div class="header-right">
+                <button type="button" class="bell-btn" title="Thông báo">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span class="bell-dot"></span>
+                </button>
+                <a href="/manager/profile" class="profile-pill">
+                    <div class="avatar-circle">MN</div>
+                    <div class="profile-info">
+                        <span class="profile-name">{{ session.get('user', {}).get('name', 'Nguyễn Minh Nam') }}</span>
+                        <span class="profile-role">Manager</span>
+                    </div>
+                </a>
+            </div>
+        </header>
+
+        <!-- 5 THẺ KPI -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon ic-blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg></div>
+                <div><div class="kpi-label">Tổng khu vực</div><div class="kpi-val-row"><span class="kpi-val" id="statTotalZones">0</span></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon ic-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg></div>
+                <div><div class="kpi-label">Tổng kệ</div><div class="kpi-val-row"><span class="kpi-val" id="statTotalRacks">0</span></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon ic-red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
+                <div><div class="kpi-label">Tổng vị trí</div><div class="kpi-val-row"><span class="kpi-val" id="statTotalSlots">0</span></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon ic-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                <div><div class="kpi-label">Vị trí đang sử dụng</div><div class="kpi-val-row"><span class="kpi-val" id="statUsedSlots">0</span><span class="kpi-pct" id="statUsedPct">(0%)</span></div></div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon ic-purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>
+                <div><div class="kpi-label">Vị trí trống</div><div class="kpi-val-row"><span class="kpi-val" id="statEmptySlots">0</span><span class="kpi-pct" id="statEmptyPct">(0%)</span></div></div>
+            </div>
+        </section>
+
+        <!-- THANH 3 TAB & NÚT HÀNH ĐỘNG -->
+        <section class="tabs-toolbar">
+            <div class="tabs-list">
+                <button type="button" class="tab-btn active" onclick="switchConfigTab('tabMap', this)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"></path></svg>
+                    Sơ đồ kho
+                </button>
+                <button type="button" class="tab-btn" onclick="switchConfigTab('tabSlots', this)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    Danh sách vị trí
+                </button>
+                <button type="button" class="tab-btn" onclick="switchConfigTab('tabRules', this)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Quy tắc sức chứa
+                </button>
+            </div>
+
+            <div class="toolbar-actions">
+                <input type="file" id="excelConfigInput" accept=".csv" style="display:none;" onchange="importConfigCsv(event)">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('excelConfigInput').click()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    Nhập từ Excel
+                </button>
+                <a href="/manager/api/warehouse-config/export" class="btn btn-outline">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Xuất Excel
+                </a>
+                <button type="button" class="btn btn-primary" onclick="toggleAddMenu(event)">
+                    + Thêm <span style="font-size:10px;">&#9662;</span>
+                </button>
+                <div class="add-dropdown" id="addStructureDropdown">
+                    <button type="button" class="add-opt" onclick="openAddModal('ZONE')">📁 Thêm Khu vực mới</button>
+                    <button type="button" class="add-opt" onclick="openAddModal('RACK')">🗄️ Thêm Kệ mới</button>
+                    <button type="button" class="add-opt" onclick="openAddModal('FLOOR')">📚 Thêm Tầng vào Kệ</button>
+                    <button type="button" class="add-opt" onclick="openAddModal('SLOT')">📍 Thêm Vị trí vào Tầng</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 1: SƠ ĐỒ KHO 3 CỘT ================= -->
+        <section id="tabMap" class="tab-panel active">
+            <div class="map-grid">
+                <!-- Cột trái: Cây cấu trúc kho (Gập/mở mượt mà Kho chính + Kho trả hàng + từng Khu) -->
+                <div class="panel-card">
+                    <div class="panel-title">
+                        <span>Cấu trúc kho</span>
+                        <button type="button" onclick="collapseAllZones()" style="background:none;border:none;font-size:11.5px;color:#059669;font-weight:700;cursor:pointer;" title="Thu gọn tất cả khu vực">Thu gọn</button>
+                    </div>
+                    <div id="warehouseTreeContainer"></div>
+                </div>
+
+                <!-- Cột giữa: Sơ đồ Kệ & Tầng (Hỗ trợ 5 vị trí thu gọn <-> 10 vị trí mở rộng) -->
+                <div class="panel-card">
+                    <div class="rack-top-bar">
+                        <div class="rack-top-left">
+                            <div class="rack-icon-lg">
+                                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+                            </div>
+                            <div>
+                                <h2 style="font-size:17px; font-weight:800;" id="selectedRackTitle">Kệ A1</h2>
+                                <div class="rack-meta-line" id="selectedRackMeta">
+                                    Khu: <strong>A – Mỹ phẩm</strong> &nbsp;|&nbsp; Tầng: <strong>4</strong> &nbsp;|&nbsp; Vị trí: <strong>40</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="legend-bar">
+                        <span class="lg-item"><i class="lg-sq" style="background:#10b981;"></i>Đang sử dụng</span>
+                        <span class="lg-item"><i class="lg-sq" style="background:#e2e8f0;"></i>Trống</span>
+                        <span class="lg-item"><i class="lg-sq" style="background:#f59e0b;"></i>Sắp đầy (&ge;90%)</span>
+                        <span class="lg-item"><i class="lg-sq" style="background:#94a3b8;"></i>Tạm khóa / Ngừng</span>
+                    </div>
+
+                    <div id="rackFloorsContainer"></div>
+                </div>
+
+                <!-- Cột phải: Thông tin Kệ hoặc Thông tin Vị trí -->
+                <div class="panel-card">
+                    <div class="panel-title">
+                        <span id="inspectorHeaderTitle">Thông tin kệ A1</span>
+                        <button type="button" class="btn-edit-pill" id="btnEditInspector">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            Chỉnh sửa
+                        </button>
+                    </div>
+
+                    <div class="info-rows" id="inspectorInfoRows"></div>
+
+                    <div class="usage-footer">
+                        <div class="usage-top">
+                            <strong style="color:#0f172a;">Tình trạng sử dụng</strong>
+                            <span style="color:#475569; font-weight:600;" id="usageRatioTxt">0 / 0 vị trí</span>
+                        </div>
+                        <div class="usage-bar-row">
+                            <div class="usage-track"><div class="usage-fill" id="usageBarFill" style="width:0%;"></div></div>
+                            <span class="usage-pct-txt" id="usagePctTxt">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: DANH SÁCH VỊ TRÍ ================= -->
+        <section id="tabSlots" class="tab-panel">
+            <div class="panel-card">
+                <div class="filter-bar">
+                    <input type="text" id="slotSearchInp" placeholder="Tìm theo mã vị trí (VD: A1-040, RT1-001), kệ, tầng..." oninput="renderSlotsTable()">
+                    <select id="slotZoneFilter" onchange="renderSlotsTable()"><option value="ALL">Khu vực: Tất cả</option></select>
+                    <select id="slotStatusFilter" onchange="renderSlotsTable()">
+                        <option value="ALL">Trạng thái: Tất cả</option>
+                        <option value="Đang sử dụng">Đang sử dụng</option>
+                        <option value="Tạm khóa">Tạm khóa</option>
+                        <option value="Ngừng sử dụng">Ngừng sử dụng</option>
+                    </select>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Mã vị trí</th>
+                                <th>Kho / Khu vực / Kệ / Tầng</th>
+                                <th>Số Box (Hiện tại / Tối đa)</th>
+                                <th>Tải trọng (Hiện tại / Tối đa)</th>
+                                <th>Kích thước (D × R × C)</th>
+                                <th>Tình trạng sức chứa</th>
+                                <th>Trạng thái</th>
+                                <th style="text-align:right;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="slotsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: QUY TẮC SỨC CHỨA & LỊCH SỬ ================= -->
+        <section id="tabRules" class="tab-panel">
+            <div class="rules-grid">
+                <div class="panel-card">
+                    <div class="panel-title">Quy tắc sức chứa mặc định</div>
+                    <form onsubmit="saveCapacityRules(event)">
+                        <div class="form-group"><label>Số Box tối đa / vị trí (Box)</label><input type="number" id="ruleMaxBoxes" min="1" required></div>
+                        <div class="form-group"><label>Giới hạn tải trọng / vị trí (kg)</label><input type="number" id="ruleMaxWeight" min="1" required></div>
+                        <div class="form-group">
+                            <label>Kích thước vị trí: Dài × Rộng × Cao (cm)</label>
+                            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+                                <input type="number" id="ruleLength" min="1" required>
+                                <input type="number" id="ruleWidth" min="1" required>
+                                <input type="number" id="ruleHeight" min="1" required>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Ngưỡng cảnh báo sắp đầy (%)</label><input type="number" id="ruleWarnPct" min="50" max="99" value="90" required></div>
+                        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; margin-top:6px;">Lưu quy tắc sức chứa</button>
+                    </form>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-title">Lịch sử thay đổi cấu hình kho</div>
+                    <div style="overflow-x:auto;">
+                        <table class="data-table">
+                            <thead><tr><th>Thời gian</th><th>Người thay đổi</th><th>Nội dung thay đổi</th></tr></thead>
+                            <tbody id="configHistoryBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL THÊM KHU / KỆ / TẦNG / VỊ TRÍ -->
+    <div class="modal-overlay" id="addStructureModal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3 id="addModalTitle">Thêm cấu trúc kho</h3>
+                <button type="button" style="background:none;border:none;font-size:20px;cursor:pointer;" onclick="closeModal('addStructureModal')">&times;</button>
+            </div>
+            <form onsubmit="submitAddStructure(event)">
+                <div class="modal-body" id="addModalBody"></div>
+                <div class="modal-foot">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('addStructureModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Xác nhận tạo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CHỈNH SỬA VỊ TRÍ -->
+    <div class="modal-overlay" id="editSlotModal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3 id="editSlotTitle">Chỉnh sửa vị trí</h3>
+                <button type="button" style="background:none;border:none;font-size:20px;cursor:pointer;" onclick="closeModal('editSlotModal')">&times;</button>
+            </div>
+            <form onsubmit="submitEditSlot(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="editSlotCode">
+                    <div style="background:#f8fafc; border:1px solid var(--border); padding:10px 12px; border-radius:8px; font-size:12px; color:#475569; margin-bottom:12px;">
+                        Hiện đang lưu trữ: <strong id="editSlotCurrentInfo" style="color:#0f172a;">0 Box · 0 kg</strong><br>
+                        <span style="color:#d97706;">Không được hạ giới hạn xuống dưới mức đang sử dụng thực tế.</span>
+                    </div>
+                    <div class="form-group"><label>Giới hạn số Box tối đa (Box)</label><input type="number" id="editMaxBoxes" min="1" required></div>
+                    <div class="form-group"><label>Giới hạn tải trọng tối đa (kg)</label><input type="number" id="editMaxWeight" min="1" required></div>
+                    <div class="form-group">
+                        <label>Kích thước vị trí: Dài × Rộng × Cao (cm)</label>
+                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+                            <input type="number" id="editLen" min="1" required>
+                            <input type="number" id="editWid" min="1" required>
+                            <input type="number" id="editHei" min="1" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Trạng thái vị trí</label>
+                        <select id="editStatus">
+                            <option value="Đang sử dụng">Đang sử dụng</option>
+                            <option value="Tạm khóa">Tạm khóa</option>
+                            <option value="Ngừng sử dụng">Ngừng sử dụng (Chỉ cho phép khi 0 Box)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('editSlotModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let warehouseConfig = null;
+        let selectedRackId = null;
+        let selectedSlotCode = null;
+        let currentAddType = 'RACK';
+
+        // Trạng thái mở rộng / thu gọn cây thư mục & số vị trí trên 1 tầng
+        let expandedWarehouses = { 'KHO-01': true, 'KHO-RT': false };
+        let expandedZones = { 'A': true }; // Mặc định mở Khu A, thu gọn Khu B, C cho gọn
+        let isRackSlotsExpanded = true;    // true = hiển thị cả 10 vị trí/tầng, false = thu gọn 5 vị trí/tầng
+        let collapsedFloors = {};          // Thu gọn riêng từng tầng nếu cần
+
+        function toggleAddMenu(e) {
+            e.stopPropagation();
+            document.getElementById('addStructureDropdown').classList.toggle('show');
+        }
+        document.addEventListener('click', () => document.getElementById('addStructureDropdown').classList.remove('show'));
+
+        function switchConfigTab(tabId, btn) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        function formatNum(n) {
+            return Number(n || 0).toLocaleString('vi-VN');
+        }
+
+
+        function toggleWarehouseNode(whId) {
+            expandedWarehouses[whId] = !expandedWarehouses[whId];
+            renderTreeAndMap();
+        }
+
+        function toggleZoneNode(zoneId) {
+            expandedZones[zoneId] = !expandedZones[zoneId];
+            renderTreeAndMap();
+        }
+
+        function collapseAllZones() {
+            Object.keys(expandedZones).forEach(k => expandedZones[k] = false);
+            renderTreeAndMap();
+        }
+
+        function toggleSingleFloor(floorKey) {
+            collapsedFloors[floorKey] = !collapsedFloors[floorKey];
+            renderMiddleAndRightPanels();
+        }
+
+        async function loadWarehouseConfig() {
+            try {
+                const res = await fetch('/manager/api/warehouse-config');
+                if (!res.ok) return;
+                const data = await res.json();
+                warehouseConfig = data.config;
+
+                if (data.sidebar_badges) {
+                    document.getElementById('sbBadgeApprovals').textContent = data.sidebar_badges.approvals || 0;
+                    document.getElementById('sbBadgeStocktake').textContent = data.sidebar_badges.stocktake || 0;
+                }
+
+                renderKpis();
+                renderTreeAndMap();
+                renderSlotsTable();
+                renderRulesAndHistory(data.history || []);
+            } catch (err) {
+                console.error('Lỗi đồng bộ cấu hình kho:', err);
+            }
+        }
+
+        function getAllZonesFlat() {
+            if (!warehouseConfig) return [];
+            if (warehouseConfig.warehouses && warehouseConfig.warehouses.length) {
+                const list = [];
+                warehouseConfig.warehouses.forEach(w => {
+                    (w.zones || []).forEach(z => list.push({ ...z, warehouse_id: w.warehouse_id, warehouse_name: w.warehouse_name }));
+                });
+                return list;
+            }
+            return (warehouseConfig.zones || []).map(z => ({ ...z, warehouse_id: 'KHO-01', warehouse_name: 'Kho chính (KHO-01)' }));
+        }
+
+        function evaluateSlotVisual(slot) {
+            if (slot.status !== 'Đang sử dụng') {
+                return { css: 'st-locked', label: slot.status, canReceive: false };
+            }
+            const warnRatio = (warehouseConfig.default_rules.warn_threshold_pct || 90) / 100;
+            const ratio = Math.max(slot.current_boxes / slot.max_boxes, slot.current_weight / slot.max_weight);
+            if (ratio >= warnRatio) {
+                return { css: 'st-warn', label: ratio >= 1 ? 'Đầy tải' : 'Sắp đầy (≥90%)', canReceive: ratio < 1 };
+            }
+            if (slot.current_boxes > 0 || slot.current_weight > 0) {
+                return { css: 'st-used', label: 'Đang sử dụng (Còn chỗ)', canReceive: true };
+            }
+            return { css: 'st-empty', label: 'Trống', canReceive: true };
+        }
+
+        function renderKpis() {
+            const allZones = getAllZonesFlat();
+            let rackCount = 0, slotCount = 0, usedCount = 0, emptyCount = 0;
+
+            allZones.forEach(z => {
+                (z.racks || []).forEach(r => {
+                    rackCount++;
+                    (r.floors || []).forEach(f => {
+                        (f.slots || []).forEach(s => {
+                            slotCount++;
+                            if (s.current_boxes > 0 || s.status !== 'Đang sử dụng') usedCount++;
+                            else emptyCount++;
+                        });
+                    });
+                });
+            });
+
+            const usedPct = slotCount > 0 ? ((usedCount / slotCount) * 100).toFixed(1).replace('.', ',') : '0,0';
+            const emptyPct = slotCount > 0 ? ((emptyCount / slotCount) * 100).toFixed(1).replace('.', ',') : '0,0';
+
+            document.getElementById('statTotalZones').textContent = formatNum(allZones.length);
+            document.getElementById('statTotalRacks').textContent = formatNum(rackCount);
+            document.getElementById('statTotalSlots').textContent = formatNum(slotCount);
+            document.getElementById('statUsedSlots').textContent = formatNum(usedCount);
+            document.getElementById('statUsedPct').textContent = `(${usedPct}%)`;
+            document.getElementById('statEmptySlots').textContent = formatNum(emptyCount);
+            document.getElementById('statEmptyPct').textContent = `(${emptyPct}%)`;
+        }
+
+        function renderTreeAndMap() {
+            const warehouses = warehouseConfig.warehouses || [
+                { warehouse_id: 'KHO-01', warehouse_name: 'Kho chính (KHO-01)', zones: warehouseConfig.zones || [] }
+            ];
+            const treeEl = document.getElementById('warehouseTreeContainer');
+
+            treeEl.innerHTML = warehouses.map((wh, whIdx) => {
+                const isWhOpen = expandedWarehouses[wh.warehouse_id] !== false;
+                const zonesHtml = (wh.zones || []).map(z => {
+                    const isZoneOpen = !!expandedZones[z.zone_id];
+                    const racksHtml = (z.racks || []).map(r => {
+                        if (!selectedRackId) selectedRackId = r.rack_id;
+                        const activeCls = r.rack_id === selectedRackId ? 'active' : '';
+                        return `
+                            <li>
+                                <button type="button" class="rack-btn ${activeCls}" onclick="selectRack('${r.rack_id}')">
+                                    <span style="display:flex;align-items:center;gap:8px;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+                                        <span>Kệ ${r.rack_id}</span>
+                                    </span>
+                                    <span style="font-size:11px;opacity:0.7;">${(r.floors||[]).length}T</span>
+                                </button>
+                            </li>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="zone-group">
+                            <div class="zone-header" onclick="toggleZoneNode('${z.zone_id}')">
+                                <span style="display:flex;align-items:center;gap:6px;">
+                                    <span class="chevron-icon ${isZoneOpen ? 'expanded' : ''}">&#8250;</span>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                                    <span>Khu ${z.zone_id} – ${z.zone_name} (${z.zone_id})</span>
+                                </span>
+                                <span class="zone-count-tag">${(z.racks||[]).length}</span>
+                            </div>
+                            <ul class="rack-list tree-children ${isZoneOpen ? '' : 'collapsed'}">${racksHtml}</ul>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    ${whIdx > 0 ? '<div class="tree-divider"></div>' : ''}
+                    <div>
+                        <div class="tree-node-root" onclick="toggleWarehouseNode('${wh.warehouse_id}')">
+                            <div class="tree-node-left">
+                                <span class="chevron-icon ${isWhOpen ? 'expanded' : ''}">&#8250;</span>
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                <span>${wh.warehouse_name}</span>
+                            </div>
+                            <span style="font-size:11px;color:#64748b;font-weight:600;">${(wh.zones||[]).length} khu</span>
+                        </div>
+                        <div class="tree-children ${isWhOpen ? '' : 'collapsed'}">${zonesHtml}</div>
+                    </div>
+                `;
+            }).join('');
+
+            renderMiddleAndRightPanels();
+        }
+
+        function selectRack(rackId) {
+            selectedRackId = rackId;
+            selectedSlotCode = null;
+            renderTreeAndMap();
+        }
+
+        function selectSlot(slotCode) {
+            selectedSlotCode = slotCode;
+            renderMiddleAndRightPanels();
+        }
+
+        function findRackById(rackId) {
+            const warehouses = warehouseConfig.warehouses || [
+                { warehouse_id: 'KHO-01', warehouse_name: 'Kho chính (KHO-01)', zones: warehouseConfig.zones || [] }
+            ];
+            for (const wh of warehouses) {
+                for (const z of (wh.zones || [])) {
+                    for (const r of (z.racks || [])) {
+                        if (r.rack_id === rackId) return { warehouse: wh, zone: z, rack: r };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function findSlotByCode(code) {
+            const warehouses = warehouseConfig.warehouses || [
+                { warehouse_id: 'KHO-01', warehouse_name: 'Kho chính (KHO-01)', zones: warehouseConfig.zones || [] }
+            ];
+            for (const wh of warehouses) {
+                for (const z of (wh.zones || [])) {
+                    for (const r of (z.racks || [])) {
+                        for (const f of (r.floors || [])) {
+                            for (const s of (f.slots || [])) {
+                                if (s.slot_code === code) return { warehouse: wh, zone: z, rack: r, floor: f, slot: s };
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function renderMiddleAndRightPanels() {
+            const found = findRackById(selectedRackId);
+            const floorsEl = document.getElementById('rackFloorsContainer');
+            if (!found) return;
+
+            const { warehouse, zone, rack } = found;
+            const floorsDesc = [...(rack.floors || [])].reverse();
+            let totalSlots = 0, usedSlots = 0;
+
+            rack.floors.forEach(f => {
+                (f.slots || []).forEach(s => {
+                    totalSlots++;
+                    if (s.current_boxes > 0 || s.status !== 'Đang sử dụng') usedSlots++;
+                });
+            });
+
+            document.getElementById('selectedRackTitle').textContent = `Kệ ${rack.rack_id}`;
+            document.getElementById('selectedRackMeta').innerHTML =
+                `Kho: <strong>${warehouse.warehouse_id}</strong> &nbsp;|&nbsp; Khu: <strong>${zone.zone_id} – ${zone.zone_name}</strong> &nbsp;|&nbsp; Tầng: <strong>${rack.floors.length}</strong> &nbsp;|&nbsp; Vị trí: <strong>${totalSlots}</strong>`;
+
+            floorsEl.innerHTML = floorsDesc.map(f => {
+                const allFloorSlots = f.slots || [];
+                const floorKey = `${rack.rack_id}-${f.floor_no}`;
+                const isFloorCollapsed = !!collapsedFloors[floorKey];
+
+                // Mặc định hiển thị 100% vị trí; chỉ thu gọn còn 5 ô đầu khi click trực tiếp vào nhãn Tầng
+                const visibleSlots = isFloorCollapsed ? allFloorSlots.slice(0, 5) : allFloorSlots;
+
+                const tilesHtml = visibleSlots.map(s => {
+                    const ev = evaluateSlotVisual(s);
+                    const selCls = s.slot_code === selectedSlotCode ? 'selected' : '';
+                    return `
+                        <div class="slot-tile ${ev.css} ${selCls}" onclick="selectSlot('${s.slot_code}')" title="${s.slot_code}: ${s.current_boxes}/${s.max_boxes} Box · ${s.current_weight}/${s.max_weight} kg">
+                            ${s.slot_code}
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="floor-row">
+                        <div class="floor-label-box" onclick="toggleSingleFloor('${floorKey}')" title="Nhấn để thu gọn / mở rộng Tầng ${Number(f.floor_no)}">
+                            Tầng ${Number(f.floor_no)} ${isFloorCollapsed ? '&#9656;' : '&#9662;'}
+                            <span class="floor-sub-cnt">${isFloorCollapsed ? `${visibleSlots.length}/${allFloorSlots.length} ô` : `${allFloorSlots.length} vị trí`}</span>
+                        </div>
+                        <div class="slots-strip">${tilesHtml}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Cột phải: Inspector
+            if (!selectedSlotCode) {
+                const slotsPerFloor = rack.floors.length > 0 ? (rack.floors[0].slots || []).length : 0;
+                const sampleSlot = (rack.floors[0] && rack.floors[0].slots[0]) || { max_weight: 200, length_cm: 50, width_cm: 40, height_cm: 40 };
+                const usedPct = totalSlots > 0 ? ((usedSlots / totalSlots) * 100).toFixed(1).replace('.', ',') : '0,0';
+                const barWidth = totalSlots > 0 ? Math.round((usedSlots / totalSlots) * 100) : 0;
+
+                document.getElementById('inspectorHeaderTitle').textContent = `Thông tin kệ ${rack.rack_id}`;
+                document.getElementById('btnEditInspector').onclick = () => {
+                    if (sampleSlot.slot_code) openEditSlotModal(sampleSlot.slot_code);
+                };
+
+                document.getElementById('inspectorInfoRows').innerHTML = `
+                    <div class="info-row"><span class="info-k">Thuộc kho</span><span class="info-v">${warehouse.warehouse_name}</span></div>
+                    <div class="info-row"><span class="info-k">Mã kệ</span><span class="info-v">${rack.rack_id}</span></div>
+                    <div class="info-row"><span class="info-k">Khu vực</span><span class="info-v">${zone.zone_id} – ${zone.zone_name}</span></div>
+                    <div class="info-row"><span class="info-k">Số tầng</span><span class="info-v">${rack.floors.length}</span></div>
+                    <div class="info-row"><span class="info-k">Số vị trí / tầng</span><span class="info-v">${slotsPerFloor}</span></div>
+                    <div class="info-row"><span class="info-k">Tổng vị trí</span><span class="info-v">${totalSlots}</span></div>
+                    <div class="info-row"><span class="info-k">Giới hạn tải trọng / vị trí</span><span class="info-v">${sampleSlot.max_weight} kg</span></div>
+                    <div class="info-row"><span class="info-k">Kích thước vị trí (D × R × C)</span><span class="info-v">${sampleSlot.length_cm} × ${sampleSlot.width_cm} × ${sampleSlot.height_cm} cm</span></div>
+                    <div style="margin-top:6px;">
+                        <button type="button" class="btn btn-outline" style="width:100%; justify-content:center; font-size:12px;" onclick="openAddModal('FLOOR')">+ Thêm tầng vào kệ ${rack.rack_id}</button>
+                    </div>
+                `;
+
+                document.getElementById('usageRatioTxt').textContent = `${usedSlots} / ${totalSlots} vị trí`;
+                document.getElementById('usageBarFill').style.width = `${barWidth}%`;
+                document.getElementById('usagePctTxt').textContent = `${usedPct}%`;
+            } else {
+                const sFound = findSlotByCode(selectedSlotCode);
+                if (!sFound) return;
+                const s = sFound.slot;
+                const ev = evaluateSlotVisual(s);
+                const boxPct = Math.round((s.current_boxes / s.max_boxes) * 100);
+
+                document.getElementById('inspectorHeaderTitle').textContent = `Vị trí ${s.slot_code}`;
+                document.getElementById('btnEditInspector').onclick = () => openEditSlotModal(s.slot_code);
+
+                document.getElementById('inspectorInfoRows').innerHTML = `
+                    <div class="info-row"><span class="info-k">Mã vị trí</span><span class="info-v">${s.slot_code}</span></div>
+                    <div class="info-row"><span class="info-k">Kho / Tầng / Kệ</span><span class="info-v">${sFound.warehouse.warehouse_id} · Tầng ${Number(sFound.floor.floor_no)} · Kệ ${sFound.rack.rack_id}</span></div>
+                    <div class="info-row"><span class="info-k">Box đang lưu trữ</span><span class="info-v">${s.current_boxes} / ${s.max_boxes} Box</span></div>
+                    <div class="info-row"><span class="info-k">Tải trọng hiện tại</span><span class="info-v">${s.current_weight} / ${s.max_weight} kg</span></div>
+                    <div class="info-row"><span class="info-k">Kích thước ô (D × R × C)</span><span class="info-v">${s.length_cm} × ${s.width_cm} × ${s.height_cm} cm</span></div>
+                    <div class="info-row"><span class="info-k">Trạng thái vị trí</span><span class="info-v" style="color:#059669;">${s.status} (${ev.label})</span></div>
+                    <div style="margin-top:6px;">
+                        <button type="button" class="btn btn-outline" style="width:100%; justify-content:center; font-size:12px;" onclick="selectRack('${sFound.rack.rack_id}')">&larr; Quay lại thông tin kệ ${sFound.rack.rack_id}</button>
+                    </div>
+                `;
+
+                document.getElementById('usageRatioTxt').textContent = `${s.current_boxes} / ${s.max_boxes} Box`;
+                document.getElementById('usageBarFill').style.width = `${Math.min(100, boxPct)}%`;
+                document.getElementById('usagePctTxt').textContent = `${boxPct}%`;
+            }
+        }
+
+        function renderSlotsTable() {
+            const kw = (document.getElementById('slotSearchInp').value || '').trim().toLowerCase();
+            const zFilter = document.getElementById('slotZoneFilter').value;
+            const stFilter = document.getElementById('slotStatusFilter').value;
+            const allZones = getAllZonesFlat();
+
+            const zoneSel = document.getElementById('slotZoneFilter');
+            const curZ = zoneSel.value;
+            zoneSel.innerHTML = '<option value="ALL">Khu vực: Tất cả</option>' +
+                allZones.map(z => `<option value="${z.zone_id}">[${z.warehouse_id}] Khu ${z.zone_id} – ${z.zone_name}</option>`).join('');
+            if ([...allZones.map(z => z.zone_id), 'ALL'].includes(curZ)) zoneSel.value = curZ;
+
+            const rows = [];
+            allZones.forEach(z => {
+                if (zFilter !== 'ALL' && z.zone_id !== zFilter) return;
+                (z.racks || []).forEach(r => {
+                    (r.floors || []).forEach(f => {
+                        (f.slots || []).forEach(s => {
+                            if (stFilter !== 'ALL' && s.status !== stFilter) return;
+                            const path = `${z.warehouse_id} / Khu ${z.zone_id} / Kệ ${r.rack_id} / Tầng ${Number(f.floor_no)}`;
+                            if (kw && !s.slot_code.toLowerCase().includes(kw) && !path.toLowerCase().includes(kw)) return;
+
+                            const ev = evaluateSlotVisual(s);
+                            let pillCls = 'sp-active';
+                            if (s.status === 'Tạm khóa') pillCls = 'sp-locked';
+                            if (s.status === 'Ngừng sử dụng') pillCls = 'sp-stopped';
+
+                            rows.push(`
+                                <tr>
+                                    <td><strong>${s.slot_code}</strong></td>
+                                    <td>${path}</td>
+                                    <td><strong>${s.current_boxes}</strong> / ${s.max_boxes} Box</td>
+                                    <td><strong>${s.current_weight}</strong> / ${s.max_weight} kg</td>
+                                    <td>${s.length_cm} × ${s.width_cm} × ${s.height_cm} cm</td>
+                                    <td style="font-weight:700; color:#059669;">${ev.label}</td>
+                                    <td><span class="st-pill ${pillCls}">${s.status}</span></td>
+                                    <td style="text-align:right;">
+                                        <button type="button" class="btn-edit-pill" onclick="openEditSlotModal('${s.slot_code}')">Chỉnh sửa</button>
+                                    </td>
+                                </tr>
+                            `);
+                        });
+                    });
+                });
+            });
+
+            document.getElementById('slotsTableBody').innerHTML = rows.length
+                ? rows.join('')
+                : '<tr><td colspan="8" style="text-align:center; padding:24px; color:#64748b;">Không tìm thấy vị trí phù hợp.</td></tr>';
+        }
+
+        function renderRulesAndHistory(history) {
+            const r = warehouseConfig.default_rules || {};
+            document.getElementById('ruleMaxBoxes').value = r.max_boxes || 10;
+            document.getElementById('ruleMaxWeight').value = r.max_weight_kg || 200;
+            document.getElementById('ruleLength').value = r.length_cm || 50;
+            document.getElementById('ruleWidth').value = r.width_cm || 40;
+            document.getElementById('ruleHeight').value = r.height_cm || 40;
+            document.getElementById('ruleWarnPct').value = r.warn_threshold_pct || 90;
+
+            const histEl = document.getElementById('configHistoryBody');
+            histEl.innerHTML = history.length
+                ? history.map(h => `
+                    <tr>
+                        <td style="font-size:12px; color:#64748b; white-space:nowrap;">${h.timestamp || h.time || ''}</td>
+                        <td><strong>${h.by || h.actor || 'Manager'}</strong></td>
+                        <td>
+                            <div style="font-weight:700;">${h.action} (${h.target})</div>
+                            <div style="font-size:11.5px; color:#059669;">${Array.isArray(h.changes) ? h.changes.map(c => `${c.field}: ${c.before} → ${c.after}`).join('; ') : (h.changes || '')}</div>
+                        </td>
+                    </tr>
+                  `).join('')
+                : '<tr><td colspan="3" style="text-align:center; padding:20px; color:#64748b;">Chưa có lịch sử cấu hình kho.</td></tr>';
+        }
+
+        async function saveCapacityRules(e) {
+            e.preventDefault();
+            const payload = {
+                max_boxes: parseInt(document.getElementById('ruleMaxBoxes').value, 10),
+                max_weight_kg: parseFloat(document.getElementById('ruleMaxWeight').value),
+                length_cm: parseFloat(document.getElementById('ruleLength').value),
+                width_cm: parseFloat(document.getElementById('ruleWidth').value),
+                height_cm: parseFloat(document.getElementById('ruleHeight').value),
+                warn_threshold_pct: parseInt(document.getElementById('ruleWarnPct').value, 10)
+            };
+            const res = await fetch('/manager/api/warehouse-config/rules', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            alert(data.message || data.error);
+            loadWarehouseConfig();
+        }
+
+        function openAddModal(type) {
+            currentAddType = type;
+            const body = document.getElementById('addModalBody');
+            const warehouses = warehouseConfig.warehouses || [{ warehouse_id: 'KHO-01', warehouse_name: 'Kho chính (KHO-01)' }];
+            const whOpts = warehouses.map(w => `<option value="${w.warehouse_id}">${w.warehouse_name}</option>`).join('');
+            const allZones = getAllZonesFlat();
+            const zoneOpts = allZones.map(z => `<option value="${z.zone_id}">[${z.warehouse_id}] Khu ${z.zone_id} – ${z.zone_name}</option>`).join('');
+            const rackOpts = [];
+            allZones.forEach(z => (z.racks || []).forEach(r => rackOpts.push(`<option value="${r.rack_id}" ${r.rack_id === selectedRackId ? 'selected' : ''}>Kệ ${r.rack_id} (Khu ${z.zone_id})</option>`)));
+
+            if (type === 'ZONE') {
+                document.getElementById('addModalTitle').textContent = 'Thêm Khu vực mới';
+                body.innerHTML = `
+                    <div class="form-group"><label>Thuộc kho</label><select id="newZoneWh">${whOpts}</select></div>
+                    <div class="form-group"><label>Mã khu vực (VD: D hoặc RT-B)</label><input type="text" id="newZoneId" required style="text-transform:uppercase;"></div>
+                    <div class="form-group"><label>Tên khu vực (VD: Hàng khuyến mãi)</label><input type="text" id="newZoneName" required></div>
+                `;
+            } else if (type === 'RACK') {
+                document.getElementById('addModalTitle').textContent = 'Thêm Kệ mới';
+                body.innerHTML = `
+                    <div class="form-group"><label>Thuộc khu vực</label><select id="newRackZone">${zoneOpts}</select></div>
+                    <div class="form-group"><label>Mã kệ (VD: A4 hoặc RT2)</label><input type="text" id="newRackId" required style="text-transform:uppercase;"></div>
+                    <div class="form-group"><label>Số tầng</label><input type="number" id="newRackFloors" min="1" max="10" value="4" required></div>
+                    <div class="form-group"><label>Số vị trí / tầng (Mặc định 10 vị trí/tầng)</label><input type="number" id="newRackSlotsPerFloor" min="1" max="20" value="10" required></div>
+                `;
+            } else if (type === 'FLOOR') {
+                document.getElementById('addModalTitle').textContent = 'Thêm Tầng mới vào Kệ';
+                body.innerHTML = `
+                    <div class="form-group"><label>Chọn kệ cần thêm tầng</label><select id="newFloorRack">${rackOpts.join('')}</select></div>
+                    <div class="form-group"><label>Số hiệu tầng (VD: 05)</label><input type="text" id="newFloorNo" value="05" required></div>
+                    <div class="form-group"><label>Số vị trí trong tầng này</label><input type="number" id="newFloorSlotsCount" min="1" max="20" value="10" required></div>
+                `;
+            } else {
+                document.getElementById('addModalTitle').textContent = 'Thêm Vị trí vào tầng';
+                body.innerHTML = `
+                    <div class="form-group"><label>Chọn kệ</label><select id="newSlotRack">${rackOpts.join('')}</select></div>
+                    <div class="form-group"><label>Số tầng (VD: 01)</label><input type="text" id="newSlotFloor" value="01" required></div>
+                    <div class="form-group"><label>Mã vị trí mới (VD: A1-041)</label><input type="text" id="newSlotCode" required style="text-transform:uppercase;"></div>
+                `;
+            }
+            document.getElementById('addStructureModal').classList.add('show');
+        }
+
+        async function submitAddStructure(e) {
+            e.preventDefault();
+            let payload = { action_type: currentAddType };
+            if (currentAddType === 'ZONE') {
+                payload.warehouse_id = document.getElementById('newZoneWh').value;
+                payload.zone_id = document.getElementById('newZoneId').value.trim().toUpperCase();
+                payload.zone_name = document.getElementById('newZoneName').value.trim();
+            } else if (currentAddType === 'RACK') {
+                payload.zone_id = document.getElementById('newRackZone').value;
+                payload.rack_id = document.getElementById('newRackId').value.trim().toUpperCase();
+                payload.floors_count = parseInt(document.getElementById('newRackFloors').value, 10);
+                payload.slots_per_floor = parseInt(document.getElementById('newRackSlotsPerFloor').value, 10);
+            } else if (currentAddType === 'FLOOR') {
+                payload.rack_id = document.getElementById('newFloorRack').value;
+                payload.floor_no = document.getElementById('newFloorNo').value.trim();
+                payload.slots_count = parseInt(document.getElementById('newFloorSlotsCount').value, 10);
+            } else {
+                payload.rack_id = document.getElementById('newSlotRack').value;
+                payload.floor_no = document.getElementById('newSlotFloor').value.trim();
+                payload.slot_code = document.getElementById('newSlotCode').value.trim().toUpperCase();
+            }
+
+            const res = await fetch('/manager/api/warehouse-config/structure', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Lỗi thêm cấu trúc kho.');
+                return;
+            }
+            closeModal('addStructureModal');
+            loadWarehouseConfig();
+        }
+
+        function openEditSlotModal(code) {
+            const found = findSlotByCode(code);
+            if (!found) return;
+            const s = found.slot;
+            document.getElementById('editSlotTitle').textContent = `Chỉnh sửa vị trí ${s.slot_code}`;
+            document.getElementById('editSlotCode').value = s.slot_code;
+            document.getElementById('editSlotCurrentInfo').textContent = `${s.current_boxes} Box · ${s.current_weight} kg`;
+            document.getElementById('editMaxBoxes').value = s.max_boxes;
+            document.getElementById('editMaxWeight').value = s.max_weight;
+            document.getElementById('editLen').value = s.length_cm;
+            document.getElementById('editWid').value = s.width_cm;
+            document.getElementById('editHei').value = s.height_cm;
+            document.getElementById('editStatus').value = s.status;
+            document.getElementById('editSlotModal').classList.add('show');
+        }
+
+        async function submitEditSlot(e) {
+            e.preventDefault();
+            const code = document.getElementById('editSlotCode').value;
+            const payload = {
+                max_boxes: parseInt(document.getElementById('editMaxBoxes').value, 10),
+                max_weight: parseFloat(document.getElementById('editMaxWeight').value),
+                length_cm: parseFloat(document.getElementById('editLen').value),
+                width_cm: parseFloat(document.getElementById('editWid').value),
+                height_cm: parseFloat(document.getElementById('editHei').value),
+                status: document.getElementById('editStatus').value
+            };
+            const res = await fetch(`/manager/api/warehouse-config/slots/${code}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Không thể cập nhật.');
+                return;
+            }
+            closeModal('editSlotModal');
+            loadWarehouseConfig();
+        }
+
+        async function importConfigCsv(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/manager/api/warehouse-config/import', { method: 'POST', body: fd });
+            const data = await res.json();
+            alert(data.message || data.error);
+            event.target.value = '';
+            loadWarehouseConfig();
+        }
+        function suggestNextSlotCode() {
+            const rId = document.getElementById('newSlotRack').value;
+            const fNo = String(document.getElementById('newSlotFloor').value || '1').padStart(2, '0');
+            const found = findRackById(rId);
+            if (!found) return;
+            const floor = (found.rack.floors || []).find(fl => fl.floor_no === fNo);
+            const nextIdx = floor ? (floor.slots.length + 1) : 1;
+            document.getElementById('newSlotCode').value = `${rId}-T${Number(fNo)}-${String(nextIdx).padStart(2, '0')}`;
+        }
+
+        loadWarehouseConfig();
+    </script>
+    <script src="{{ url_for('static', filename='js/manager_sidebar_sync.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+{
+  "sessions": [
+    {
+      "id": "KK-20261113-001",
+      "scope": "Kệ A1 · 24 vị trí",
+      "scope_type_label": "Theo kệ",
+      "assignee": "Lê Văn Hùng",
+      "counted_slots": 18,
+      "total_slots": 24,
+      "diff_abs_pcs": 10,
+      "time_range": "13/11/2026 08:00 – 11:30",
+      "snapshot_time": "13/11/2026 08:00",
+      "status": "Đang kiểm kê",
+      "note": "Kiểm kê định kỳ tháng 11/2026 tại Kệ A1 (Đang đếm 18/24 vị trí)."
+    },
+    {
+      "id": "KK-0105",
+      "scope": "Kệ A1 · 24 vị trí",
+      "scope_type_label": "Theo kệ",
+      "assignee": "Lê Văn Hùng",
+      "counted_slots": 24,
+      "total_slots": 24,
+      "diff_abs_pcs": 10,
+      "time_range": "13/01/2026 07:00 – 09:30",
+      "snapshot_time": "13/01/2026 07:00",
+      "status": "Chờ phê duyệt",
+      "note": "Hoàn tất 24/24 vị trí, phát hiện lệch -5 PCS và +5 PCS."
+    },
+    {
+      "id": "KK-0104",
+      "scope": "Khu vực A2 · 20 vị trí",
+      "scope_type_label": "Theo khu vực",
+      "assignee": "Trần Thị Mai",
+      "counted_slots": 20,
+      "total_slots": 20,
+      "diff_abs_pcs": 8,
+      "time_range": "12/01/2026 14:00 – 16:30",
+      "snapshot_time": "12/01/2026 14:00",
+      "status": "Chờ phê duyệt",
+      "note": "Hoàn tất 20/20 vị trí tại Khu A2."
+    },
+    {
+      "id": "KK-0103",
+      "scope": "Kệ B1 · 16 vị trí",
+      "scope_type_label": "Theo kệ",
+      "assignee": "Nguyễn Văn An",
+      "counted_slots": 16,
+      "total_slots": 16,
+      "diff_abs_pcs": 2,
+      "time_range": "11/01/2026 08:00 – 10:00",
+      "snapshot_time": "11/01/2026 08:00",
+      "status": "Hoàn tất",
+      "note": "Đã duyệt điều chỉnh và chốt biên bản."
+    }
+  ],
+  "adjustments": [
+    {
+      "id": "DC-0018",
+      "session_id": "KK-0105",
+      "count_type": "Theo kệ",
+      "scope": "Kệ A1",
+      "full_scope_path": "Kho chính > Khu A > Kệ A1",
+      "sender": "Lê Văn Hùng",
+      "snapshot_at": "13/01/2026 07:00",
+      "sent_at": "13/01/2026 09:30",
+      "total_shortage": 5,
+      "total_surplus": 5,
+      "status": "Chờ phê duyệt",
+      "scope_completed": true,
+      "has_post_count_movement": false,
+      "explanation": "Phát hiện chênh lệch số lượng khi kiểm đếm thực tế tại Kệ A1. Đề nghị điều chỉnh theo kết quả kiểm kê.",
+      "items": [
+        {
+          "sku": "SP0001",
+          "name": "Sữa rửa mặt dịu nhẹ 150ml",
+          "box_code": "BX-0781",
+          "location": "A1-01",
+          "system_pcs": 100,
+          "counted_pcs": 95
+        },
+        {
+          "sku": "SP0002",
+          "name": "Kem dưỡng ẩm phục hồi 50g",
+          "box_code": "BX-0782",
+          "location": "A1-02",
+          "system_pcs": 80,
+          "counted_pcs": 85
+        }
+      ],
+      "history": [
+        {
+          "time": "13/01/2026 09:30",
+          "actor": "Lê Văn Hùng",
+          "action": "Gửi yêu cầu",
+          "note": "Gửi đề xuất điều chỉnh DC-0018."
+        }
+      ]
+    },
+    {
+      "id": "DC-0017",
+      "session_id": "KK-0104",
+      "count_type": "Theo khu vực",
+      "scope": "Khu vực A2",
+      "full_scope_path": "Kho chính > Khu A > Khu vực A2",
+      "sender": "Trần Thị Mai",
+      "snapshot_at": "12/01/2026 14:00",
+      "sent_at": "12/01/2026 16:45",
+      "total_shortage": 8,
+      "total_surplus": 0,
+      "status": "Chờ phê duyệt",
+      "scope_completed": true,
+      "has_post_count_movement": false,
+      "explanation": "Thiếu 8 PCS tại Box BX-0812 do rách bao bì đã lập biên bản loại trừ.",
+      "items": [
+        {
+          "sku": "SP0003",
+          "name": "Toner cân bằng da 200ml",
+          "box_code": "BX-0812",
+          "location": "A2-05",
+          "system_pcs": 50,
+          "counted_pcs": 42
+        }
+      ],
+      "history": [
+        {
+          "time": "12/01/2026 16:45",
+          "actor": "Trần Thị Mai",
+          "action": "Gửi yêu cầu",
+          "note": "Gửi đề xuất điều chỉnh DC-0017."
+        }
+      ]
+    },
+    {
+      "id": "DC-0016",
+      "session_id": "KK-0103",
+      "count_type": "Theo kệ",
+      "scope": "Kệ B1",
+      "full_scope_path": "Kho chính > Khu B > Kệ B1",
+      "sender": "Nguyễn Văn An",
+      "snapshot_at": "11/01/2026 08:00",
+      "sent_at": "11/01/2026 10:15",
+      "total_shortage": 2,
+      "total_surplus": 0,
+      "status": "Đã duyệt",
+      "reviewed_by": "Nguyễn Minh Nam",
+      "reviewed_at": "11/01/2026 10:40",
+      "scope_completed": true,
+      "has_post_count_movement": false,
+      "explanation": "Sai lệch 2 PCS trong quá trình soạn đơn mẫu.",
+      "items": [
+        {
+          "sku": "SP0004",
+          "name": "Serum Vitamin C 30ml",
+          "box_code": "BX-0604",
+          "location": "B1-02",
+          "system_pcs": 122,
+          "counted_pcs": 120
+        }
+      ],
+      "history": [
+        {
+          "time": "11/01/2026 10:15",
+          "actor": "Nguyễn Văn An",
+          "action": "Gửi yêu cầu",
+          "note": "Gửi đề xuất điều chỉnh DC-0016."
+        },
+        {
+          "time": "11/01/2026 10:40",
+          "actor": "Nguyễn Minh Nam",
+          "action": "Đã duyệt",
+          "note": "Phê duyệt và cập nhật tồn kho SP0004."
+        }
+      ]
+    }
+  ]
+}
