@@ -11,7 +11,7 @@ import tempfile
 import threading
 
 from flask import (
-    Flask, render_template, request, redirect,
+    Flask, render_template, render_template_string, request, redirect,
     url_for, session, make_response, abort,
     jsonify, flash
 )
@@ -312,13 +312,10 @@ def hash_password(password):
 def protect_requests():
     if "_csrf_token" not in session:
         session["_csrf_token"] = secrets.token_hex(32)
-        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            if (
-                request.path in ("/login", "/")
-                or request.path.startswith("/warehouse/api/")
-                or request.path.startswith("/manager/api/")
-            ):
-                return
+
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        if request.path in ("/login", "/") or request.path.startswith(("/warehouse/api/", "/manager/api/", "/admin/api/", "/api/staff/")):
+            return
 
         supplied_token = (
             request.form.get("csrf_token")
@@ -369,7 +366,7 @@ def admin_required(f):
     @wraps(f)
     @login_required
     def decorated(*args, **kwargs):
-        if session["user"].get("role") != "Quản trị viên":
+        if "Quản trị viên" not in session["user"].get("role", ""):
             abort(403)
         return f(*args, **kwargs)
     return decorated
@@ -411,16 +408,20 @@ def welcome():
             return redirect(url_for("admin_dashboard"))
         if role == "Quản lý kho":
             return redirect(url_for("warehouse_manager_dashboard"))
+        if role == "Nhân viên kho":
+            return redirect(url_for("staff_dashboard_page"))
     return render_template("welcome.html")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'user' in session:
-        role = session['user'].get('role')
-        if role == 'Quản trị viên':
+        role = session['user'].get('role', '')
+        if 'Quản trị viên' in role:
             return redirect(url_for('admin_dashboard'))
-        elif role == 'Quản lý kho':
+        elif 'Quản lý kho' in role:
             return redirect(url_for('warehouse_manager_dashboard'))
+        elif 'Nhân viên' in role or 'Staff' in role:
+            return redirect(url_for('staff_dashboard_page'))
 
     error = None
     login_input = ""
@@ -472,10 +473,13 @@ def login():
                     result="Thành công"
                 )
 
-                if user_info.get('role') == 'Quản trị viên':
+                role_name = user_info.get('role', '')
+                if 'Quản trị viên' in role_name:
                     return redirect(url_for('admin_dashboard'))
-                else:
+                elif 'Quản lý kho' in role_name:
                     return redirect('/warehouse/manager')
+                else:
+                    return redirect('/staff/dashboard')
         else:
             add_audit_log(
                 category="Bảo mật",
@@ -517,13 +521,25 @@ def admin_dashboard():
     locked_count = sum(1 for u in users.values() if u.get("status") == "Tạm khóa")
     pending_count = sum(1 for u in users.values() if u.get("status") == "Chờ kích hoạt")
 
-    role_counts = {r: 0 for r in roles}
+    # Chuẩn hóa đếm số lượng theo vai trò cho biểu đồ & thống kê Tổng quan
+    role_counts = {
+        "Quản trị viên": 0,
+        "Quản lý kho": 0,
+        "Nhân viên kho": 0,
+        "Điều phối / Kế toán kho": 0
+    }
     for user in users.values():
-        role = user.get("role")
-        if role in role_counts:
-            role_counts[role] += 1
-        elif role:
-            role_counts[role] = 1
+        r = user.get("role", "")
+        if "Quản trị viên" in r:
+            role_counts["Quản trị viên"] += 1
+        elif "Quản lý kho" in r:
+            role_counts["Quản lý kho"] += 1
+        elif "Nhân viên kho" in r:
+            role_counts["Nhân viên kho"] += 1
+        elif "Điều phối" in r or "Kế toán" in r:
+            role_counts["Điều phối / Kế toán kho"] += 1
+        elif r:
+            role_counts[r] = role_counts.get(r, 0) + 1
 
     gradient_parts = []
     current_pct = 0.0
@@ -778,7 +794,7 @@ def admin_update_user():
         abort(404, description="Tài khoản không tồn tại")
 
     user = users[username]
-    if username == session["user"]["username"] and role != "Quản trị viên":
+    if username == session["user"]["username"] and "Quản trị viên" not in role:
         flash("Không cho phép Admin tự hạ quyền quản trị của chính mình!", "danger")
         return redirect(url_for("admin_users"))
 
@@ -802,7 +818,7 @@ def toggle_status(username):
         abort(404)
 
     target_user = users[username]
-    if target_user.get("role") == "Quản trị viên" or username in ("admin", "duc.long"):
+    if "Quản trị viên" in target_user.get("role", "") or username in ("admin", "duc.long"):
         flash("Không được phép khóa tài khoản Quản trị viên!", "danger")
         return redirect(url_for("admin_users"))
 
@@ -2286,7 +2302,7 @@ def admin_dashboard_api():
     users = load_users()
     logs = load_logs()
     roles = load_roles()
-    load_system_settings()
+    settings = load_settings()
 
     today = datetime.now().strftime("%Y-%m-%d")
 
@@ -4973,6 +4989,3955 @@ def api_manager_change_password():
     # Tuyệt đối không ghi mật khẩu vào nhật ký audit_logs
     add_audit_log(category='BẢO MẬT', action='Đổi mật khẩu tài khoản Manager', target=username)
     return jsonify({'message': 'Đổi mật khẩu thành công.'})
+
+#######======= III.Nhân viên kho (Warehouse Staff) ==========
+import json
+import hashlib
+from functools import wraps
+from datetime import datetime
+from flask import render_template, request, jsonify, session, redirect, url_for
+
+STAFF_TASKS_FILE = 'staff_tasks.json'
+STAFF_NOTI_FILE = 'staff_notifications.json'
+
+def staff_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = session.get('user')
+        if not user:
+            if request.path.startswith('/api/'):
+                return jsonify({'error': 'Phiên đăng nhập đã hết hạn', 'redirect': '/login'}), 401
+            return redirect(url_for('login'))
+        role = str(user.get('role', '')).upper()
+        if 'NHÂN VIÊN' not in role and 'STAFF' not in role and 'ADMIN' not in role:
+            return jsonify({'error': 'Tài khoản không thuộc phân hệ Nhân viên kho'}), 403
+        return f(*args, **kwargs)
+    return decorated
+
+
+def get_current_shift_info():
+    now = datetime.now()
+    hour = now.hour
+    if 6 <= hour < 14:
+        return {'shift_id': 'CA-SANG', 'shift_name': 'Ca Sáng (Ca 1)', 'time_range': '06:00 - 14:00', 'date_str': now.strftime('%Y-%m-%d')}
+    elif 14 <= hour < 22:
+        return {'shift_id': 'CA-CHIEU', 'shift_name': 'Ca Chiều (Ca 2)', 'time_range': '14:00 - 22:00', 'date_str': now.strftime('%Y-%m-%d')}
+    return {'shift_id': 'CA-DEM', 'shift_name': 'Ca Đêm (Ca 3)', 'time_range': '22:00 - 06:00', 'date_str': now.strftime('%Y-%m-%d')}
+
+
+def _safe_load(filepath, default):
+    if 'read_json' in globals():
+        return read_json(filepath, default)
+    if 'load_json_safe' in globals():
+        return load_json_safe(filepath, default=default)
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+
+def _safe_save(filepath, data):
+    if 'write_json' in globals():
+        write_json(filepath, data)
+        return
+    if 'save_json_safe' in globals():
+        save_json_safe(filepath, data)
+        return
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def build_synced_staff_tasks(emp_code, emp_name, warehouse_id):
+    """
+    Tổng hợp 100% dữ liệu thật từ các phân hệ SANOVA:
+    1. staff_tasks.json (Công việc được phân công trực tiếp)
+    2. approvals_data.json (Phiếu nhập kho / bàn giao chờ duyệt, bị trả lại, hoặc đã duyệt trong ngày)
+    3. stocktake_data.json (Phiên kiểm kê kho & yêu cầu điều chỉnh)
+    4. warehouse_data.json (Hàng đợi vận hành đang mở)
+    """
+    today_ymd = datetime.now().strftime('%Y-%m-%d')
+    today_dmy = datetime.now().strftime('%d/%m/%Y')
+
+    saved_tasks = _safe_load(STAFF_TASKS_FILE, [])
+    approvals_data = _safe_load('approvals_data.json', {})
+    stocktake_data = _safe_load('stocktake_data.json', {})
+    wh_data = _safe_load('warehouse_data.json', {})
+
+    tasks_map = {}
+
+    def belongs_to_staff(sender_or_assignee):
+        if not sender_or_assignee:
+            return True
+        val = str(sender_or_assignee).strip().lower()
+        checks = {
+            str(emp_code).strip().lower(),
+            str(emp_name).strip().lower(),
+            'all_staff', 'nhân viên kho', 'staff'
+        }
+        return any(c and (c == val or c in val) for c in checks)
+
+    # 1. Nạp công việc từ staff_tasks.json
+    for t in saved_tasks:
+        if t.get('warehouse_id', 'KHO-01') != warehouse_id:
+            continue
+        if belongs_to_staff(t.get('assigned_employee')):
+            tasks_map[t['task_id']] = t
+
+    # 2. Đồng bộ từ approvals_data.json
+    # 2a. Phiếu đang chờ Manager xác nhận
+    for t in approvals_data.get('pending_tickets', []):
+        if not belongs_to_staff(t.get('sender')):
+            continue
+        ref_id = t.get('id')
+        tid = f"TSK-{ref_id}"
+        is_handover = t.get('category') == 'HANDOVER'
+        tasks_map[tid] = {
+            'task_id': tid,
+            'reference_id': ref_id,
+            'task_type': 'HANDOVER' if is_handover else 'INBOUND',
+            'title': f"Chờ xác nhận {'bàn giao' if is_handover else 'nhập kho'}",
+            'category_label': 'Bàn giao' if is_handover else 'Nhập kho',
+            'quantity_text': t.get('qty_primary') or f"{t.get('total_pcs', 0)} PCS",
+            'time_label': str(t.get('sent_at', ''))[-5:] or 'Hôm nay',
+            'assigned_employee': emp_code,
+            'warehouse_id': warehouse_id,
+            'status': 'Chờ xác nhận',
+            'priority': 'NORMAL',
+            'is_carryover': False,
+            'rejection_reason': ''
+        }
+
+    processed_list = approvals_data.get('processed_tickets', [])
+
+    # 2b. Phiếu bị Manager từ chối / trả lại
+    for r in processed_list:
+        if str(r.get('status', '')) != 'Đã từ chối' or not belongs_to_staff(r.get('sender')):
+            continue
+        ref_id = r.get('id')
+        tid = f"TSK-{ref_id}"
+        is_handover = r.get('category') == 'HANDOVER'
+        tasks_map[tid] = {
+            'task_id': tid,
+            'reference_id': ref_id,
+            'task_type': 'HANDOVER' if is_handover else 'INBOUND',
+            'title': f"Bổ sung thông tin {'bàn giao' if is_handover else 'nhập kho'}",
+            'category_label': 'Bàn giao' if is_handover else 'Nhập kho',
+            'quantity_text': r.get('qty_primary') or f"{r.get('total_pcs', 0)} PCS",
+            'time_label': str(r.get('reviewed_at', ''))[-5:] or 'Vừa trả lại',
+            'assigned_employee': emp_code,
+            'warehouse_id': warehouse_id,
+            'status': 'Cần xử lý lại',
+            'priority': 'HIGH',
+            'is_carryover': False,
+            'rejection_reason': r.get('reject_reason') or 'Manager yêu cầu kiểm tra và bổ sung thông tin phiếu.'
+        }
+
+    # 2c. Phiếu đã được Manager duyệt hoàn tất trong ngày
+    for a in processed_list:
+        if 'Đã xác nhận' not in str(a.get('status', '')) or not belongs_to_staff(a.get('sender')):
+            continue
+        approved_at = str(a.get('reviewed_at', ''))
+        if today_ymd in approved_at or today_dmy in approved_at or not approved_at:
+            ref_id = a.get('id')
+            tid = f"TSK-{ref_id}"
+            is_handover = a.get('category') == 'HANDOVER'
+            tasks_map[tid] = {
+                'task_id': tid,
+                'reference_id': ref_id,
+                'task_type': 'HANDOVER' if is_handover else 'INBOUND',
+                'title': f"Đã xác nhận {'bàn giao' if is_handover else 'nhập kho'}",
+                'category_label': 'Bàn giao' if is_handover else 'Nhập kho',
+                'quantity_text': a.get('qty_primary') or f"{a.get('total_pcs', 0)} PCS",
+                'time_label': approved_at[-5:] if len(approved_at) >= 5 else 'Đã duyệt',
+                'assigned_employee': emp_code,
+                'warehouse_id': warehouse_id,
+                'status': 'Hoàn thành',
+                'priority': 'NORMAL',
+                'is_carryover': False,
+                'rejection_reason': ''
+            }
+
+    # 3. Đồng bộ phiên kiểm kê từ stocktake_data.json
+    for s in stocktake_data.get('sessions', []):
+        assignee = s.get('assignee') or s.get('assigned_to')
+        if not belongs_to_staff(assignee):
+            continue
+        st_raw = s.get('status', '')
+        if st_raw in ('Chờ thực hiện', 'Đang kiểm kê', 'Đối chiếu', 'Hoàn tất'):
+            ref_id = s.get('id')
+            tid = f"TSK-{ref_id}"
+            mapped_status = (
+                'Chờ thực hiện' if st_raw == 'Chờ thực hiện'
+                else ('Chờ xác nhận' if st_raw == 'Đối chiếu'
+                else ('Hoàn thành' if st_raw == 'Hoàn tất' else 'Đang thực hiện'))
+            )
+            tasks_map[tid] = {
+                'task_id': tid,
+                'reference_id': ref_id,
+                'task_type': 'STOCK_COUNT',
+                'title': f"Kiểm kê {s.get('scope', 'khu vực kho')}",
+                'category_label': 'Kiểm kê',
+                'quantity_text': f"{s.get('total_boxes', s.get('total_locations', 0))} vị trí",
+                'time_label': str(s.get('created_at', ''))[-5:] or 'Trong ca',
+                'assigned_employee': emp_code,
+                'warehouse_id': warehouse_id,
+                'status': mapped_status,
+                'priority': 'HIGH' if s.get('priority') == 'HIGH' else 'NORMAL',
+                'is_carryover': bool(s.get('is_carryover', False)),
+                'rejection_reason': ''
+            }
+
+    # Sắp xếp ưu tiên: Cần xử lý lại -> Ưu tiên cao -> Đang thực hiện -> Chờ thực hiện -> Chờ xác nhận -> Hoàn thành
+    order_weight = {
+        'Cần xử lý lại': 1,
+        'Đang thực hiện': 2,
+        'Chờ thực hiện': 3,
+        'Chờ xác nhận': 4,
+        'Hoàn thành': 5
+    }
+    result = list(tasks_map.values())
+    result.sort(key=lambda x: (order_weight.get(x.get('status'), 9), 0 if x.get('priority') == 'HIGH' else 1))
+    return result
+
+
+def build_staff_notifications(emp_code, tasks):
+    read_store = _safe_load(STAFF_NOTI_FILE, {})
+    read_ids = set(read_store.get(emp_code, []))
+    notifications = []
+
+    for t in tasks:
+        ref = t['reference_id']
+        target_url = (
+            f"/staff/packing-handover?ticket={ref}" if t['task_type'] == 'HANDOVER'
+            else (f"/staff/picking-returns?tab=OUT&ticket={ref}" if t['task_type'] == 'OUT'
+            else (f"/staff/stocktake?ticket={ref}" if t['task_type'] == 'STOCK_COUNT'
+            else f"/staff/inbound?ticket={ref}"))
+        )
+
+        if t.get('status') == 'Cần xử lý lại':
+            nid = f"NOTI-RET-{ref}"
+            notifications.append({
+                'id': nid,
+                'level': 'DANGER',
+                'title': f"Manager trả lại phiếu {ref}",
+                'message': t.get('rejection_reason') or 'Yêu cầu kiểm tra và bổ sung thông tin phiếu.',
+                'time': t.get('time_label', 'Vừa xong'),
+                'is_read': nid in read_ids,
+                'target_url': target_url
+            })
+        elif t.get('priority') == 'HIGH' and t.get('status') in ('Chờ thực hiện', 'Đang thực hiện'):
+            nid = f"NOTI-PRI-{ref}"
+            notifications.append({
+                'id': nid,
+                'level': 'WARNING',
+                'title': f"Công việc ưu tiên: {ref}",
+                'message': f"{t['title']} ({t['quantity_text']}) cần xử lý đúng tiến độ ca.",
+                'time': t.get('time_label', 'Trong ca'),
+                'is_read': nid in read_ids,
+                'target_url': target_url
+            })
+        elif t.get('status') == 'Hoàn thành':
+            nid = f"NOTI-OK-{ref}"
+            notifications.append({
+                'id': nid,
+                'level': 'SUCCESS',
+                'title': f"Đã xác nhận phiếu {ref}",
+                'message': f"{t['title']} ({t['quantity_text']}) đã được phê duyệt hoàn tất.",
+                'time': t.get('time_label', 'Hôm nay'),
+                'is_read': nid in read_ids,
+                'target_url': target_url
+            })
+
+    return notifications
+
+
+# ================= ROUTES & API STAFF DASHBOARD =================
+
+@app.route('/staff/dashboard')
+@staff_required
+def staff_dashboard_page():
+    return render_template('STAFF/staff_dashboard.html')
+
+
+@app.route('/api/staff/dashboard', methods=['GET'])
+@staff_required
+def api_staff_dashboard():
+    user = session.get('user', {})
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+    emp_name = user.get('name', 'Nhân viên kho')
+    warehouse_id = user.get('warehouse_id', 'KHO-01')
+
+    tasks = build_synced_staff_tasks(emp_code, emp_name, warehouse_id)
+    shift = get_current_shift_info()
+
+    pending_cnt = sum(1 for t in tasks if t.get('status') == 'Chờ thực hiện')
+    in_progress_cnt = sum(1 for t in tasks if t.get('status') == 'Đang thực hiện')
+    waiting_cnt = sum(1 for t in tasks if t.get('status') == 'Chờ xác nhận')
+    returned_cnt = sum(1 for t in tasks if t.get('status') == 'Cần xử lý lại')
+    completed_cnt = sum(1 for t in tasks if t.get('status') == 'Hoàn thành' and not t.get('is_carryover'))
+    carryover_cnt = sum(1 for t in tasks if t.get('is_carryover') and t.get('status') != 'Hoàn thành')
+    current_shift_total = sum(1 for t in tasks if not t.get('is_carryover'))
+
+    notifications = build_staff_notifications(emp_code, tasks)
+
+    payload = {
+        'staff': {
+            'employee_code': emp_code,
+            'full_name': emp_name,
+            'role': user.get('role', 'Nhân viên kho'),
+            'warehouse_id': warehouse_id,
+            'warehouse_name': user.get('scope', 'Kho chính - SANOVA')
+        },
+        'shift': shift,
+        'stats': {
+            'pending': pending_cnt,
+            'in_progress': in_progress_cnt,
+            'waiting_approval': waiting_cnt,
+            'returned': returned_cnt,
+            'completed': completed_cnt,
+            'total_shift_tasks': current_shift_total,
+            'carryover_count': carryover_cnt
+        },
+        'tasks': tasks,
+        'notifications': notifications
+    }
+
+    # Tạo mã băm trạng thái để Frontend chỉ cập nhật DOM khi dữ liệu thực sự thay đổi
+    raw_hash = hashlib.md5(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
+    payload['state_hash'] = raw_hash
+    return jsonify(payload)
+
+
+@app.route('/api/staff/tasks', methods=['GET'])
+@staff_required
+def api_staff_tasks():
+    user = session.get('user', {})
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+    emp_name = user.get('name', 'Nhân viên kho')
+    warehouse_id = user.get('warehouse_id', 'KHO-01')
+    status_filter = request.args.get('status', 'ALL')
+
+    tasks = build_synced_staff_tasks(emp_code, emp_name, warehouse_id)
+    if status_filter != 'ALL':
+        tasks = [t for t in tasks if t.get('status') == status_filter]
+    return jsonify({'tasks': tasks, 'count': len(tasks)})
+
+
+@app.route('/api/staff/tasks/<task_id>', methods=['GET'])
+@staff_required
+def api_staff_task_detail(task_id):
+    user = session.get('user', {})
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+    emp_name = user.get('name', 'Nhân viên kho')
+    warehouse_id = user.get('warehouse_id', 'KHO-01')
+
+    tasks = build_synced_staff_tasks(emp_code, emp_name, warehouse_id)
+    for t in tasks:
+        if t.get('task_id') == task_id or t.get('reference_id') == task_id:
+            return jsonify({'task': t})
+    return jsonify({'error': 'Không tìm thấy công việc hoặc bạn không có quyền truy cập phiếu này'}), 404
+
+
+@app.route('/api/staff/notifications', methods=['GET'])
+@staff_required
+def api_staff_notifications():
+    user = session.get('user', {})
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+    emp_name = user.get('name', 'Nhân viên kho')
+    warehouse_id = user.get('warehouse_id', 'KHO-01')
+    tasks = build_synced_staff_tasks(emp_code, emp_name, warehouse_id)
+    return jsonify({'notifications': build_staff_notifications(emp_code, tasks)})
+
+
+@app.route('/api/staff/notifications/<noti_id>/read', methods=['PATCH'])
+@staff_required
+def api_staff_notification_mark_read(noti_id):
+    user = session.get('user', {})
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+    read_store = _safe_load(STAFF_NOTI_FILE, {})
+    user_reads = set(read_store.get(emp_code, []))
+    user_reads.add(noti_id)
+    read_store[emp_code] = list(user_reads)
+    _safe_save(STAFF_NOTI_FILE, read_store)
+    return jsonify({'status': 'ok', 'id': noti_id})
+
+
+@app.route('/api/staff/shifts/current', methods=['GET'])
+@staff_required
+def api_staff_current_shift():
+    return jsonify(get_current_shift_info())
+
+# API STAFF
+@app.route('/api/staff/tasks/<task_id>/progress', methods=['PATCH'])
+@staff_required
+def api_staff_update_task_progress(task_id):
+    """
+    Ghi nhận tức thì mọi thao tác nhỏ của nhân viên (bắt đầu làm, quét dở từng Box/vị trí, gửi chờ duyệt)
+    để Dashboard Staff và hệ thống đồng bộ theo thời gian thực.
+    """
+    user = session.get('user', {})
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+    emp_name = user.get('name', 'Nhân viên kho')
+    warehouse_id = user.get('warehouse_id', 'KHO-01')
+
+    body = request.get_json(silent=True) or {}
+    new_status = body.get('status')       # 'Đang thực hiện' | 'Chờ xác nhận' | 'Hoàn thành'
+    sub_note = body.get('progress_note')  # VD: 'Đã quét 6/10 Box'
+
+    saved_tasks = _safe_load(STAFF_TASKS_FILE, [])
+    now_str = datetime.now().strftime('%H:%M')
+    updated = False
+
+    for t in saved_tasks:
+        if t.get('task_id') == task_id or t.get('reference_id') == task_id:
+            if new_status:
+                t['status'] = new_status
+            if sub_note:
+                t['quantity_text'] = sub_note
+            t['time_label'] = now_str
+            t['updated_by'] = emp_code
+            updated = True
+            break
+
+    # Nếu phiếu xuất phát từ stocktake_data.json hoặc approvals_data.json chưa có trong staff_tasks.json
+    if not updated:
+        saved_tasks.insert(0, {
+            'task_id': task_id if task_id.startswith('TSK-') else f"TSK-{task_id}",
+            'reference_id': task_id.replace('TSK-', ''),
+            'task_type': body.get('task_type', 'INBOUND'),
+            'title': body.get('title', f"Xử lý phiếu {task_id}"),
+            'category_label': body.get('category_label', 'Nghiệp vụ kho'),
+            'quantity_text': sub_note or body.get('quantity_text', ''),
+            'time_label': now_str,
+            'assigned_employee': emp_code,
+            'warehouse_id': warehouse_id,
+            'status': new_status or 'Đang thực hiện',
+            'priority': body.get('priority', 'NORMAL'),
+            'is_carryover': False,
+            'rejection_reason': ''
+        })
+
+    _safe_save(STAFF_TASKS_FILE, saved_tasks)
+
+    if 'add_audit_log' in globals():
+        add_audit_log(
+            category='Nghiệp vụ kho',
+            action=f"Cập nhật tiến độ công việc ({new_status or 'Đang thao tác'})",
+            target=task_id,
+            reason=sub_note or f"Thực hiện bởi {emp_name}"
+        )
+
+    return jsonify({'status': 'ok', 'task_id': task_id, 'new_status': new_status})
+
+# Nhập và lưu trữ kho
+import uuid
+import threading
+
+INBOUND_FILE = 'inbound_receipts.json'
+_inbound_lock = threading.Lock()
+
+
+def _find_eligible_boxes_for_sku(sku):
+    """
+    Chỉ lấy các Box đang ở trạng thái 'Đang lưu trữ' (đã được Manager xác nhận nhập kho),
+    không bị khóa/cách ly và còn tồn khả dụng > 0 trên kệ.
+    """
+    receipts = _load_inbound_receipts()
+    boxes = []
+    for r in receipts:
+        for b in r.get('boxes', []):
+            if (b.get('sku', '').upper() == sku.upper()
+                and b.get('box_status') == 'Đang lưu trữ'
+                and int(b.get('quantity', 0)) > 0
+                and b.get('shelf_position_id')):
+                hierarchy = _resolve_slot_hierarchy(b.get('shelf_position_id'))
+                box_copy = dict(b)
+                box_copy['location_hierarchy'] = hierarchy['full_path']
+                box_copy['zone_id'] = hierarchy['zone']
+                box_copy['rack_id'] = hierarchy['rack']
+                box_copy['floor_no'] = hierarchy['floor']
+                boxes.append(box_copy)
+    return boxes
+def _get_default_inbound_receipts(emp_name='Nguyễn Văn C'):
+    return [
+        {
+            'id': 'NK-0025',
+            'vehicle_code': 'XE-014',
+            'supplier': 'Nhà cung cấp A',
+            'doc_ref': 'PO-2026-0814',
+            'created_at': '2026-11-14 08:15',
+            'assignee': emp_name,
+            'status': 'Hoàn thành',
+            'notes': 'Đã xác nhận nhập kho lô SP0001 & SP0002.',
+            'reject_reason': '',
+            'items': [
+                {'sku': 'SP0001', 'product_name': 'Sữa rửa mặt dịu nhẹ 150ml', 'expected_boxes': 2, 'received_boxes': 2, 'damaged_boxes': 0, 'pcs_per_box': 50},
+                {'sku': 'SP0002', 'product_name': 'Kem dưỡng ẩm phục hồi 50g', 'expected_boxes': 2, 'received_boxes': 2, 'damaged_boxes': 0, 'pcs_per_box': 30}
+            ],
+            'boxes': [
+                {
+                    'box_id': 'BOX-0025-01',
+                    'internal_qr': 'QR-SANOVA-NK0025-01',
+                    'sku': 'SP0001',
+                    'product_name': 'Sữa rửa mặt dịu nhẹ 150ml',
+                    'quantity': 50,
+                    'dimensions': '40x30x30',
+                    'weight': 8.5,
+                    'receipt_id': 'NK-0025',
+                    'box_status': 'Đang lưu trữ',
+                    'shelf_position_id': 'A1-001'
+                },
+                {
+                    'box_id': 'BOX-0025-02',
+                    'internal_qr': 'QR-SANOVA-NK0025-02',
+                    'sku': 'SP0001',
+                    'product_name': 'Sữa rửa mặt dịu nhẹ 150ml',
+                    'quantity': 50,
+                    'dimensions': '40x30x30',
+                    'weight': 8.5,
+                    'receipt_id': 'NK-0025',
+                    'box_status': 'Đang lưu trữ',
+                    'shelf_position_id': 'A1-002'
+                },
+                {
+                    'box_id': 'BOX-0025-03',
+                    'internal_qr': 'QR-SANOVA-NK0025-03',
+                    'sku': 'SP0002',
+                    'product_name': 'Kem dưỡng ẩm phục hồi 50g',
+                    'quantity': 25,
+                    'dimensions': '40x30x30',
+                    'weight': 7.5,
+                    'receipt_id': 'NK-0025',
+                    'box_status': 'Đang lưu trữ',
+                    'shelf_position_id': 'A1-003'
+                },
+                {
+                    'box_id': 'BOX-0025-04',
+                    'internal_qr': 'QR-SANOVA-NK0025-04',
+                    'sku': 'SP0002',
+                    'product_name': 'Kem dưỡng ẩm phục hồi 50g',
+                    'quantity': 30,
+                    'dimensions': '40x30x30',
+                    'weight': 9.0,
+                    'receipt_id': 'NK-0025',
+                    'box_status': 'Đang lưu trữ',
+                    'shelf_position_id': 'A1-004'
+                }
+            ]
+        }
+    ]
+def _load_inbound_receipts():
+    data = _safe_load(INBOUND_FILE, None)
+    if data is None:
+        data = []
+        _safe_save(INBOUND_FILE, data)
+
+    # Tự động đồng bộ trạng thái thật từ quyết định duyệt/từ chối của Manager (approvals_data.json)
+    approvals = _safe_load('approvals_data.json', {})
+    processed = approvals.get('processed_tickets', [])
+    approved_ids = {t.get('id') for t in processed if 'Đã xác nhận' in str(t.get('status', ''))}
+    rejected_map = {
+        t.get('id'): t.get('reject_reason', '')
+        for t in processed if str(t.get('status', '')) == 'Đã từ chối'
+    }
+
+    changed = False
+    for r in data:
+        if r['id'] in approved_ids and r.get('status') != 'Hoàn thành':
+            r['status'] = 'Hoàn thành'
+            for b in r.get('boxes', []):
+                if b.get('box_status') == 'Đã xếp kệ, chờ duyệt':
+                    b['box_status'] = 'Đang lưu trữ'
+            changed = True
+        elif r['id'] in rejected_map and r.get('status') == 'Chờ xác nhận':
+            r['status'] = 'Cần xử lý lại'
+            r['reject_reason'] = rejected_map[r['id']]
+            changed = True
+
+    if changed:
+        _safe_save(INBOUND_FILE, data)
+    return data
+
+
+def _extract_available_shelves():
+    """
+    Đọc trực tiếp 100% cấu trúc kho, kệ, tầng, vị trí và sức chứa thực tế
+    từ tệp warehouse_config.json của phân hệ Quản lý kho (Manager).
+    """
+    default_cfg = get_default_warehouse_config() if 'get_default_warehouse_config' in globals() else {'zones': []}
+    cfg = _safe_load('warehouse_config.json', default_cfg)
+
+    # Hỗ trợ cả cấu trúc trực tiếp cfg['zones'] của Manager lẫn cấu trúc lồng warehouses
+    zones = cfg.get('zones', [])
+    if not zones and cfg.get('warehouses'):
+        for wh in cfg['warehouses']:
+            if wh.get('warehouse_id') == 'KHO-01':
+                zones = wh.get('zones', [])
+                break
+
+    shelves = []
+    for z in zones:
+        z_id = z.get('zone_id', '')
+        z_name = z.get('zone_name', '')
+        for rk in z.get('racks', []):
+            r_id = rk.get('rack_id', '')
+            for fl in rk.get('floors', []):
+                f_no = fl.get('floor_no', '')
+                for sl in fl.get('slots', []):
+                    status = sl.get('status', 'Đang sử dụng')
+                    # Chỉ lấy các vị trí đang mở lưu trữ (loại bỏ Tạm khóa & Ngừng sử dụng)
+                    if status not in ('Đang sử dụng', 'Trống', 'Còn chỗ'):
+                        continue
+
+                    cur_b = int(sl.get('current_boxes', 0))
+                    max_b = int(sl.get('max_boxes', 10))
+                    cur_w = float(sl.get('current_weight', 0))
+                    max_w = float(sl.get('max_weight', 150))
+
+                    rem_b = max_b - cur_b
+                    rem_w = round(max_w - cur_w, 1)
+
+                    if rem_b > 0 and rem_w > 0:
+                        l_cm = sl.get('length_cm', 60)
+                        w_cm = sl.get('width_cm', 40)
+                        h_cm = sl.get('height_cm', 40)
+                        shelves.append({
+                            'zone_id': z_id,
+                            'zone_name': z_name,
+                            'rack_id': r_id,
+                            'floor_no': f_no,
+                            'slot_code': sl.get('slot_code'),
+                            'current_boxes': cur_b,
+                            'max_boxes': max_b,
+                            'rem_boxes': rem_b,
+                            'current_weight': cur_w,
+                            'max_weight': max_w,
+                            'rem_weight': rem_w,
+                            'dimensions': f"{l_cm}x{w_cm}x{h_cm}",
+                            'status': status
+                        })
+
+    # Sắp xếp theo mã kệ -> tầng -> vị trí tự nhiên (A01-T01-P01...)
+    shelves.sort(key=lambda x: str(x.get('slot_code', '')))
+    return shelves
+
+
+# ================= ROUTES & API NHẬP KHO & LƯU TRỮ =================
+
+@app.route('/staff/inbound')
+@staff_required
+def staff_inbound_page():
+    return render_template('STAFF/staff_inbound.html')
+
+
+@app.route('/api/staff/inbound', methods=['GET'])
+@staff_required
+def api_staff_inbound_list():
+    user = session.get('user', {})
+    receipts = _load_inbound_receipts()
+    catalog = _safe_load('products_catalog.json', [])
+    active_products = [p for p in catalog if p.get('status', 'Đang sử dụng') == 'Đang sử dụng']
+
+    stats = {
+        'total': len(receipts),
+        'placing': sum(1 for r in receipts if r.get('status') == 'Đang xếp kệ'),
+        'waiting': sum(1 for r in receipts if r.get('status') == 'Chờ xác nhận')
+    }
+
+    return jsonify({
+        'receipts': receipts,
+        'products': active_products,
+        'available_shelves': _extract_available_shelves(),
+        'current_user': user.get('name', ''),
+        'stats': stats
+    })
+
+
+@app.route('/api/staff/inbound', methods=['POST'])
+@staff_required
+def api_staff_inbound_create():
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+    body = request.get_json(silent=True) or {}
+
+    with _inbound_lock:
+        receipts = _load_inbound_receipts()
+        date_prefix = datetime.now().strftime('%Y%m%d')
+        seq = len(receipts) + 1
+        new_id = f"NK-{date_prefix}-{str(seq).zfill(3)}"
+        while any(r['id'] == new_id for r in receipts):
+            seq += 1
+            new_id = f"NK-{date_prefix}-{str(seq).zfill(3)}"
+
+        new_receipt = {
+            'id': new_id,
+            'vehicle_code': body.get('vehicle_code', ''),
+            'supplier': body.get('supplier', ''),
+            'doc_ref': body.get('doc_ref', ''),
+            'created_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+            'assignee': emp_name,
+            'status': 'Nháp',
+            'notes': body.get('notes', ''),
+            'reject_reason': '',
+            'items': [],
+            'boxes': []
+        }
+        receipts.insert(0, new_receipt)
+        _safe_save(INBOUND_FILE, receipts)
+
+        # Đồng bộ sang danh sách công việc trên Dashboard Staff
+        tasks = _safe_load(STAFF_TASKS_FILE, [])
+        tasks.insert(0, {
+            'task_id': f"TSK-{new_id}",
+            'reference_id': new_id,
+            'task_type': 'INBOUND',
+            'title': 'Tiếp nhận và xếp kệ',
+            'category_label': 'Nhập kho',
+            'quantity_text': '0 Box',
+            'time_label': datetime.now().strftime('%H:%M'),
+            'assigned_employee': emp_code,
+            'warehouse_id': user.get('warehouse_id', 'KHO-01'),
+            'status': 'Đang thực hiện',
+            'priority': 'NORMAL',
+            'is_carryover': False,
+            'rejection_reason': ''
+        })
+        _safe_save(STAFF_TASKS_FILE, tasks)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', 'Tạo phiếu nhập kho mới', new_id, f"Lập bởi {emp_name}")
+
+    return jsonify({'status': 'ok', 'receipt': new_receipt}), 201
+
+
+@app.route('/api/staff/inbound/<receipt_id>', methods=['PATCH'])
+@staff_required
+def api_staff_inbound_update(receipt_id):
+    body = request.get_json(silent=True) or {}
+    with _inbound_lock:
+        receipts = _load_inbound_receipts()
+        target = next((r for r in receipts if r['id'] == receipt_id), None)
+        if not target:
+            return jsonify({'error': 'Không tìm thấy phiếu nhập kho'}), 404
+        if target.get('status') in ('Hoàn thành', 'Hủy'):
+            return jsonify({'error': 'Phiếu đã hoàn tất hoặc hủy, không thể chỉnh sửa'}), 400
+
+        for field in ('vehicle_code', 'supplier', 'doc_ref', 'notes', 'status'):
+            if field in body:
+                target[field] = body[field]
+
+        if 'items' in body:
+            for it in body['items']:
+                if int(it.get('received_boxes', 0)) < 0 or int(it.get('expected_boxes', 0)) < 0:
+                    return jsonify({'error': 'Số lượng Box không được phép âm'}), 400
+            target['items'] = body['items']
+
+        _safe_save(INBOUND_FILE, receipts)
+    return jsonify({'status': 'ok', 'receipt': target})
+
+
+@app.route('/api/staff/inbound/<receipt_id>/boxes/bulk', methods=['POST'])
+@staff_required
+def api_staff_inbound_boxes_bulk(receipt_id):
+    body = request.get_json(silent=True) or {}
+    count = int(body.get('box_count', 1))
+    pcs = int(body.get('pcs_per_box', 1))
+    weight = float(body.get('weight', 1.0))
+    sku = str(body.get('sku', '')).strip()
+    prod_name = str(body.get('product_name', sku)).strip()
+    dims = str(body.get('dimensions', '40x30x30')).strip()
+
+    if count <= 0 or pcs <= 0 or weight <= 0 or not sku:
+        return jsonify({'error': 'Thông số Box, số PCS và trọng lượng phải lớn hơn 0'}), 400
+
+    with _inbound_lock:
+        receipts = _load_inbound_receipts()
+        target = next((r for r in receipts if r['id'] == receipt_id), None)
+        if not target:
+            return jsonify({'error': 'Không tìm thấy phiếu nhập'}), 404
+
+        existing_boxes = target.setdefault('boxes', [])
+        start_idx = len(existing_boxes) + 1
+
+        for i in range(count):
+            seq_num = start_idx + i
+            box_id = f"BOX-{receipt_id.replace('NK-', '')}-{str(seq_num).zfill(2)}"
+            unique_qr = f"QR-SANOVA-{receipt_id}-{str(seq_num).zfill(2)}-{uuid.uuid4().hex[:4].upper()}"
+            existing_boxes.append({
+                'box_id': box_id,
+                'internal_qr': unique_qr,
+                'sku': sku,
+                'product_name': prod_name,
+                'quantity': pcs,
+                'dimensions': dims,
+                'weight': weight,
+                'receipt_id': receipt_id,
+                'box_status': 'Chờ xếp kệ',
+                'shelf_position_id': ''
+            })
+
+        target['status'] = 'Đang xếp kệ'
+        _safe_save(INBOUND_FILE, receipts)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"Sinh {count} mã QR Box nội bộ", receipt_id, f"SKU: {sku} ({pcs} PCS/Box)")
+
+    return jsonify({'status': 'ok', 'created_count': count})
+
+
+@app.route('/api/staff/inbound/<receipt_id>/boxes/<box_id>', methods=['PATCH'])
+@staff_required
+def api_staff_inbound_update_box(receipt_id, box_id):
+    body = request.get_json(silent=True) or {}
+    with _inbound_lock:
+        receipts = _load_inbound_receipts()
+        target = next((r for r in receipts if r['id'] == receipt_id), None)
+        if not target:
+            return jsonify({'error': 'Không tìm thấy phiếu nhập'}), 404
+
+        box = next((b for b in target.get('boxes', []) if b['box_id'] == box_id), None)
+        if not box:
+            return jsonify({'error': 'Không tìm thấy Box'}), 404
+        if box.get('shelf_position_id'):
+            return jsonify({'error': 'Box đã xếp lên kệ, không thể sửa thông số tại bước này'}), 400
+
+        if 'quantity' in body:
+            if int(body['quantity']) <= 0:
+                return jsonify({'error': 'Số PCS trong Box phải lớn hơn 0'}), 400
+            box['quantity'] = int(body['quantity'])
+        if 'box_status' in body:
+            box['box_status'] = body['box_status']
+
+        _safe_save(INBOUND_FILE, receipts)
+    return jsonify({'status': 'ok', 'box': box})
+
+
+@app.route('/api/staff/inbound/<receipt_id>/placements', methods=['POST'])
+@staff_required
+def api_staff_inbound_place_box(receipt_id):
+    body = request.get_json(silent=True) or {}
+    box_qr = str(body.get('box_qr', '')).strip()
+    shelf_code = str(body.get('shelf_position_id', '')).strip().upper()
+
+    with _inbound_lock:
+        receipts = _load_inbound_receipts()
+        target = next((r for r in receipts if r['id'] == receipt_id), None)
+        if not target:
+            return jsonify({'error': 'Không tìm thấy phiếu nhập'}), 404
+
+        box = next((b for b in target.get('boxes', []) if b.get('internal_qr') == box_qr or b.get('box_id') == box_qr), None)
+        if not box:
+            return jsonify({'error': f'Không tìm thấy mã QR Box "{box_qr}" trong phiếu {receipt_id}'}), 404
+
+        if box.get('box_status') == 'Hư hỏng / Cách ly':
+            return jsonify({'error': 'Cảnh báo: Box này đang ở trạng thái Hư hỏng / Cách ly, không được phép xếp lên kệ!'}), 400
+
+        if box.get('shelf_position_id'):
+            return jsonify({'error': f"Box {box['box_id']} đã được xếp tại vị trí {box['shelf_position_id']} trước đó!"}), 400
+
+        # Đọc trực tiếp cấu hình kho thật của Manager trong warehouse_config.json
+        default_cfg = get_default_warehouse_config() if 'get_default_warehouse_config' in globals() else {'zones': []}
+        cfg = _safe_load('warehouse_config.json', default_cfg)
+        zones = cfg.get('zones', [])
+        if not zones and cfg.get('warehouses'):
+            for wh in cfg['warehouses']:
+                if wh.get('warehouse_id') == 'KHO-01':
+                    zones = wh.get('zones', [])
+                    break
+
+        slot_obj = None
+        for z in zones:
+            for rk in z.get('racks', []):
+                for fl in rk.get('floors', []):
+                    for sl in fl.get('slots', []):
+                        if str(sl.get('slot_code', '')).upper() == shelf_code:
+                            slot_obj = sl
+                            break
+                    if slot_obj:
+                        break
+                if slot_obj:
+                    break
+            if slot_obj:
+                break
+
+        # Bắt buộc mã vị trí phải khớp 100% với sơ đồ kho Manager
+        if not slot_obj:
+            return jsonify({'error': f'Mã vị trí "{shelf_code}" không tồn tại trong Cấu hình kho SANOVA!'}), 404
+
+        if slot_obj.get('status') in ('Tạm khóa', 'Ngừng sử dụng'):
+            return jsonify({'error': f'Vị trí {shelf_code} đang ở trạng thái "{slot_obj.get("status")}", không cho phép xếp hàng!'}), 400
+
+        cur_b = int(slot_obj.get('current_boxes', 0))
+        max_b = int(slot_obj.get('max_boxes', 10))
+        cur_w = float(slot_obj.get('current_weight', 0))
+        max_w = float(slot_obj.get('max_weight', 150))
+        box_w = float(box.get('weight', 0))
+
+        # Kiểm tra kích thước Box (DxRxC) so với giới hạn ô kệ
+        try:
+            b_dims = [float(x) for x in str(box.get('dimensions', '0x0x0')).lower().split('x')]
+            if len(b_dims) == 3:
+                if (b_dims[0] > float(slot_obj.get('length_cm', 999)) or
+                    b_dims[1] > float(slot_obj.get('width_cm', 999)) or
+                    b_dims[2] > float(slot_obj.get('height_cm', 999))):
+                    return jsonify({'error': f'Kích thước Box ({box.get("dimensions")} cm) vượt quá kích thước ô kệ {shelf_code}!'}), 400
+        except Exception:
+            pass
+
+        if cur_b + 1 > max_b:
+            return jsonify({'error': f'Vị trí {shelf_code} đã đầy số lượng ({cur_b}/{max_b} Box). Vui lòng chọn vị trí khác!'}), 400
+
+        if cur_w + box_w > max_w:
+            return jsonify({'error': f'Vị trí {shelf_code} vượt quá tải trọng ({round(cur_w + box_w, 1)}/{max_w} kg). Vui lòng chọn vị trí khác!'}), 400
+
+        # Cập nhật trực tiếp vào warehouse_config.json để bên Manager đồng bộ tức thì
+        slot_obj['current_boxes'] = cur_b + 1
+        slot_obj['current_weight'] = round(cur_w + box_w, 2)
+        _safe_save('warehouse_config.json', cfg)
+
+        box['shelf_position_id'] = shelf_code
+        box['box_status'] = 'Đã xếp kệ, chờ duyệt'
+        target['status'] = 'Đang xếp kệ'
+        _safe_save(INBOUND_FILE, receipts)
+
+        # Đồng bộ tiến độ lên Dashboard Staff
+        valid_boxes = [b for b in target.get('boxes', []) if b.get('box_status') != 'Hư hỏng / Cách ly']
+        placed_cnt = sum(1 for b in valid_boxes if b.get('shelf_position_id'))
+        tasks = _safe_load(STAFF_TASKS_FILE, [])
+        for t in tasks:
+            if t.get('reference_id') == receipt_id:
+                t['quantity_text'] = f"Đã xếp {placed_cnt}/{len(valid_boxes)} Box"
+                t['status'] = 'Đang thực hiện'
+        _safe_save(STAFF_TASKS_FILE, tasks)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"Xếp Box {box['box_id']} lên kệ {shelf_code}", receipt_id, f"QR: {box['internal_qr']}")
+
+    return jsonify({'status': 'ok', 'box': box})
+
+
+@app.route('/api/staff/inbound/<receipt_id>/summary', methods=['GET'])
+@staff_required
+def api_staff_inbound_summary(receipt_id):
+    receipts = _load_inbound_receipts()
+    target = next((r for r in receipts if r['id'] == receipt_id), None)
+    if not target:
+        return jsonify({'error': 'Không tìm thấy phiếu nhập'}), 404
+
+    boxes = target.get('boxes', [])
+    damaged_boxes = [b for b in boxes if b.get('box_status') == 'Hư hỏng / Cách ly']
+    valid_boxes = [b for b in boxes if b.get('box_status') != 'Hư hỏng / Cách ly']
+    placed_boxes = [b for b in valid_boxes if b.get('shelf_position_id')]
+    eligible_pcs = sum(int(b.get('quantity', 0)) for b in placed_boxes)
+    used_shelves = sorted(list({b.get('shelf_position_id') for b in placed_boxes if b.get('shelf_position_id')}))
+
+    return jsonify({
+        'receipt_id': receipt_id,
+        'status': target.get('status'),
+        'reject_reason': target.get('reject_reason', ''),
+        'total_boxes': len(boxes),
+        'placed_boxes': len(placed_boxes),
+        'damaged_boxes': len(damaged_boxes),
+        'eligible_pcs': eligible_pcs,
+        'used_shelves': used_shelves
+    })
+
+
+@app.route('/api/staff/inbound/<receipt_id>/submit', methods=['POST'])
+@staff_required
+def api_staff_inbound_submit(receipt_id):
+    """
+    Gửi phiếu nhập kho sang hàng đợi Duyệt & xác nhận của Manager (approvals_data.json)
+    và đồng bộ trạng thái Chờ xác nhận sang Dashboard Staff.
+    """
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+    note = str(body.get('note', '')).strip()
+
+    with _inbound_lock:
+        receipts = _load_inbound_receipts()
+        target = next((r for r in receipts if r['id'] == receipt_id), None)
+        if not target:
+            return jsonify({'error': 'Không tìm thấy phiếu nhập'}), 404
+
+        placed_boxes = [b for b in target.get('boxes', []) if b.get('shelf_position_id') and b.get('box_status') != 'Hư hỏng / Cách ly']
+        if not placed_boxes:
+            return jsonify({'error': 'Phải có ít nhất 01 Box đã xếp lên kệ trước khi gửi Manager xác nhận!'}), 400
+
+        target['status'] = 'Chờ xác nhận'
+        if note:
+            target['notes'] = note
+        _safe_save(INBOUND_FILE, receipts)
+
+        # Đẩy sang approvals_data.json để Manager duyệt
+        approvals = _safe_load('approvals_data.json', {'pending_tickets': [], 'approved_tickets': [], 'rejected_tickets': []})
+        approvals['rejected_tickets'] = [x for x in approvals.get('rejected_tickets', []) if x.get('id') != receipt_id]
+        approvals['pending_tickets'] = [x for x in approvals.get('pending_tickets', []) if x.get('id') != receipt_id]
+
+        total_pcs = sum(int(b.get('quantity', 0)) for b in placed_boxes)
+        first_box = placed_boxes[0]
+        approvals['pending_tickets'].insert(0, {
+            'id': receipt_id,
+            'category': 'INBOUND',
+            'type_label': 'Nhập kho',
+            'partner': f"{target.get('vehicle_code', '')} · {target.get('supplier', 'NCC')}",
+            'qty_primary': f"{len(placed_boxes)} Box",
+            'total_pcs': total_pcs,
+            'sender': emp_name,
+            'sent_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+            'sku': first_box.get('sku'),
+            'product_name': first_box.get('product_name'),
+            'target_location': ', '.join(sorted(list({b['shelf_position_id'] for b in placed_boxes}))),
+            'note': note or target.get('notes', '')
+        })
+        _safe_save('approvals_data.json', approvals)
+
+        # Cập nhật trạng thái sang Chờ xác nhận trên Dashboard Staff
+        tasks = _safe_load(STAFF_TASKS_FILE, [])
+        for t in tasks:
+            if t.get('reference_id') == receipt_id:
+                t['status'] = 'Chờ xác nhận'
+                t['quantity_text'] = f"{len(placed_boxes)} Box"
+        _safe_save(STAFF_TASKS_FILE, tasks)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', 'Gửi phiếu nhập kho chờ Manager xác nhận', receipt_id, f"{len(placed_boxes)} Box ({total_pcs} PCS)")
+
+    return jsonify({'status': 'ok', 'receipt_id': receipt_id})
+@app.route('/api/staff/scan/lookup', methods=['GET'])
+@staff_required
+def api_staff_scan_lookup():
+    """
+    API dùng chung cho cả súng bắn Barcode (nhận mã QR-SANOVA-...)
+    và camera điện thoại (nhận URL hoặc mã thô), trả về đầy đủ thông tin Box, SKU và vị trí kệ.
+    """
+    raw_code = str(request.args.get('code', '')).strip()
+    if '/staff/box-info/' in raw_code:
+        raw_code = raw_code.split('/staff/box-info/')[-1].strip()
+
+    if not raw_code:
+        return jsonify({'error': 'Vui lòng cung cấp mã QR hoặc Barcode'}), 400
+
+    receipts = _load_inbound_receipts()
+    catalog = _safe_load('products_catalog.json', [])
+
+    for r in receipts:
+        for b in r.get('boxes', []):
+            if b.get('internal_qr') == raw_code or b.get('box_id') == raw_code:
+                prod = next((p for p in catalog if p.get('sku') == b.get('sku')), {})
+                return jsonify({
+                    'type': 'BOX',
+                    'box': b,
+                    'receipt': {
+                        'id': r.get('id'),
+                        'vehicle_code': r.get('vehicle_code'),
+                        'supplier': r.get('supplier'),
+                        'created_at': r.get('created_at')
+                    },
+                    'product': {
+                        'sku': b.get('sku'),
+                        'name': prod.get('name') or b.get('product_name'),
+                        'category': prod.get('category', 'Hàng tiêu dùng'),
+                        'unit': prod.get('unit', 'PCS'),
+                        'spec': prod.get('spec', '')
+                    }
+                })
+
+    # Kiểm tra nếu mã quét là mã vị trí kệ (VD: A1-040)
+    shelves = _extract_available_shelves()
+    shelf = next((s for s in shelves if str(s.get('slot_code', '')).upper() == raw_code.upper()), None)
+    if shelf:
+        return jsonify({'type': 'SHELF', 'shelf': shelf})
+
+    return jsonify({'error': f'Không tìm thấy dữ liệu cho mã "{raw_code}" trong hệ thống SANOVA'}), 404
+
+@app.route('/q/<path:box_code>')
+def short_box_qr_redirect(box_code):
+    return staff_box_qr_detail_page(box_code)
+
+@app.route('/staff/box-info/<path:qr_code>')
+def staff_box_qr_detail_page(qr_code):
+    """
+    Trang hiển thị chi tiết Box & Sản phẩm khi nhân viên quét mã QR trên tem bằng điện thoại,
+    hỗ trợ xem thông số và chuyển nhanh sang Xếp kệ hoặc Lấy hàng.
+    """
+    qr_clean = qr_code.strip()
+    receipts = _load_inbound_receipts()
+    found_box = None
+    found_receipt = None
+
+    for r in receipts:
+        for b in r.get('boxes', []):
+            if b.get('internal_qr') == qr_clean or b.get('box_id') == qr_clean:
+                found_box = b
+                found_receipt = r
+                break
+        if found_box:
+            break
+
+    if not found_box:
+        return render_template_string("""
+            <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>Không tìm thấy mã · SANOVA</title></head>
+            <body style="font-family:sans-serif;background:#f4f7f6;padding:24px;text-align:center;">
+                <div style="max-width:420px;margin:40px auto;background:#fff;padding:24px;border-radius:16px;border:1px solid #e2e8f0;">
+                    <h2 style="color:#dc2626;margin-bottom:8px;">Không tìm thấy dữ liệu Box</h2>
+                    <p style="color:#475569;font-size:14px;">Mã định danh <strong>{{ qr }}</strong> chưa tồn tại trong hệ thống SANOVA.</p>
+                </div>
+            </body></html>
+        """, qr=qr_clean), 404
+
+    catalog = _safe_load('products_catalog.json', [])
+    prod_info = next((p for p in catalog if p.get('sku') == found_box.get('sku')), {})
+
+    return render_template_string("""
+        <!DOCTYPE html>
+        <html lang="vi">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{{ box.box_id }} · Chi tiết hàng hóa SANOVA</title>
+            <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+                body { background: #f4f7f6; color: #0f172a; padding: 14px; }
+                .card { max-width: 460px; margin: 0 auto; background: #fff; border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 8px 24px rgba(15,23,42,0.06); }
+                .top { background: #063b2c; color: #fff; padding: 18px 20px; }
+                .brand { font-size: 11px; letter-spacing: 0.8px; color: #79b49f; font-weight: 700; text-transform: uppercase; }
+                .box-title { font-size: 21px; font-weight: 800; margin: 4px 0; }
+                .qr-code { font-family: monospace; font-size: 11.5px; background: rgba(255,255,255,0.12); padding: 4px 10px; border-radius: 6px; display: inline-block; word-break: break-all; }
+                .highlight-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 20px; background: #f0fdf9; border-bottom: 1px solid #ccf0e6; }
+                .hl-item span { display: block; font-size: 11.5px; color: #475569; }
+                .hl-item strong { font-size: 17px; font-weight: 800; color: #063b2c; }
+                .body { padding: 14px 20px; }
+                .row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #f1f5f9; font-size: 13.5px; gap: 12px; }
+                .row span { color: #64748b; }
+                .row strong { text-align: right; color: #0f172a; }
+                .actions { padding: 14px 20px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+                .btn { text-align: center; text-decoration: none; padding: 11px 10px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+                .btn-primary { background: #0f766e; color: #fff; }
+                .btn-outline { border: 1px solid #cbd5e1; color: #0f172a; background: #fff; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="top">
+                    <div class="brand">SANOVA WMS · TRA CỨU BOX & SẢN PHẨM</div>
+                    <div class="box-title">{{ box.sku }} · {{ box.product_name }}</div>
+                    <div class="qr-code">{{ box.internal_qr }}</div>
+                </div>
+                <div class="highlight-box">
+                    <div class="hl-item">
+                        <span>Số lượng khả dụng trong Box</span>
+                        <strong style="color:#0f766e;">{{ box.quantity }} {{ prod.unit or 'PCS' }}</strong>
+                    </div>
+                    <div class="hl-item">
+                        <span>Vị trí kệ lưu trữ</span>
+                        <strong>{{ box.shelf_position_id or 'Chưa xếp kệ' }}</strong>
+                    </div>
+                </div>
+                <div class="body">
+                    <div class="row"><span>Mã Box nội bộ</span><strong>{{ box.box_id }}</strong></div>
+                    <div class="row"><span>Trạng thái Box</span><strong style="color:#059669;">{{ box.box_status }}</strong></div>
+                    <div class="row"><span>Quy cách / Nhóm</span><strong>{{ prod.spec or prod.category or 'Tiêu chuẩn' }}</strong></div>
+                    <div class="row"><span>Trọng lượng / Kích thước</span><strong>{{ box.weight }} kg · {{ box.dimensions }} cm</strong></div>
+                    <div class="row"><span>Phiếu nhập nguồn</span><strong>{{ receipt.id }} ({{ receipt.vehicle_code or 'NCC' }})</strong></div>
+                    <div class="row" style="border-bottom:none;"><span>Nhà cung cấp</span><strong>{{ receipt.supplier or '--' }}</strong></div>
+                </div>
+                <div class="actions">
+                    <a href="/staff/picking-returns?tab=OUT&box={{ box.internal_qr }}" class="btn btn-primary">Lấy hàng (Picking)</a>
+                    <a href="/staff/inbound?ticket={{ receipt.id }}" class="btn btn-outline">Mở phiếu nhập</a>
+                </div>
+            </div>
+        </body>
+        </html>
+    """, box=found_box, receipt=found_receipt, prod=prod_info)
+
+# Quét QR/Barcode
+SCAN_HISTORY_FILE = 'scan_history.json'
+
+
+def _record_scan_history(code, code_type, type_label, summary, found=True):
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+
+    history = _safe_load(SCAN_HISTORY_FILE, [])
+    history.insert(0, {
+        'id': f"SCN-{datetime.now().strftime('%H%M%S')}-{uuid.uuid4().hex[:3].upper()}",
+        'code': code,
+        'code_type': code_type,
+        'type_label': type_label,
+        'summary': summary,
+        'found': found,
+        'staff_code': emp_code,
+        'staff_name': emp_name,
+        'time': datetime.now().strftime('%H:%M:%S · %d/%m/%Y')
+    })
+    _safe_save(SCAN_HISTORY_FILE, history[:100])
+
+
+@app.route('/staff/scan')
+@staff_required
+def staff_scan_page():
+    return render_template('STAFF/staff_scan.html')
+
+
+@app.route('/api/staff/scan/lookup', methods=['POST'])
+@staff_required
+def api_staff_scan_lookup_post():
+    body = request.get_json(silent=True) or {}
+    raw_code = str(body.get('code', '')).strip()
+    selected_sku = str(body.get('selected_sku') or '').strip().upper()
+
+    if '/staff/box-info/' in raw_code:
+        raw_code = raw_code.split('/staff/box-info/')[-1].strip()
+    elif '/q/' in raw_code:
+        raw_code = raw_code.split('/q/')[-1].strip()
+
+    if not raw_code:
+        return jsonify({'error': 'Mã quét không hợp lệ hoặc bị trống.'}), 400
+
+    receipts = _load_inbound_receipts()
+    catalog = _safe_load('products_catalog.json', [])
+    wh_data = _safe_load('warehouse_data.json', {})
+
+    # 1. Kiểm tra trong danh mục Box nội bộ đã đăng ký
+    for r in receipts:
+        for b in r.get('boxes', []):
+            if b.get('internal_qr') == raw_code or b.get('box_id', '').upper() == raw_code.upper():
+                prod = next((p for p in catalog if p.get('sku') == b.get('sku')), {})
+                _record_scan_history(
+                    code=b.get('box_id'),
+                    code_type='BOX',
+                    type_label='Box nội bộ',
+                    summary=f"{b.get('sku')} · {b.get('quantity')} PCS · {b.get('box_status')}",
+                    found=True
+                )
+                return jsonify({
+                    'type': 'BOX',
+                    'box': b,
+                    'receipt': {
+                        'id': r.get('id'),
+                        'vehicle_code': r.get('vehicle_code'),
+                        'supplier': r.get('supplier'),
+                        'created_at': r.get('created_at')
+                    },
+                    'product': {
+                        'sku': b.get('sku'),
+                        'name': prod.get('name') or b.get('product_name'),
+                        'unit': prod.get('unit', 'PCS')
+                    }
+                })
+
+    # 2. Kiểm tra trong danh mục Vị trí kệ (warehouse_config.json)
+    default_cfg = get_default_warehouse_config() if 'get_default_warehouse_config' in globals() else {'zones': []}
+    cfg = _safe_load('warehouse_config.json', default_cfg)
+    zones = cfg.get('zones', [])
+    if not zones and cfg.get('warehouses'):
+        for wh in cfg['warehouses']:
+            if wh.get('warehouse_id') == 'KHO-01':
+                zones = wh.get('zones', [])
+                break
+
+    for z in zones:
+        for rk in z.get('racks', []):
+            for fl in rk.get('floors', []):
+                for sl in fl.get('slots', []):
+                    if str(sl.get('slot_code', '')).upper() == raw_code.upper():
+                        slot_code = sl.get('slot_code')
+                        boxes_in_slot = []
+                        for r in receipts:
+                            for b in r.get('boxes', []):
+                                if str(b.get('shelf_position_id', '')).upper() == slot_code.upper():
+                                    boxes_in_slot.append(b)
+
+                        cur_b = int(sl.get('current_boxes', 0))
+                        max_b = int(sl.get('max_boxes', 10))
+                        cur_w = float(sl.get('current_weight', 0))
+                        max_w = float(sl.get('max_weight', 150))
+
+                        shelf_info = {
+                            'zone_id': z.get('zone_id'),
+                            'zone_name': z.get('zone_name'),
+                            'rack_id': rk.get('rack_id'),
+                            'floor_no': fl.get('floor_no'),
+                            'slot_code': slot_code,
+                            'current_boxes': cur_b,
+                            'max_boxes': max_b,
+                            'rem_boxes': max(0, max_b - cur_b),
+                            'current_weight': cur_w,
+                            'max_weight': max_w,
+                            'dimensions': f"{sl.get('length_cm', 60)}x{sl.get('width_cm', 40)}x{sl.get('height_cm', 40)}",
+                            'status': sl.get('status', 'Đang sử dụng')
+                        }
+                        _record_scan_history(
+                            code=slot_code,
+                            code_type='SHELF',
+                            type_label='Vị trí kệ',
+                            summary=f"Khu {z.get('zone_id')} · {cur_b}/{max_b} Box",
+                            found=True
+                        )
+                        return jsonify({'type': 'SHELF', 'shelf': shelf_info, 'boxes_in_slot': boxes_in_slot})
+
+    # 3. Kiểm tra trong Danh mục sản phẩm (SKU hoặc Barcode nhà cung cấp)
+    matched_products = []
+    for p in catalog:
+        sku_match = p.get('sku', '').upper() == raw_code.upper()
+        barcode_match = str(p.get('barcode', '')).strip() == raw_code
+        if selected_sku:
+            if p.get('sku', '').upper() == selected_sku:
+                matched_products = [p]
+                break
+        elif sku_match or barcode_match:
+            matched_products.append(p)
+
+    # Nếu 1 Barcode liên kết nhiều sản phẩm -> Bắt buộc nhân viên chọn đúng SKU
+    if len(matched_products) > 1:
+        return jsonify({
+            'type': 'MULTI_PRODUCT',
+            'code': raw_code,
+            'candidates': matched_products
+        })
+
+    if len(matched_products) == 1:
+        prod = matched_products[0]
+        sku = prod.get('sku')
+        inv_item = next((x for x in wh_data.get('inventory', []) if x.get('sku') == sku), {})
+
+        # Tổng hợp các Box đang chứa SKU này
+        locs = []
+        for r in receipts:
+            for b in r.get('boxes', []):
+                if b.get('sku') == sku and b.get('box_status') not in ('Đã OUT', 'Hư hỏng / Cách ly'):
+                    locs.append(b)
+
+        avail_pcs = inv_item.get('on_shelf') if inv_item else sum(int(x.get('quantity', 0)) for x in locs)
+        _record_scan_history(
+            code=sku,
+            code_type='PRODUCT',
+            type_label='Sản phẩm (SKU)',
+            summary=f"{prod.get('name')} · Tồn {avail_pcs} {prod.get('unit', 'PCS')}",
+            found=True
+        )
+        return jsonify({
+            'type': 'PRODUCT',
+            'product': prod,
+            'available_pcs': avail_pcs,
+            'locations': locs
+        })
+
+    # Không tìm thấy mã -> Ghi nhận lịch sử lỗi, tuyệt đối không tự tạo Box mới
+    _record_scan_history(
+        code=raw_code,
+        code_type='UNKNOWN',
+        type_label='Không xác định',
+        summary='Mã không tồn tại trong danh mục SANOVA',
+        found=False
+    )
+    return jsonify({'error': f'Không tìm thấy mã "{raw_code}" trong danh mục Box, Vị trí kệ hoặc Sản phẩm SANOVA.'}), 404
+
+
+@app.route('/api/staff/boxes/<box_id>', methods=['GET'])
+@staff_required
+def api_staff_box_detail(box_id):
+    receipts = _load_inbound_receipts()
+    for r in receipts:
+        for b in r.get('boxes', []):
+            if b.get('box_id', '').upper() == box_id.upper() or b.get('internal_qr') == box_id:
+                return jsonify({'box': b, 'receipt_id': r.get('id')})
+    return jsonify({'error': 'Không tìm thấy Box'}), 404
+
+
+@app.route('/api/staff/locations/<slot_code>', methods=['GET'])
+@staff_required
+def api_staff_location_detail(slot_code):
+    shelves = _extract_available_shelves()
+    found = next((s for s in shelves if str(s.get('slot_code', '')).upper() == slot_code.upper()), None)
+    if not found:
+        return jsonify({'error': 'Không tìm thấy vị trí kệ'}), 404
+    return jsonify({'shelf': found})
+
+
+@app.route('/api/staff/products/<sku>', methods=['GET'])
+@staff_required
+def api_staff_product_detail(sku):
+    catalog = _safe_load('products_catalog.json', [])
+    found = next((p for p in catalog if p.get('sku', '').upper() == sku.upper()), None)
+    if not found:
+        return jsonify({'error': 'Không tìm thấy sản phẩm'}), 404
+    return jsonify({'product': found})
+
+
+@app.route('/api/staff/scan/history', methods=['GET'])
+@staff_required
+def api_staff_scan_history():
+    history = _safe_load(SCAN_HISTORY_FILE, [])
+    receipts = _load_inbound_receipts()
+    catalog = _safe_load('products_catalog.json', [])
+    shelves = _extract_available_shelves()
+
+    # Tự động trích xuất các mã thực tế đang có trong kho để hiển thị chip truy cập nhanh
+    real_samples = []
+    all_boxes = [b for r in receipts for b in r.get('boxes', [])]
+
+    placed_box = next((b for b in all_boxes if b.get('shelf_position_id')), None)
+    if placed_box:
+        real_samples.append({'label': f"Box trên kệ ({placed_box['box_id']})", 'code': placed_box['box_id']})
+
+    pending_box = next((b for b in all_boxes if not b.get('shelf_position_id')), None)
+    if pending_box:
+        real_samples.append({'label': f"Box chờ xếp ({pending_box['box_id']})", 'code': pending_box['box_id']})
+
+    if shelves:
+        real_samples.append({'label': f"Vị trí kệ ({shelves[0]['slot_code']})", 'code': shelves[0]['slot_code']})
+
+    if catalog:
+        real_samples.append({'label': f"Sản phẩm ({catalog[0]['sku']})", 'code': catalog[0]['sku']})
+
+    return jsonify({'history': history[:30], 'real_samples': real_samples})
+
+            #    Lấy hàng và trả hàng
+PICKING_FILE = 'picking_orders.json'
+RETURNS_FILE = 'return_orders.json'
+_picking_lock = threading.Lock()
+
+
+def _get_default_picking_orders(emp_name='Nguyễn Văn C'):
+    return [
+        {
+            'id': 'OUT-0018',
+            'order_code': 'DH-0025',
+            'platform': 'Shopee',
+            'sku': 'SP0001',
+            'product_name': 'Sữa rửa mặt dịu nhẹ 150ml',
+            'required_pcs': 80,
+            'picked_pcs': 50,
+            'consumed_pcs': 40,
+            'assignee': emp_name,
+            'status': 'Đang thực hiện',
+            'shortage_note': '',
+            'transactions': [
+                {
+                    'tx_id': 'TX-INIT-01',
+                    'time': '09:30',
+                    'box_id': 'BOX-0025-01',
+                    'internal_qr': 'QR-SANOVA-NK0025-01',
+                    'location_snapshot': 'A1-001',
+                    'picked_pcs': 50,
+                    'remaining_in_box': 0,
+                    'staff_name': emp_name
+                }
+            ]
+        },
+        {
+            'id': 'OUT-0019',
+            'order_code': 'DH-0026',
+            'platform': 'TikTok Shop',
+            'sku': 'SP0002',
+            'product_name': 'Kem dưỡng ẩm phục hồi 50g',
+            'required_pcs': 40,
+            'picked_pcs': 0,
+            'consumed_pcs': 0,
+            'assignee': emp_name,
+            'status': 'Chờ thực hiện',
+            'shortage_note': '',
+            'transactions': []
+        },
+        {
+            'id': 'OUT-0020',
+            'order_code': 'DH-0027',
+            'platform': 'Lazada',
+            'sku': 'SP0001',
+            'product_name': 'Sữa rửa mặt dịu nhẹ 150ml',
+            'required_pcs': 20,
+            'picked_pcs': 20,
+            'consumed_pcs': 20,
+            'assignee': emp_name,
+            'status': 'Hoàn thành',
+            'shortage_note': '',
+            'transactions': [
+                {
+                    'tx_id': 'TX-INIT-02',
+                    'time': '08:45',
+                    'box_id': 'BOX-0025-02',
+                    'internal_qr': 'QR-SANOVA-NK0025-02',
+                    'location_snapshot': 'A1-002',
+                    'picked_pcs': 20,
+                    'remaining_in_box': 4,
+                    'staff_name': emp_name
+                }
+            ]
+        }
+    ]
+
+VALID_RETURN_REASONS = [
+    'Lấy dư so với nhu cầu',
+    'Đơn hàng bị hủy',
+    'Hàng dư sau Pre-packing',
+    'Lấy nhầm sản phẩm',
+    'Hàng có vấn đề về chất lượng'
+]
+
+
+def _compute_out_return_eligibility(out_order):
+    """
+    Tính chính xác số PCS còn đủ điều kiện trả của một phiếu OUT:
+    Không chỉ lấy (picked_pcs - returned_pcs), mà phải trừ đi lượng hàng đã tiêu thụ
+    ở Pre-packing, Đóng gói hoặc đã Bàn giao ra ngoài kho.
+    """
+    out_id = out_order.get('id', '')
+    order_code = out_order.get('order_code', '')
+    picked_pcs = int(out_order.get('picked_pcs', 0))
+
+    # 1. Lượng đã tiêu thụ ghi nhận trực tiếp trên phiếu OUT
+    consumed_pcs = int(out_order.get('consumed_pcs', 0))
+
+    # 2. Kiểm tra thêm nếu đơn hàng đã chuyển sang Bàn giao (approvals_data.json)
+    approvals = _safe_load('approvals_data.json', {})
+    all_bg = approvals.get('pending_tickets', []) + approvals.get('processed_tickets', [])
+    for bg in all_bg:
+        if bg.get('category') == 'HANDOVER' and order_code and order_code in str(bg.get('order_or_po', '')):
+            if 'Từ chối' not in str(bg.get('status', '')):
+                consumed_pcs = max(consumed_pcs, int(bg.get('total_pcs', 0)))
+
+    # 3. Tổng số PCS đã lập phiếu RETURNED (đang chờ trả hoặc đã hoàn thành)
+    ret_orders = _safe_load(RETURNS_FILE, [])
+    committed_or_returned = sum(
+        int(r.get('return_qty', 0)) if r.get('status') not in ('Hoàn thành', 'Hủy') else int(r.get('returned_pcs', 0))
+        for r in ret_orders
+        if r.get('out_order_id') == out_id and r.get('status') != 'Hủy'
+    )
+
+    eligible_pcs = max(0, picked_pcs - consumed_pcs - committed_or_returned)
+    return {
+        'picked_pcs': picked_pcs,
+        'consumed_pcs': consumed_pcs,
+        'committed_or_returned': committed_or_returned,
+        'eligible_pcs': eligible_pcs
+    }
+
+
+def _get_default_return_orders(emp_name='Nguyễn Văn C'):
+    return [
+        {
+            'id': 'RETURN-0005',
+            'out_order_id': 'OUT-0018',
+            'order_code': 'DH-0025',
+            'sku': 'SP0001',
+            'product_name': 'Sữa rửa mặt dịu nhẹ 150ml',
+            'source_out_pcs': 50,
+            'consumed_pcs': 40,
+            'return_qty': 10,
+            'returned_pcs': 0,
+            'source_box_id': 'BOX-0025-02',
+            'source_shelf_code': 'A1-002',
+            'suggested_location_path': 'Khu A / Kệ A1 / Tầng 01 / A1-002',
+            'reason': 'Lấy dư so với nhu cầu',
+            'note': 'Dư 10 chai sau khi đóng gói đủ đơn DH-0025.',
+            'assignee': emp_name,
+            'status': 'Chờ trả',
+            'created_at': '10:15',
+            'transactions': []
+        }
+    ]
+
+def _load_picking_orders():
+    data = _safe_load(PICKING_FILE, None)
+    if data is None:
+        data = []
+        _safe_save(PICKING_FILE, data)
+    return data
+
+def _load_return_orders():
+    data = _safe_load(RETURNS_FILE, None)
+    if data is None:
+        data = []
+        _safe_save(RETURNS_FILE, data)
+    return data
+
+
+def _resolve_slot_hierarchy(slot_code):
+    """Tra cứu cấu trúc Khu / Kệ / Tầng / Ô từ warehouse_config.json theo mã vị trí."""
+    code_up = str(slot_code or '').strip().upper()
+    if not code_up:
+        return {'zone': '--', 'rack': '--', 'floor': '--', 'slot': '--', 'full_path': '--'}
+
+    default_cfg = get_default_warehouse_config() if 'get_default_warehouse_config' in globals() else {'zones': []}
+    cfg = _safe_load('warehouse_config.json', default_cfg)
+    zones = cfg.get('zones', [])
+    if not zones and cfg.get('warehouses'):
+        for wh in cfg['warehouses']:
+            if wh.get('warehouse_id') == 'KHO-01':
+                zones = wh.get('zones', [])
+                break
+
+    for z in zones:
+        for rk in z.get('racks', []):
+            for fl in rk.get('floors', []):
+                for sl in fl.get('slots', []):
+                    if str(sl.get('slot_code', '')).upper() == code_up:
+                        z_id = z.get('zone_id', 'A')
+                        r_id = rk.get('rack_id', 'A1')
+                        f_no = str(fl.get('floor_no', '01')).zfill(2)
+                        return {
+                            'zone': z_id,
+                            'rack': r_id,
+                            'floor': f_no,
+                            'slot': code_up,
+                            'full_path': f"Khu {z_id} / Kệ {r_id} / Tầng {f_no} / {code_up}"
+                        }
+    return {'zone': 'A', 'rack': code_up.split('-')[0], 'floor': '01', 'slot': code_up, 'full_path': code_up}
+
+
+# ================= ROUTES & API LẤY HÀNG & TRẢ HÀNG =================
+
+@app.route('/staff/picking-returns')
+@staff_required
+def staff_picking_returns_page():
+    return render_template('STAFF/staff_picking_returns.html')
+
+
+@app.route('/api/staff/picking', methods=['GET'])
+@staff_required
+def api_staff_picking_list():
+    orders = _load_picking_orders()
+    return jsonify({'orders': orders})
+
+
+@app.route('/api/staff/picking/<out_id>', methods=['GET'])
+@staff_required
+def api_staff_picking_detail(out_id):
+    orders = _load_picking_orders()
+    order = next((o for o in orders if o['id'].upper() == out_id.upper()), None)
+    if not order:
+        return jsonify({'error': 'Không tìm thấy phiếu lấy hàng'}), 404
+    boxes = _find_eligible_boxes_for_sku(order.get('sku', ''))
+    return jsonify({'order': order, 'available_boxes': boxes})
+
+
+@app.route('/api/staff/picking/<out_id>/confirm', methods=['POST'])
+@staff_required
+def api_staff_picking_confirm(out_id):
+    """
+    Xác nhận 1 lượt OUT hàng khỏi kệ:
+    - Kiểm tra Box đã được Manager xác nhận nhập kho ('Đang lưu trữ')
+    - Kiểm tra vị trí kệ quét khớp 100% với vị trí lưu trữ của Box
+    - Kiểm tra số PCS lấy <= tồn trong Box và <= số PCS còn thiếu của phiếu
+    - Chống gửi trùng giao dịch (idempotency_key)
+    - Giảm tồn kho trực tiếp tại bước OUT (warehouse_data.json, inbound_receipts.json, warehouse_config.json)
+    """
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+
+    shelf_code = str(body.get('shelf_code', '')).strip().upper()
+    box_qr = str(body.get('box_qr', '')).strip()
+    pick_pcs = int(body.get('pick_pcs', 0))
+    idem_key = str(body.get('idempotency_key', '')).strip()
+
+    if '/staff/box-info/' in box_qr:
+        box_qr = box_qr.split('/staff/box-info/')[-1].strip()
+    elif '/q/' in box_qr:
+        box_qr = box_qr.split('/q/')[-1].strip()
+
+    if pick_pcs <= 0 or not shelf_code or not box_qr:
+        return jsonify({'error': 'Vui lòng cung cấp đủ vị trí kệ, mã Box và số PCS > 0'}), 400
+
+    with _picking_lock:
+        orders = _load_picking_orders()
+        order = next((o for o in orders if o['id'].upper() == out_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu lấy hàng'}), 404
+        if order.get('status') in ('Hoàn thành', 'Hủy'):
+            return jsonify({'error': 'Phiếu đã hoàn thành hoặc bị hủy, không thể thao tác thêm'}), 400
+
+        # Chống ghi nhận trùng giao dịch
+        if idem_key and any(tx.get('tx_id') == idem_key for tx in order.get('transactions', [])):
+            return jsonify({'status': 'ok', 'message': 'Giao dịch đã được ghi nhận trước đó'}), 200
+
+        rem_needed = int(order['required_pcs']) - int(order['picked_pcs'])
+        if pick_pcs > rem_needed:
+            return jsonify({'error': f'Không được lấy vượt số lượng còn thiếu của phiếu ({rem_needed} PCS)!'}), 400
+
+        receipts = _load_inbound_receipts()
+        target_box = None
+        for r in receipts:
+            for b in r.get('boxes', []):
+                if b.get('internal_qr') == box_qr or b.get('box_id', '').upper() == box_qr.upper():
+                    target_box = b
+                    break
+            if target_box:
+                break
+
+        if not target_box:
+            return jsonify({'error': f'Không tìm thấy mã Box "{box_qr}" trong hệ thống'}), 404
+
+        # Ràng buộc 1: Box phải được Manager xác nhận nhập kho ('Đang lưu trữ')
+        if target_box.get('box_status') != 'Đang lưu trữ':
+            return jsonify({'error': f'Không thể OUT: Box đang ở trạng thái "{target_box.get("box_status")}" (chưa được Manager xác nhận nhập kho hoặc đang cách ly).'}), 400
+
+        # Ràng buộc 2: Sản phẩm trong Box phải khớp phiếu
+        if target_box.get('sku', '').upper() != order.get('sku', '').upper():
+            return jsonify({'error': f'Sai sản phẩm! Box chứa {target_box.get("sku")}, trong khi phiếu yêu cầu {order.get("sku")}.'}), 400
+
+        # Ràng buộc 3: Vị trí kệ quét phải khớp chính xác vị trí thực tế của Box
+        actual_shelf = str(target_box.get('shelf_position_id', '')).upper()
+        if actual_shelf != shelf_code:
+            return jsonify({'error': f'Sai vị trí kệ! Box {target_box["box_id"]} đang nằm tại {actual_shelf}, không phải {shelf_code}.'}), 400
+
+        # Ràng buộc 4: Không âm tồn Box
+        box_avail = int(target_box.get('quantity', 0))
+        if pick_pcs > box_avail:
+            return jsonify({'error': f'Số PCS lấy ({pick_pcs}) vượt quá tồn khả dụng trong Box ({box_avail} PCS)!'}), 400
+
+        # Cập nhật tồn Box (lấy 1 phần thì giữ Box trên kệ, lấy hết thì giải phóng vị trí)
+        new_box_qty = box_avail - pick_pcs
+        target_box['quantity'] = new_box_qty
+        if new_box_qty == 0:
+            target_box['box_status'] = 'Đã OUT'
+            target_box['shelf_position_id'] = ''
+            # Giải phóng 1 Box trên cấu hình kệ warehouse_config.json
+            cfg = _safe_load('warehouse_config.json', {})
+            for z in cfg.get('zones', []):
+                for rk in z.get('racks', []):
+                    for fl in rk.get('floors', []):
+                        for sl in fl.get('slots', []):
+                            if str(sl.get('slot_code', '')).upper() == actual_shelf:
+                                sl['current_boxes'] = max(0, int(sl.get('current_boxes', 1)) - 1)
+                                sl['current_weight'] = max(0, round(float(sl.get('current_weight', 0)) - float(target_box.get('weight', 0)), 2))
+            _safe_save('warehouse_config.json', cfg)
+
+        _safe_save(INBOUND_FILE, receipts)
+
+        # Trừ tồn kho thực tế duy nhất 1 lần tại bước OUT trong warehouse_data.json
+        wh_data = _safe_load('warehouse_data.json', {})
+        for inv in wh_data.get('inventory', []):
+            if inv.get('sku', '').upper() == order.get('sku', '').upper():
+                inv['on_shelf'] = max(0, int(inv.get('on_shelf', 0)) - pick_pcs)
+                inv['off_shelf_processing'] = int(inv.get('off_shelf_processing', 0)) + pick_pcs
+        ops = wh_data.setdefault('operations_summary', {})
+        ops['recorded_outbound_pcs'] = int(ops.get('recorded_outbound_pcs', 0)) + pick_pcs
+        _safe_save('warehouse_data.json', wh_data)
+
+        # Lưu lịch sử vị trí lấy hàng (Snapshot)
+        order['picked_pcs'] = int(order['picked_pcs']) + pick_pcs
+        order['status'] = 'Hoàn thành' if order['picked_pcs'] >= order['required_pcs'] else 'Đang thực hiện'
+        order.setdefault('transactions', []).append({
+            'tx_id': idem_key or f"TX-{uuid.uuid4().hex[:6].upper()}",
+            'time': datetime.now().strftime('%H:%M'),
+            'box_id': target_box['box_id'],
+            'internal_qr': target_box['internal_qr'],
+            'location_snapshot': actual_shelf,
+            'picked_pcs': pick_pcs,
+            'remaining_in_box': new_box_qty,
+            'staff_name': emp_name
+        })
+        _safe_save(PICKING_FILE, orders)
+
+        # Đồng bộ tiến độ lên Dashboard Staff
+        tasks = _safe_load(STAFF_TASKS_FILE, [])
+        for t in tasks:
+            if t.get('reference_id') == out_id:
+                t['quantity_text'] = f"{order['picked_pcs']}/{order['required_pcs']} PCS"
+                t['status'] = 'Hoàn thành' if order['status'] == 'Hoàn thành' else 'Đang thực hiện'
+        _safe_save(STAFF_TASKS_FILE, tasks)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"OUT lấy hàng ({pick_pcs} PCS) tại {actual_shelf}", out_id, f"Box: {target_box['box_id']}")
+
+    return jsonify({'status': 'ok', 'order': order})
+
+
+@app.route('/api/staff/picking/<out_id>/shortage', methods=['POST'])
+@staff_required
+def api_staff_picking_shortage(out_id):
+    body = request.get_json(silent=True) or {}
+    reason = str(body.get('reason', '')).strip()
+    if not reason:
+        return jsonify({'error': 'Bắt buộc nhập lý do thiếu hàng'}), 400
+
+    with _picking_lock:
+        orders = _load_picking_orders()
+        order = next((o for o in orders if o['id'].upper() == out_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu lấy hàng'}), 404
+        # Không tự sửa số lượng yêu cầu gốc trên đơn hàng, chỉ chuyển trạng thái Thiếu hàng
+        order['status'] = 'Thiếu hàng'
+        order['shortage_note'] = reason
+        _safe_save(PICKING_FILE, orders)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', 'Báo thiếu hàng khi lấy hàng (Picking)', out_id, reason)
+
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/staff/returns', methods=['GET'])
+@staff_required
+def api_staff_returns_list():
+    ret_orders = _load_return_orders()
+    out_orders = _load_picking_orders()
+
+    # Bổ sung thông tin vị trí đề xuất & danh sách phiếu OUT đủ điều kiện lập phiếu trả
+    eligible_out_sources = []
+    for o in out_orders:
+        if int(o.get('picked_pcs', 0)) <= 0:
+            continue
+        elig = _compute_out_return_eligibility(o)
+        last_tx = (o.get('transactions') or [{}])[-1]
+        slot_code = last_tx.get('location_snapshot', 'A1-001').split('/')[-1].strip()
+        hierarchy = _resolve_slot_hierarchy(slot_code)
+        eligible_out_sources.append({
+            'id': o['id'],
+            'order_code': o.get('order_code', '--'),
+            'sku': o.get('sku'),
+            'product_name': o.get('product_name'),
+            'source_box_id': last_tx.get('box_id', ''),
+            'source_shelf_code': slot_code,
+            'suggested_location_path': hierarchy['full_path'],
+            'picked_pcs': elig['picked_pcs'],
+            'consumed_pcs': elig['consumed_pcs'],
+            'eligible_pcs': elig['eligible_pcs']
+        })
+
+    for r in ret_orders:
+        if not r.get('suggested_location_path') and r.get('source_shelf_code'):
+            r['suggested_location_path'] = _resolve_slot_hierarchy(r['source_shelf_code'])['full_path']
+
+    return jsonify({
+        'orders': ret_orders,
+        'eligible_out_sources': eligible_out_sources,
+        'standard_reasons': VALID_RETURN_REASONS
+    })
+
+@app.route('/api/staff/returns', methods=['POST'])
+@staff_required
+def api_staff_returns_create():
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+
+    out_id = str(body.get('out_order_id', '')).strip().upper()
+    req_qty = int(body.get('return_qty', 0))
+    reason = str(body.get('reason', '')).strip()
+    note = str(body.get('note', '')).strip()
+
+    if not out_id or req_qty <= 0 or not reason:
+        return jsonify({'error': 'Vui lòng chọn phiếu OUT nguồn, nhập số lượng trả > 0 và chọn lý do trả.'}), 400
+
+    with _picking_lock:
+        out_orders = _load_picking_orders()
+        src_out = next((o for o in out_orders if o['id'].upper() == out_id), None)
+        if not src_out:
+            return jsonify({'error': 'Không tìm thấy phiếu OUT nguồn trong hệ thống.'}), 404
+
+        elig = _compute_out_return_eligibility(src_out)
+        if req_qty > elig['eligible_pcs']:
+            return jsonify({
+                'error': f"Số PCS yêu cầu trả ({req_qty} PCS) vượt quá lượng còn đủ điều kiện trả ({elig['eligible_pcs']} PCS) do một phần hàng đã chuyển sang đóng gói/bàn giao!"
+            }), 400
+
+        ret_orders = _load_return_orders()
+        last_tx = (src_out.get('transactions') or [{}])[-1]
+        slot_code = last_tx.get('location_snapshot', 'A1-002').split('/')[-1].strip()
+        hierarchy = _resolve_slot_hierarchy(slot_code)
+
+        new_id = f"RETURN-{str(len(ret_orders) + 6).zfill(4)}"
+        new_ret = {
+            'id': new_id,
+            'out_order_id': src_out['id'],
+            'order_code': src_out.get('order_code', '--'),
+            'sku': src_out['sku'],
+            'product_name': src_out['product_name'],
+            'source_out_pcs': elig['picked_pcs'],
+            'consumed_pcs': elig['consumed_pcs'],
+            'return_qty': req_qty,
+            'returned_pcs': 0,
+            'source_box_id': last_tx.get('box_id', ''),
+            'source_shelf_code': slot_code,
+            'suggested_location_path': hierarchy['full_path'],
+            'reason': reason,
+            'note': note,
+            'assignee': emp_name,
+            'status': 'Chờ xử lý lỗi' if reason == 'Hàng có vấn đề về chất lượng' else 'Chờ trả',
+            'created_at': datetime.now().strftime('%H:%M'),
+            'transactions': []
+        }
+        ret_orders.insert(0, new_ret)
+        _safe_save(RETURNS_FILE, ret_orders)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"Tạo phiếu trả hàng {new_id} ({req_qty} PCS)", out_id, reason)
+
+    return jsonify({'status': 'ok', 'return_order': new_ret}), 201
+
+@app.route('/api/staff/returns/check-slot/<slot_code>', methods=['GET'])
+@staff_required
+def api_staff_return_check_slot(slot_code):
+    """
+    Bước 2: Kiểm tra sức chứa & tình trạng kệ thực tế từ warehouse_config.json
+    """
+    code_up = str(slot_code or '').strip().upper()
+    hierarchy = _resolve_slot_hierarchy(code_up)
+
+    default_cfg = get_default_warehouse_config() if 'get_default_warehouse_config' in globals() else {'zones': []}
+    cfg = _safe_load('warehouse_config.json', default_cfg)
+    zones = cfg.get('zones', [])
+    if not zones and cfg.get('warehouses'):
+        for wh in cfg['warehouses']:
+            if wh.get('warehouse_id') == 'KHO-01':
+                zones = wh.get('zones', [])
+                break
+
+    for z in zones:
+        for rk in z.get('racks', []):
+            for fl in rk.get('floors', []):
+                for sl in fl.get('slots', []):
+                    if str(sl.get('slot_code', '')).upper() == code_up:
+                        cur_b = int(sl.get('current_boxes', 0))
+                        max_b = int(sl.get('max_boxes', 10))
+                        cur_w = float(sl.get('current_weight', 0))
+                        max_w = float(sl.get('max_weight', 200))
+                        status = sl.get('status', 'Đang sử dụng')
+                        rem_b = max(0, max_b - cur_b)
+                        rem_w = round(max(0.0, max_w - cur_w), 1)
+                        is_available = (status == 'Đang sử dụng' and rem_b > 0 and rem_w > 0)
+
+                        return jsonify({
+                            'exists': True,
+                            'slot_code': code_up,
+                            'full_path': hierarchy['full_path'],
+                            'status': status,
+                            'current_boxes': cur_b,
+                            'max_boxes': max_b,
+                            'rem_boxes': rem_b,
+                            'current_weight': cur_w,
+                            'max_weight': max_w,
+                            'rem_weight': rem_w,
+                            'is_available': is_available
+                        })
+
+    return jsonify({
+        'exists': False,
+        'slot_code': code_up,
+        'full_path': hierarchy['full_path'],
+        'status': 'Không tồn tại trong cấu hình kho',
+        'is_available': False
+    }), 404
+
+@app.route('/api/staff/returns/<ret_id>/confirm', methods=['POST'])
+@staff_required
+def api_staff_returns_confirm(ret_id):
+    """
+    Xác nhận RETURNED (Bước 4):
+    - Kiểm tra lại lượng đủ điều kiện tại thời điểm xác nhận
+    - Kiểm tra vị trí kệ quét thực tế có đang mở lưu trữ & còn sức chứa không
+    - Nếu hàng có vấn đề về chất lượng (DAMAGED): chuyển cách ly, KHÔNG cộng tồn khả dụng trên kệ
+    - Nếu hàng nguyên vẹn (GOOD): cộng tồn vào Box nguồn (hoặc tạo Box & QR mới) và cập nhật kệ
+    """
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+
+    actual_pcs = int(body.get('actual_return_pcs', 0))
+    condition = str(body.get('condition', 'GOOD')).upper()
+    target_box_code = str(body.get('target_box', '')).strip()
+    target_shelf = str(body.get('target_shelf', '')).strip().upper()
+
+    if '/staff/box-info/' in target_box_code:
+        target_box_code = target_box_code.split('/staff/box-info/')[-1].strip()
+    elif '/q/' in target_box_code:
+        target_box_code = target_box_code.split('/q/')[-1].strip()
+
+    if actual_pcs <= 0:
+        return jsonify({'error': 'Số PCS trả thực tế phải lớn hơn 0'}), 400
+
+    with _picking_lock:
+        ret_orders = _load_return_orders()
+        ret = next((r for r in ret_orders if r['id'].upper() == ret_id.upper()), None)
+        if not ret:
+            return jsonify({'error': 'Không tìm thấy phiếu trả hàng'}), 404
+        if ret.get('status') == 'Hoàn thành':
+            return jsonify({'error': 'Phiếu trả hàng đã hoàn thành trước đó'}), 400
+
+        rem_to_return = int(ret['return_qty']) - int(ret['returned_pcs'])
+        if actual_pcs > rem_to_return:
+            return jsonify({'error': f'Số PCS trả thực tế ({actual_pcs}) vượt quá số lượng còn phải trả của phiếu ({rem_to_return} PCS)!'}), 400
+
+        wh_data = _safe_load('warehouse_data.json', {})
+
+        # Nhánh 1: Hàng có vấn đề về chất lượng -> Cách ly, không cộng tồn khả dụng
+        if condition == 'DAMAGED' or ret.get('reason') == 'Hàng có vấn đề về chất lượng':
+            ret['returned_pcs'] = int(ret['returned_pcs']) + actual_pcs
+            ret['status'] = 'Chờ xử lý lỗi'
+            ret.setdefault('transactions', []).append({
+                'time': datetime.now().strftime('%H:%M'),
+                'box_id': target_box_code or 'BOX-CACHLY',
+                'location_snapshot': 'Khu cách ly / Chờ kiểm định',
+                'returned_pcs': actual_pcs,
+                'condition': 'Hàng lỗi / Cách ly',
+                'staff_name': emp_name
+            })
+            for inv in wh_data.get('inventory', []):
+                if inv.get('sku', '').upper() == ret['sku'].upper():
+                    inv['off_shelf_processing'] = max(0, int(inv.get('off_shelf_processing', 0)) - actual_pcs)
+                    inv['returned_pending'] = int(inv.get('returned_pending', 0)) + actual_pcs
+            _safe_save('warehouse_data.json', wh_data)
+            _safe_save(RETURNS_FILE, ret_orders)
+            return jsonify({'status': 'ok', 'message': f'Đã chuyển {actual_pcs} PCS hàng lỗi vào khu cách ly (Không cộng tồn khả dụng).'})
+
+        # Nhánh 2: Hàng nguyên vẹn -> Bắt buộc quét vị trí kệ trả hợp lệ
+        if not target_shelf:
+            return jsonify({'error': 'Bắt buộc quét mã vị trí kệ thực tế khi trả hàng nguyên vẹn về kho!'}), 400
+
+        # Kiểm tra vị trí kệ trong warehouse_config.json
+        cfg = _safe_load('warehouse_config.json', {})
+        slot_obj = None
+        for z in cfg.get('zones', []):
+            for rk in z.get('racks', []):
+                for fl in rk.get('floors', []):
+                    for sl in fl.get('slots', []):
+                        if str(sl.get('slot_code', '')).upper() == target_shelf:
+                            slot_obj = sl
+                            break
+        if slot_obj and slot_obj.get('status') in ('Tạm khóa', 'Ngừng sử dụng'):
+            return jsonify({'error': f'Vị trí {target_shelf} đang bị {slot_obj.get("status")}, không thể trả hàng vào kệ này!'}), 400
+
+        receipts = _load_inbound_receipts()
+        target_box = None
+        if target_box_code:
+            for r in receipts:
+                for b in r.get('boxes', []):
+                    if b.get('box_id', '').upper() == target_box_code.upper() or b.get('internal_qr') == target_box_code:
+                        target_box = b
+                        break
+                if target_box:
+                    break
+
+        used_box_id = ''
+        if target_box:
+            if target_box.get('sku', '').upper() != ret['sku'].upper():
+                return jsonify({'error': f'Box {target_box["box_id"]} đang chứa sản phẩm khác ({target_box.get("sku")}), không thể gộp chung!'}), 400
+            target_box['quantity'] = int(target_box.get('quantity', 0)) + actual_pcs
+            target_box['box_status'] = 'Đang lưu trữ'
+            target_box['shelf_position_id'] = target_shelf
+            used_box_id = target_box['box_id']
+        else:
+            if slot_obj and int(slot_obj.get('current_boxes', 0)) + 1 > int(slot_obj.get('max_boxes', 10)):
+                return jsonify({'error': f'Vị trí {target_shelf} đã đầy sức chứa số lượng Box ({slot_obj.get("current_boxes")}/{slot_obj.get("max_boxes")} Box)!'}), 400
+            used_box_id = f"BOX-RT-{datetime.now().strftime('%H%M%S')}"
+            new_qr = f"QR-SANOVA-RT-{uuid.uuid4().hex[:6].upper()}"
+            if receipts:
+                receipts[0].setdefault('boxes', []).append({
+                    'box_id': used_box_id,
+                    'internal_qr': new_qr,
+                    'sku': ret['sku'],
+                    'product_name': ret['product_name'],
+                    'quantity': actual_pcs,
+                    'dimensions': '40x30x30',
+                    'weight': 5.0,
+                    'receipt_id': receipts[0]['id'],
+                    'box_status': 'Đang lưu trữ',
+                    'shelf_position_id': target_shelf
+                })
+            if slot_obj:
+                slot_obj['current_boxes'] = int(slot_obj.get('current_boxes', 0)) + 1
+                _safe_save('warehouse_config.json', cfg)
+
+        _safe_save(INBOUND_FILE, receipts)
+
+        # Tăng lại tồn trên kệ trong warehouse_data.json
+        for inv in wh_data.get('inventory', []):
+            if inv.get('sku', '').upper() == ret['sku'].upper():
+                inv['on_shelf'] = int(inv.get('on_shelf', 0)) + actual_pcs
+                inv['off_shelf_processing'] = max(0, int(inv.get('off_shelf_processing', 0)) - actual_pcs)
+        _safe_save('warehouse_data.json', wh_data)
+
+        loc_full = _resolve_slot_hierarchy(target_shelf)['full_path']
+        ret['returned_pcs'] = int(ret['returned_pcs']) + actual_pcs
+        ret['status'] = 'Hoàn thành' if ret['returned_pcs'] >= ret['return_qty'] else 'Đang trả'
+        ret.setdefault('transactions', []).append({
+            'time': datetime.now().strftime('%H:%M'),
+            'box_id': used_box_id,
+            'location_snapshot': loc_full,
+            'returned_pcs': actual_pcs,
+            'condition': 'Nguyên vẹn · Nhập lại kệ',
+            'staff_name': emp_name
+        })
+        _safe_save(RETURNS_FILE, ret_orders)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"RETURNED trả {actual_pcs} PCS về {target_shelf}", ret_id, f"Nguồn: {ret['out_order_id']}")
+
+    return jsonify({'status': 'ok', 'message': f'Đã đặt {actual_pcs} PCS vào {loc_full} ({used_box_id}) và cập nhật tồn kho thành công!'})
+# Pre-backing / Đóng gói / Bàn giao sẽ trừ tồn kho thực tế tại bước OUT, nên khi trả về kho chỉ cần cộng lại vào kệ (on_shelf) và giảm off_shelf_processing.
+PREPACKING_FILE = 'prepacking_orders.json'
+_prepacking_lock = threading.Lock()
+
+
+def _recompute_prepacking_capacity(order):
+    """
+    Tính toán tự động số bộ Combo / PCS tối đa có thể chuẩn bị dựa trên số PCS đạt thực nhận
+    và khóa định mức công thức Combo của đơn hàng.
+    """
+    req_qty = int(order.get('required_qty', 0))
+    possible_list = []
+    for it in order.get('items', []):
+        valid_pcs = max(0, int(it.get('received_pcs', 0)) - int(it.get('defective_pcs', 0)))
+        per_unit = max(1, int(it.get('qty_per_unit', 1)))
+        possible_list.append(valid_pcs // per_unit)
+
+    max_by_stock = min(possible_list) if possible_list else 0
+    order['max_possible_qty'] = min(req_qty, max_by_stock)
+    return order['max_possible_qty']
+
+
+def _sync_prepacking_from_picking():
+    """
+    Tự động sinh & cập nhật công việc Pre-packing từ các phiếu OUT đã lấy hàng (picking_orders.json)
+    và công thức Combo trong products_catalog.json. Không dùng dữ liệu mẫu cố định.
+    """
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+
+    pre_orders = _safe_load(PREPACKING_FILE, [])
+    out_orders = _safe_load(PICKING_FILE, [])
+    catalog = _safe_load('products_catalog.json', [])
+    prod_map = {p.get('sku', '').upper(): p for p in catalog}
+
+    # Gom các phiếu OUT đã có phát sinh lấy hàng (picked_pcs > 0) theo order_code
+    orders_by_code = {}
+    for o in out_orders:
+        if int(o.get('picked_pcs', 0)) <= 0:
+            continue
+        ocode = o.get('order_code') or o.get('id')
+        orders_by_code.setdefault(ocode, []).append(o)
+
+    changed = False
+    for ocode, outs in orders_by_code.items():
+        existing = next((p for p in pre_orders if p.get('order_code') == ocode), None)
+        out_ids = [x['id'] for x in outs]
+
+        if not existing:
+            first_out = outs[0]
+            sku_up = str(first_out.get('sku', '')).upper()
+            prod_cfg = prod_map.get(sku_up, {})
+            combo_comps = prod_cfg.get('combo_items') or []
+            is_combo = (prod_cfg.get('category') == 'Combo' or len(combo_comps) > 0)
+
+            items = []
+            if is_combo and combo_comps:
+                # Chụp phiên bản công thức Combo tại thời điểm tạo phiếu
+                for comp in combo_comps:
+                    c_sku = str(comp.get('sku', '')).upper()
+                    c_prod = prod_map.get(c_sku, {})
+                    matched_out = next((x for x in outs if str(x.get('sku', '')).upper() == c_sku), None)
+                    out_pcs = int(matched_out.get('picked_pcs', 0)) if matched_out else 0
+                    boxes = list({tx.get('box_id') for tx in (matched_out.get('transactions', []) if matched_out else []) if tx.get('box_id')})
+                    items.append({
+                        'sku': c_sku,
+                        'product_name': c_prod.get('name', c_sku),
+                        'qty_per_unit': int(comp.get('qty', 1)),
+                        'out_pcs': out_pcs,
+                        'received_pcs': out_pcs,
+                        'defective_pcs': 0,
+                        'source_boxes': boxes
+                    })
+                req_qty = max(1, int(first_out.get('required_pcs', 1)))
+            else:
+                for x in outs:
+                    x_sku = str(x.get('sku', '')).upper()
+                    x_boxes = list({tx.get('box_id') for tx in x.get('transactions', []) if tx.get('box_id')})
+                    items.append({
+                        'sku': x_sku,
+                        'product_name': x.get('product_name', x_sku),
+                        'qty_per_unit': 1,
+                        'out_pcs': int(x.get('picked_pcs', 0)),
+                        'received_pcs': int(x.get('picked_pcs', 0)),
+                        'defective_pcs': 0,
+                        'source_boxes': x_boxes
+                    })
+                req_qty = sum(int(x.get('required_pcs', 0)) for x in outs)
+
+            new_pre = {
+                'id': f"PRE-{str(len(pre_orders) + 15).zfill(4)}",
+                'order_code': ocode,
+                'platform': first_out.get('platform', 'Shopee'),
+                'is_combo': is_combo,
+                'title': prod_cfg.get('name') or first_out.get('product_name', sku_up),
+                'out_refs': out_ids,
+                'required_qty': req_qty,
+                'prepared_qty': 0,
+                'assignee': first_out.get('assignee') or emp_name,
+                'status': 'Chờ chuẩn bị',
+                'items': items,
+                'batches': [],
+                'issues': [],
+                'created_at': datetime.now().strftime('%H:%M')
+            }
+            _recompute_prepacking_capacity(new_pre)
+            pre_orders.insert(0, new_pre)
+            changed = True
+        else:
+            # Cập nhật lại số lượng đã OUT mới nhất nếu nhân viên vừa lấy bổ sung từ kệ
+            for it in existing.get('items', []):
+                matched_out = next((x for x in outs if str(x.get('sku', '')).upper() == it['sku'].upper()), None)
+                if matched_out:
+                    latest_out_pcs = int(matched_out.get('picked_pcs', 0))
+                    if it['out_pcs'] != latest_out_pcs:
+                        it['out_pcs'] = latest_out_pcs
+                        if existing['status'] in ('Chờ chuẩn bị', 'Chờ bổ sung'):
+                            it['received_pcs'] = latest_out_pcs
+                        changed = True
+            existing['out_refs'] = out_ids
+            _recompute_prepacking_capacity(existing)
+
+    if changed:
+        _safe_save(PREPACKING_FILE, pre_orders)
+    return pre_orders
+
+
+# ================= ROUTES & API PRE-PACKING & COMBO =================
+
+@app.route('/staff/prepacking')
+@staff_required
+def staff_prepacking_page():
+    return render_template('STAFF/staff_prepacking.html')
+
+
+@app.route('/api/staff/prepacking', methods=['GET'])
+@staff_required
+def api_staff_prepacking_list():
+    orders = _sync_prepacking_from_picking()
+    stats = {
+        'waiting': sum(1 for o in orders if o.get('status') == 'Chờ chuẩn bị'),
+        'in_progress': sum(1 for o in orders if o.get('status') == 'Đang chuẩn bị'),
+        'issues': sum(1 for o in orders if o.get('status') in ('Chờ bổ sung', 'Chờ xử lý lỗi')),
+        'completed': sum(1 for o in orders if o.get('status') in ('Sẵn sàng đóng gói', 'Đã chuyển đóng gói'))
+    }
+    return jsonify({'orders': orders, 'stats': stats})
+
+
+@app.route('/api/staff/prepacking/<pre_id>', methods=['GET'])
+@staff_required
+def api_staff_prepacking_detail(pre_id):
+    orders = _sync_prepacking_from_picking()
+    order = next((o for o in orders if o['id'].upper() == pre_id.upper()), None)
+    if not order:
+        return jsonify({'error': 'Không tìm thấy phiếu Pre-packing'}), 404
+    _recompute_prepacking_capacity(order)
+    return jsonify({'order': order})
+
+
+@app.route('/api/staff/prepacking/<pre_id>/start', methods=['POST'])
+@staff_required
+def api_staff_prepacking_start(pre_id):
+    with _prepacking_lock:
+        orders = _safe_load(PREPACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pre_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+        if order['status'] == 'Chờ chuẩn bị':
+            order['status'] = 'Đang chuẩn bị'
+            _safe_save(PREPACKING_FILE, orders)
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/staff/prepacking/<pre_id>/receive', methods=['POST'])
+@staff_required
+def api_staff_prepacking_receive(pre_id):
+    """Ghi nhận số lượng thực nhận & hàng lỗi tại bàn Pre-packing (không cho sửa số đã OUT)"""
+    body = request.get_json(silent=True) or {}
+    in_items = body.get('items', [])
+
+    with _prepacking_lock:
+        orders = _safe_load(PREPACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pre_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+        if order['status'] in ('Đã chuyển đóng gói', 'Hủy'):
+            return jsonify({'error': 'Phiếu đã chuyển đóng gói, không thể chỉnh sửa'}), 400
+
+        has_shortage_or_defect = False
+        for upd in in_items:
+            target_it = next((x for x in order['items'] if x['sku'].upper() == str(upd.get('sku', '')).upper()), None)
+            if not target_it:
+                continue
+            recv = int(upd.get('received_pcs', 0))
+            defect = int(upd.get('defective_pcs', 0))
+            if recv < 0 or recv > int(target_it['out_pcs']) or defect < 0 or defect > recv:
+                return jsonify({'error': f"Số liệu kiểm đếm của {target_it['sku']} không hợp lệ so với nguồn OUT!"}), 400
+            target_it['received_pcs'] = recv
+            target_it['defective_pcs'] = defect
+            if recv < int(target_it['out_pcs']) or defect > 0:
+                has_shortage_or_defect = True
+
+        _recompute_prepacking_capacity(order)
+        if has_shortage_or_defect:
+            order['status'] = 'Chờ xử lý lỗi'
+        elif order['status'] == 'Chờ chuẩn bị':
+            order['status'] = 'Đang chuẩn bị'
+
+        _safe_save(PREPACKING_FILE, orders)
+    return jsonify({'status': 'ok', 'order': order})
+
+
+@app.route('/api/staff/prepacking/<pre_id>/batches', methods=['POST'])
+@staff_required
+def api_staff_prepacking_batches(pre_id):
+    """Ghi nhận tiến độ ghép Combo / chuẩn bị hàng từng lượt (không vượt nguyên liệu thực tế)"""
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+    batch_qty = int(body.get('batch_qty', 0))
+
+    if batch_qty <= 0:
+        return jsonify({'error': 'Số lượng lượt chuẩn bị phải lớn hơn 0'}), 400
+
+    with _prepacking_lock:
+        orders = _safe_load(PREPACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pre_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+        if order['status'] in ('Đã chuyển đóng gói', 'Hủy'):
+            return jsonify({'error': 'Phiếu đã khóa, không thể ghi nhận thêm'}), 400
+
+        max_cap = _recompute_prepacking_capacity(order)
+        new_total = int(order['prepared_qty']) + batch_qty
+        if new_total > max_cap:
+            return jsonify({
+                'error': f"Không đủ nguyên liệu đạt! Chỉ có thể ghép/chuẩn bị tối đa {max_cap} {'Combo' if order['is_combo'] else 'PCS'} từ số hàng thực nhận."
+            }), 400
+
+        order['prepared_qty'] = new_total
+        order['status'] = 'Đang chuẩn bị'
+        order.setdefault('batches', []).append({
+            'time': datetime.now().strftime('%H:%M'),
+            'qty': batch_qty,
+            'staff_name': emp_name
+        })
+        _safe_save(PREPACKING_FILE, orders)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"Ghi nhận Pre-packing (+{batch_qty})", pre_id, f"Tiến độ: {new_total}/{order['required_qty']}")
+
+    return jsonify({'status': 'ok', 'order': order})
+
+
+@app.route('/api/staff/prepacking/<pre_id>/issues', methods=['POST'])
+@staff_required
+def api_staff_prepacking_issues(pre_id):
+    """
+    Xử lý bất thường tại Pre-packing:
+    - SURPLUS_RETURN: Hàng dư -> tự động tạo phiếu RETURNED liên kết phiếu OUT nguồn
+    - DEFECTIVE: Hàng lỗi -> chuyển cách ly (returned_pending), không cộng tồn khả dụng
+    - SHORTAGE_OUT: Thiếu so với phiếu OUT -> ghi nhận chênh lệch báo Manager
+    """
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+
+    issue_type = str(body.get('issue_type', '')).upper()
+    sku = str(body.get('sku', '')).strip().upper()
+    qty = int(body.get('qty', 0))
+    reason = str(body.get('reason', '')).strip()
+
+    if not sku or qty <= 0 or not reason:
+        return jsonify({'error': 'Vui lòng chọn SKU, số lượng > 0 và nhập lý do cụ thể'}), 400
+
+    with _prepacking_lock:
+        orders = _safe_load(PREPACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pre_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+
+        type_labels = {
+            'SURPLUS_RETURN': 'Hàng dư → Tạo RETURNED',
+            'DEFECTIVE': 'Hàng lỗi → Cách ly',
+            'SHORTAGE_OUT': 'Thiếu so với OUT'
+        }
+        msg = 'Đã ghi nhận sai lệch và báo cáo Quản lý kho.'
+
+        if issue_type == 'SURPLUS_RETURN':
+            ret_orders = _safe_load(RETURNS_FILE, [])
+            out_ref = (order.get('out_refs') or ['OUT-0000'])[0]
+            new_ret_id = f"RETURN-{str(len(ret_orders) + 6).zfill(4)}"
+            ret_orders.insert(0, {
+                'id': new_ret_id,
+                'out_order_id': out_ref,
+                'order_code': order.get('order_code', '--'),
+                'sku': sku,
+                'product_name': next((x['product_name'] for x in order['items'] if x['sku'] == sku), sku),
+                'source_out_pcs': qty,
+                'consumed_pcs': 0,
+                'return_qty': qty,
+                'returned_pcs': 0,
+                'source_box_id': '',
+                'source_shelf_code': '',
+                'suggested_location_path': 'Kệ lưu trữ nguồn',
+                'reason': 'Hàng dư sau Pre-packing',
+                'note': f"Chuyển từ {pre_id}: {reason}",
+                'assignee': emp_name,
+                'status': 'Chờ trả',
+                'created_at': datetime.now().strftime('%H:%M'),
+                'transactions': []
+            })
+            _safe_save(RETURNS_FILE, ret_orders)
+            msg = f"Đã tạo yêu cầu trả hàng {new_ret_id} ({qty} PCS) sang tab RETURNED."
+        elif issue_type == 'DEFECTIVE':
+            wh_data = _safe_load('warehouse_data.json', {})
+            for inv in wh_data.get('inventory', []):
+                if inv.get('sku', '').upper() == sku:
+                    inv['returned_pending'] = int(inv.get('returned_pending', 0)) + qty
+            _safe_save('warehouse_data.json', wh_data)
+            order['status'] = 'Chờ xử lý lỗi'
+            msg = f"Đã chuyển {qty} PCS hàng lỗi sang khu cách ly (không cộng tồn khả dụng)."
+        else:
+            order['status'] = 'Chờ xử lý lỗi'
+
+        order.setdefault('issues', []).append({
+            'type': issue_type,
+            'type_label': type_labels.get(issue_type, 'Bất thường'),
+            'sku': sku,
+            'qty': qty,
+            'reason': reason,
+            'status': 'Đã ghi nhận',
+            'time': datetime.now().strftime('%H:%M')
+        })
+        _safe_save(PREPACKING_FILE, orders)
+
+    return jsonify({'status': 'ok', 'message': msg})
+
+
+@app.route('/api/staff/prepacking/<pre_id>/complete', methods=['POST'])
+@staff_required
+def api_staff_prepacking_complete(pre_id):
+    with _prepacking_lock:
+        orders = _safe_load(PREPACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pre_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+        if int(order['prepared_qty']) < int(order['required_qty']):
+            return jsonify({'error': f"Chưa chuẩn bị đủ số lượng yêu cầu ({order['prepared_qty']}/{order['required_qty']})!"}), 400
+        if order['status'] == 'Chờ xử lý lỗi':
+            return jsonify({'error': 'Phiếu đang có sai lệch/hàng lỗi chưa xử lý xong!'}), 400
+
+        order['status'] = 'Sẵn sàng đóng gói'
+        _safe_save(PREPACKING_FILE, orders)
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/staff/prepacking/<pre_id>/transfer', methods=['POST'])
+@staff_required
+def api_staff_prepacking_transfer(pre_id):
+    """Chuyển sang Đóng gói & Bàn giao (Chống chuyển trùng, tuyệt đối không trừ tồn kho lần hai)"""
+    with _prepacking_lock:
+        orders = _safe_load(PREPACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pre_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+        if order['status'] == 'Đã chuyển đóng gói':
+            return jsonify({'error': 'Phiếu đã được chuyển sang Đóng gói trước đó!'}), 400
+        if order['status'] != 'Sẵn sàng đóng gói':
+            return jsonify({'error': 'Phải hoàn thành Pre-packing trước khi chuyển sang Đóng gói!'}), 400
+
+        order['status'] = 'Đã chuyển đóng gói'
+        order['transferred_at'] = datetime.now().strftime('%H:%M · %d/%m/%Y')
+        _safe_save(PREPACKING_FILE, orders)
+
+        # Cập nhật lượng đã tiêu thụ sang phiếu OUT nguồn để khóa không cho trả lại phần hàng đã chuyển đóng gói
+        out_orders = _safe_load(PICKING_FILE, [])
+        for o in out_orders:
+            if o['id'] in (order.get('out_refs') or []):
+                o['consumed_pcs'] = int(o.get('picked_pcs', 0))
+        _safe_save(PICKING_FILE, out_orders)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', 'Chuyển phiếu Pre-packing sang Đóng gói & Bàn giao', pre_id, f"Đơn: {order['order_code']}")
+
+    return jsonify({'status': 'ok'})
+# ĐÓng gói 
+PACKING_FILE = 'packing_orders.json'
+_packing_lock = threading.Lock()
+
+
+def _compute_packing_display_status(order):
+    """Tổng hợp 2 trạng thái packing_status và handover_status thành trạng thái hiển thị chuẩn cho STAFF."""
+    p_st = order.get('packing_status', 'PENDING')
+    h_st = order.get('handover_status', 'NONE')
+
+    if h_st == 'APPROVED':
+        return 'Hoàn thành'
+    if h_st == 'REJECTED':
+        return 'Cần xử lý lại'
+    if h_st == 'SUBMITTED':
+        return 'Chờ Manager xác nhận'
+    if p_st == 'ISSUE':
+        return 'Có vấn đề'
+    if p_st == 'COMPLETED':
+        return 'Chờ bàn giao'
+    if p_st == 'IN_PROGRESS':
+        return 'Đang đóng gói'
+    return 'Chờ đóng gói'
+
+
+def _sync_packing_orders_from_sources():
+    """
+    Tự động sinh & cập nhật công việc Đóng gói từ:
+    1. Phiếu Pre-packing đã chuyển sang đóng gói ('Đã chuyển đóng gói')
+    2. Phiếu OUT sản phẩm lẻ đã hoàn thành đủ số lượng ('Hoàn thành') mà không cần Pre-packing
+    3. Đồng bộ kết quả phê duyệt/từ chối phiếu bàn giao (BG-...) từ Manager (approvals_data.json)
+    Tuyệt đối không dùng dữ liệu mẫu cố định và không trừ tồn kho thêm lần nữa.
+    """
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+
+    pk_orders = _safe_load(PACKING_FILE, [])
+    pre_orders = _safe_load(PREPACKING_FILE, [])
+    out_orders = _safe_load(PICKING_FILE, [])
+    approvals = _safe_load('approvals_data.json', {})
+
+    processed = approvals.get('processed_tickets', [])
+    approved_bg = {t.get('id'): t for t in processed if 'Đã xác nhận' in str(t.get('status', ''))}
+    rejected_bg = {t.get('id'): t for t in processed if str(t.get('status', '')) == 'Đã từ chối'}
+
+    changed = False
+
+    # 1. Đồng bộ kết quả duyệt / trả lại từ Manager
+    for o in pk_orders:
+        ho_id = o.get('handover_id')
+        if ho_id and ho_id in approved_bg and o.get('handover_status') != 'APPROVED':
+            o['handover_status'] = 'APPROVED'
+            o['reviewed_by'] = approved_bg[ho_id].get('reviewed_by', 'Manager')
+            changed = True
+        elif ho_id and ho_id in rejected_bg and o.get('handover_status') == 'SUBMITTED':
+            o['handover_status'] = 'REJECTED'
+            o['reject_reason'] = rejected_bg[ho_id].get('reject_reason', 'Manager yêu cầu kiểm tra lại.')
+            o['reviewed_by'] = rejected_bg[ho_id].get('reviewed_by', 'Manager')
+            changed = True
+        o['display_status'] = _compute_packing_display_status(o)
+
+    # 2. Nhận đơn từ Pre-packing đã chuyển sang đóng gói
+    for pre in pre_orders:
+        if pre.get('status') != 'Đã chuyển đóng gói':
+            continue
+        ocode = pre.get('order_code')
+        if any(x.get('order_code') == ocode for x in pk_orders):
+            continue
+
+        items = []
+        if pre.get('is_combo'):
+            pcs_per_combo = sum(int(x.get('qty_per_unit', 1)) for x in pre.get('items', []))
+            items.append({
+                'sku': pre.get('id'),
+                'name': pre.get('title'),
+                'item_group': 'Combo',
+                'unit': 'bộ',
+                'required_qty': int(pre.get('required_qty', 1)),
+                'ready_qty': int(pre.get('prepared_qty', 1)),
+                'pcs_multiplier': max(1, pcs_per_combo)
+            })
+        else:
+            for it in pre.get('items', []):
+                items.append({
+                    'sku': it['sku'],
+                    'name': it['product_name'],
+                    'item_group': 'Sản phẩm lẻ',
+                    'unit': 'PCS',
+                    'required_qty': int(it.get('received_pcs', 0)),
+                    'ready_qty': int(it.get('received_pcs', 0)),
+                    'pcs_multiplier': 1
+                })
+
+        summary_str = ' + '.join([f"{x['required_qty']} {x['name']}" for x in items])
+        new_pk = {
+            'id': f"PK-{str(len(pk_orders) + 25).zfill(4)}",
+            'order_code': ocode,
+            'platform': pre.get('platform', 'Shopee'),
+            'order_type': 'Đơn Combo' if pre.get('is_combo') else 'Đơn lẻ',
+            'source_label': f"Pre-packing ({pre['id']})",
+            'summary_text': summary_str,
+            'assignee': pre.get('assignee') or emp_name,
+            'packing_status': 'PENDING',
+            'handover_status': 'NONE',
+            'display_status': 'Chờ đóng gói',
+            'items': items,
+            'packages': [],
+            'handover_id': '',
+            'receiver': '',
+            'handover_note': '',
+            'reject_reason': '',
+            'handover_history': []
+        }
+        pk_orders.insert(0, new_pk)
+        changed = True
+
+    # 3. Nhận đơn sản phẩm lẻ trực tiếp từ phiếu OUT đã hoàn thành (nếu không qua Pre-packing)
+    for out in out_orders:
+        if out.get('status') != 'Hoàn thành':
+            continue
+        ocode = out.get('order_code')
+        if any(x.get('order_code') == ocode for x in pk_orders):
+            continue
+
+        req_pcs = int(out.get('required_pcs', 0))
+        new_pk = {
+            'id': f"PK-{str(len(pk_orders) + 25).zfill(4)}",
+            'order_code': ocode,
+            'platform': out.get('platform', 'Shopee'),
+            'order_type': 'Đơn lẻ',
+            'source_label': f"OUT ({out['id']})",
+            'summary_text': f"{req_pcs} {out.get('product_name', out.get('sku'))}",
+            'assignee': out.get('assignee') or emp_name,
+            'packing_status': 'PENDING',
+            'handover_status': 'NONE',
+            'display_status': 'Chờ đóng gói',
+            'items': [{
+                'sku': out['sku'],
+                'name': out.get('product_name', out['sku']),
+                'item_group': 'Sản phẩm lẻ',
+                'unit': 'PCS',
+                'required_qty': req_pcs,
+                'ready_qty': int(out.get('picked_pcs', req_pcs)),
+                'pcs_multiplier': 1
+            }],
+            'packages': [],
+            'handover_id': '',
+            'receiver': '',
+            'handover_note': '',
+            'reject_reason': '',
+            'handover_history': []
+        }
+        pk_orders.insert(0, new_pk)
+        changed = True
+
+    if changed:
+        _safe_save(PACKING_FILE, pk_orders)
+    return pk_orders
+
+
+# ================= ROUTES & API ĐÓNG GÓI & BÀN GIAO =================
+
+@app.route('/staff/packing-handover')
+@staff_required
+def staff_packing_handover_page():
+    return render_template('STAFF/staff_packing_handover.html')
+
+
+@app.route('/api/staff/packing', methods=['GET'])
+@staff_required
+def api_staff_packing_list():
+    orders = _sync_packing_orders_from_sources()
+    stats = {
+        'waiting': sum(1 for o in orders if o.get('display_status') == 'Chờ đóng gói'),
+        'in_progress': sum(1 for o in orders if o.get('display_status') == 'Đang đóng gói'),
+        'waiting_handover': sum(1 for o in orders if o.get('display_status') in ('Chờ bàn giao', 'Chờ Manager xác nhận')),
+        'returned': sum(1 for o in orders if o.get('display_status') in ('Cần xử lý lại', 'Có vấn đề'))
+    }
+    return jsonify({'orders': orders, 'stats': stats})
+
+
+@app.route('/api/staff/packing/<pk_id>', methods=['GET'])
+@staff_required
+def api_staff_packing_detail(pk_id):
+    orders = _sync_packing_orders_from_sources()
+    order = next((o for o in orders if o['id'].upper() == pk_id.upper()), None)
+    if not order:
+        return jsonify({'error': 'Không tìm thấy phiếu đóng gói'}), 404
+    return jsonify({'order': order})
+
+
+@app.route('/api/staff/packing/<pk_id>/start', methods=['POST'])
+@staff_required
+def api_staff_packing_start(pk_id):
+    with _packing_lock:
+        orders = _safe_load(PACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pk_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+        if order['packing_status'] == 'PENDING':
+            order['packing_status'] = 'IN_PROGRESS'
+            order['display_status'] = _compute_packing_display_status(order)
+            _safe_save(PACKING_FILE, orders)
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/staff/packing/<pk_id>/packages', methods=['POST'])
+@staff_required
+def api_staff_packing_create_package(pk_id):
+    with _packing_lock:
+        orders = _safe_load(PACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pk_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+
+        pkgs = order.setdefault('packages', [])
+        pkg_code = f"PKG-{order['order_code'].replace('DH-', '')}-{str(len(pkgs) + 1).zfill(2)}"
+        pkgs.append({
+            'package_code': pkg_code,
+            'condition': 'Nguyên vẹn',
+            'items': []
+        })
+        order['packing_status'] = 'IN_PROGRESS'
+        order['display_status'] = _compute_packing_display_status(order)
+        _safe_save(PACKING_FILE, orders)
+    return jsonify({'status': 'ok', 'package_code': pkg_code})
+
+
+@app.route('/api/staff/packing/<pk_id>/packages/<pkg_code>/items', methods=['POST'])
+@staff_required
+def api_staff_packing_add_pkg_item(pk_id, pkg_code):
+    body = request.get_json(silent=True) or {}
+    sku = str(body.get('sku', '')).strip().upper()
+    qty = int(body.get('qty', 0))
+
+    if not sku or qty <= 0:
+        return jsonify({'error': 'Số lượng phân bổ vào kiện phải lớn hơn 0'}), 400
+
+    with _packing_lock:
+        orders = _safe_load(PACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pk_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+
+        item_def = next((x for x in order['items'] if x['sku'].upper() == sku), None)
+        if not item_def:
+            return jsonify({'error': 'Sản phẩm không thuộc đơn hàng này'}), 400
+
+        # Kiểm tra không cho phân bổ vượt quá số lượng hợp lệ của đơn
+        already_allocated = sum(
+            int(x['qty']) for p in order.get('packages', [])
+            for x in p.get('items', []) if x['sku'].upper() == sku
+        )
+        if already_allocated + qty > int(item_def['ready_qty']):
+            return jsonify({
+                'error': f"Vượt quá số lượng sẵn sàng của {item_def['name']} (Còn lại: {int(item_def['ready_qty']) - already_allocated} {item_def['unit']})!"
+            }), 400
+
+        pkg = next((p for p in order.get('packages', []) if p['package_code'] == pkg_code), None)
+        if not pkg:
+            return jsonify({'error': 'Không tìm thấy kiện hàng'}), 404
+
+        existing_in_pkg = next((x for x in pkg['items'] if x['sku'].upper() == sku), None)
+        if existing_in_pkg:
+            existing_in_pkg['qty'] = int(existing_in_pkg['qty']) + qty
+            existing_in_pkg['pcs_equiv'] = existing_in_pkg['qty'] * int(item_def.get('pcs_multiplier', 1))
+        else:
+            pkg['items'].append({
+                'sku': sku,
+                'name': item_def['name'],
+                'unit': item_def['unit'],
+                'qty': qty,
+                'pcs_equiv': qty * int(item_def.get('pcs_multiplier', 1))
+            })
+
+        _safe_save(PACKING_FILE, orders)
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/staff/packing/<pk_id>/complete', methods=['POST'])
+@staff_required
+def api_staff_packing_complete(pk_id):
+    with _packing_lock:
+        orders = _safe_load(PACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pk_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+
+        packages = order.get('packages', [])
+        if not packages:
+            return jsonify({'error': 'Vui lòng tạo ít nhất 01 kiện hàng trước khi hoàn tất đóng gói!'}), 400
+
+        for it in order.get('items', []):
+            allocated = sum(
+                int(x['qty']) for p in packages
+                for x in p.get('items', []) if x['sku'].upper() == it['sku'].upper()
+            )
+            if allocated != int(it['required_qty']):
+                return jsonify({
+                    'error': f"Chưa phân bổ đủ {it['name']} vào kiện ({allocated}/{it['required_qty']} {it['unit']})!"
+                }), 400
+
+        order['packing_status'] = 'COMPLETED'
+        order['display_status'] = _compute_packing_display_status(order)
+        _safe_save(PACKING_FILE, orders)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"Hoàn tất đóng gói {len(packages)} kiện", pk_id, f"Đơn: {order['order_code']}")
+
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/staff/packing/<pk_id>/issues', methods=['POST'])
+@staff_required
+def api_staff_packing_issues(pk_id):
+    body = request.get_json(silent=True) or {}
+    issue_type = str(body.get('issue_type', '')).strip()
+    reason = str(body.get('reason', '')).strip()
+    if not reason:
+        return jsonify({'error': 'Bắt buộc nhập mô tả vấn đề'}), 400
+
+    with _packing_lock:
+        orders = _safe_load(PACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pk_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu'}), 404
+        order['packing_status'] = 'ISSUE'
+        order['display_status'] = _compute_packing_display_status(order)
+        _safe_save(PACKING_FILE, orders)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"Báo sai lệch đóng gói: {issue_type}", pk_id, reason)
+
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/staff/handovers', methods=['POST'])
+@staff_required
+def api_staff_handovers_create():
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+
+    pk_id = str(body.get('packing_id', '')).strip().upper()
+    receiver = str(body.get('receiver', '')).strip()
+    note = str(body.get('note', '')).strip()
+
+    if not pk_id or not receiver:
+        return jsonify({'error': 'Vui lòng nhập đầy đủ người nhận bàn giao'}), 400
+
+    with _packing_lock:
+        orders = _safe_load(PACKING_FILE, [])
+        order = next((o for o in orders if o['id'].upper() == pk_id), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu đóng gói'}), 404
+        if order.get('packing_status') != 'COMPLETED':
+            return jsonify({'error': 'Phải hoàn tất đóng gói trước khi lập phiếu bàn giao!'}), 400
+
+        ho_id = order.get('handover_id') or f"BG-{order['order_code'].replace('DH-', '')}"
+        order['handover_id'] = ho_id
+        order['receiver'] = receiver
+        order['handover_note'] = note
+        order['handover_by'] = emp_name
+        _safe_save(PACKING_FILE, orders)
+
+    return jsonify({'status': 'ok', 'handover_id': ho_id})
+
+
+@app.route('/api/staff/handovers/<ho_id>/submit', methods=['POST'])
+@staff_required
+def api_staff_handovers_submit(ho_id):
+    """
+    Gửi phiếu bàn giao sang Manager (approvals_data.json -> pending_tickets).
+    Lưu lịch sử các lần gửi và tuyệt đối không trừ tồn kho lần thứ hai.
+    """
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    emp_code = user.get('staff_code') or user.get('username') or 'staff'
+
+    with _packing_lock:
+        orders = _safe_load(PACKING_FILE, [])
+        order = next((o for o in orders if str(o.get('handover_id', '')).upper() == ho_id.upper()), None)
+        if not order:
+            return jsonify({'error': 'Không tìm thấy phiếu bàn giao'}), 404
+
+        packages = order.get('packages', [])
+        total_pcs = sum(int(x.get('pcs_equiv', x['qty'])) for p in packages for x in p.get('items', []))
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
+
+        order['handover_status'] = 'SUBMITTED'
+        order['display_status'] = _compute_packing_display_status(order)
+        order.setdefault('handover_history', []).append({
+            'time': now_str,
+            'sender': emp_name,
+            'receiver': order.get('receiver'),
+            'packages_count': len(packages),
+            'total_pcs': total_pcs,
+            'note': order.get('handover_note', '')
+        })
+        _safe_save(PACKING_FILE, orders)
+
+        # Đồng bộ sang approvals_data.json của Manager
+        approvals = _safe_load('approvals_data.json', {'pending_tickets': [], 'processed_tickets': []})
+        approvals['pending_tickets'] = [x for x in approvals.get('pending_tickets', []) if x.get('id') != ho_id]
+        approvals['processed_tickets'] = [x for x in approvals.get('processed_tickets', []) if x.get('id') != ho_id]
+
+        approvals['pending_tickets'].insert(0, {
+            'id': ho_id,
+            'category': 'HANDOVER',
+            'partner': order.get('platform', 'Shopee'),
+            'order_or_po': order.get('order_code'),
+            'qty_primary': f"{len(packages)} kiện",
+            'total_pcs': total_pcs,
+            'sender': emp_name,
+            'receiver': order.get('receiver'),
+            'sent_at': now_str,
+            'note': order.get('handover_note') or f"Bàn giao {len(packages)} kiện ({', '.join(p['package_code'] for p in packages)}).",
+            'status': 'Chờ xác nhận',
+            'items': [
+                {
+                    'sku': x['sku'],
+                    'name': x['name'],
+                    'qty_expected': x['qty'],
+                    'qty_packed': x['qty'],
+                    'qty_actual': x['qty']
+                }
+                for p in packages for x in p.get('items', [])
+            ],
+            'checks': [
+                {'label': 'Đã hoàn thành đóng gói', 'passed': True},
+                {'label': 'Số lượng bàn giao hợp lệ với đơn hàng', 'passed': True},
+                {'label': 'Đã ghi nhận đầy đủ người nhận và thời gian', 'passed': True},
+                {'label': 'Không còn vấn đề thiếu hàng chưa xử lý', 'passed': True}
+            ]
+        })
+        _safe_save('approvals_data.json', approvals)
+
+        # Cập nhật lên Dashboard Staff
+        tasks = _safe_load(STAFF_TASKS_FILE, [])
+        tasks = [t for t in tasks if t.get('reference_id') != ho_id]
+        tasks.insert(0, {
+            'task_id': f"TSK-{ho_id}",
+            'reference_id': ho_id,
+            'task_type': 'HANDOVER',
+            'title': 'Chờ xác nhận bàn giao',
+            'category_label': 'Bàn giao',
+            'quantity_text': f"{len(packages)} kiện · {total_pcs} PCS",
+            'time_label': datetime.now().strftime('%H:%M'),
+            'assigned_employee': emp_code,
+            'warehouse_id': user.get('warehouse_id', 'KHO-01'),
+            'status': 'Chờ xác nhận',
+            'priority': 'NORMAL',
+            'is_carryover': False,
+            'rejection_reason': ''
+        })
+        _safe_save(STAFF_TASKS_FILE, tasks)
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', 'Gửi phiếu bàn giao chờ Manager xác nhận', ho_id, f"Đơn: {order['order_code']} · {len(packages)} kiện")
+
+    return jsonify({'status': 'ok'})
+#Kiểm kê kho
+_stocktake_staff_lock = threading.Lock()
+
+
+def _load_staff_stocktake_sessions():
+    """Đọc trực tiếp danh sách đợt kiểm kê thật từ stocktake_data.json của Manager."""
+    data = _safe_load(STOCKTAKE_FILE, {'sessions': [], 'adjustments': []})
+    return data
+
+
+def _build_snapshot_boxes_for_scope(scope_str):
+    """
+    Chốt mốc dữ liệu Box & PCS tại thời điểm nhân viên bắt đầu kiểm kê
+    từ inbound_receipts.json theo phạm vi kệ/khu vực được phân công.
+    """
+    receipts = _load_inbound_receipts()
+    scope_up = str(scope_str or '').upper()
+    snapshot = []
+
+    for r in receipts:
+        for b in r.get('boxes', []):
+            slot = str(b.get('shelf_position_id', '')).upper()
+            if not slot or b.get('box_status') not in ('Đang lưu trữ', 'Đã xếp kệ, chờ duyệt'):
+                continue
+            # Lọc theo phạm vi kệ/khu vực (VD: 'Kệ A1' -> khớp 'A1-', 'Khu A' -> khớp 'A')
+            matched = True
+            if 'KỆ ' in scope_up:
+                rack_code = scope_up.split('KỆ ')[-1].split('·')[0].strip()
+                matched = slot.startswith(rack_code)
+            elif 'KHU ' in scope_up:
+                zone_code = scope_up.split('KHU ')[-1].split('·')[0].strip()
+                matched = slot.startswith(zone_code)
+
+            if matched:
+                snapshot.append({
+                    'box_id': b.get('box_id'),
+                    'internal_qr': b.get('internal_qr'),
+                    'sku': b.get('sku'),
+                    'product_name': b.get('product_name'),
+                    'slot_code': slot,
+                    'system_pcs': int(b.get('quantity', 0)),
+                    'counted_pcs': None,
+                    'condition': 'Chưa kiểm',
+                    'issue_type': '',
+                    'count_round': 0
+                })
+    return snapshot
+
+
+# ================= ROUTES & API KIỂM KÊ KHO (STAFF) =================
+
+@app.route('/staff/stocktake')
+@staff_required
+def staff_stocktake_page():
+    return render_template('STAFF/staff_stocktake.html')
+
+
+@app.route('/api/staff/stock-counts', methods=['GET'])
+@staff_required
+def api_staff_stock_counts_list():
+    data = _load_staff_stocktake_sessions()
+    sessions = data.get('sessions', [])
+    stats = {
+        'waiting': sum(1 for s in sessions if s.get('status') == 'Chờ thực hiện'),
+        'counting': sum(1 for s in sessions if s.get('status') in ('Đang kiểm kê', 'Yêu cầu kiểm lại')),
+        'pending_approval': sum(1 for s in sessions if s.get('status') == 'Chờ phê duyệt'),
+        'completed': sum(1 for s in sessions if s.get('status') == 'Hoàn tất')
+    }
+    return jsonify({'sessions': sessions, 'stats': stats})
+
+
+@app.route('/api/staff/stock-counts/<session_id>', methods=['GET'])
+@staff_required
+def api_staff_stock_count_detail(session_id):
+    data = _load_staff_stocktake_sessions()
+    sess = next((s for s in data.get('sessions', []) if s['id'].upper() == session_id.upper()), None)
+    if not sess:
+        return jsonify({'error': 'Không tìm thấy phiếu kiểm kê'}), 404
+    return jsonify({'session': sess})
+
+
+@app.route('/api/staff/stock-counts/<session_id>/start', methods=['POST'])
+@staff_required
+def api_staff_stock_count_start(session_id):
+    """Bắt đầu kiểm kê & Chốt mốc tồn kho (Snapshot) chống sai lệch do biến động phát sinh."""
+    with _stocktake_staff_lock:
+        data = _load_staff_stocktake_sessions()
+        sess = next((s for s in data.get('sessions', []) if s['id'].upper() == session_id.upper()), None)
+        if not sess:
+            return jsonify({'error': 'Không tìm thấy phiếu kiểm kê'}), 404
+
+        if sess.get('status') == 'Chờ thực hiện':
+            sess['status'] = 'Đang kiểm kê'
+            sess['snapshot_time'] = datetime.now().strftime('%d/%m/%Y %H:%M')
+            if 'snapshot_boxes' not in sess:
+                sess['snapshot_boxes'] = _build_snapshot_boxes_for_scope(sess.get('scope', ''))
+            _safe_save(STOCKTAKE_FILE, data)
+
+    return jsonify({'status': 'ok', 'session': sess})
+
+
+@app.route('/api/staff/stock-counts/<session_id>/scan', methods=['POST'])
+@staff_required
+def api_staff_stock_count_scan(session_id):
+    """Kiểm tra mã vị trí kệ và QR nội bộ Box thuộc phạm vi kiểm kê."""
+    body = request.get_json(silent=True) or {}
+    scan_type = str(body.get('scan_type', '')).upper()
+    code = str(body.get('code', '')).strip()
+
+    if '/staff/box-info/' in code:
+        code = code.split('/staff/box-info/')[-1].strip()
+    elif '/q/' in code:
+        code = code.split('/q/')[-1].strip()
+
+    with _stocktake_staff_lock:
+        data = _load_staff_stocktake_sessions()
+        sess = next((s for s in data.get('sessions', []) if s['id'].upper() == session_id.upper()), None)
+        if not sess:
+            return jsonify({'error': 'Không tìm thấy phiếu kiểm kê'}), 404
+
+        if 'snapshot_boxes' not in sess:
+            sess['snapshot_boxes'] = _build_snapshot_boxes_for_scope(sess.get('scope', ''))
+            _safe_save(STOCKTAKE_FILE, data)
+
+        snap_boxes = sess.get('snapshot_boxes', [])
+
+        if scan_type == 'SHELF':
+            slot_up = code.upper()
+            hierarchy = _resolve_slot_hierarchy(slot_up)
+            # Kiểm tra vị trí có nằm trong Cấu hình kho không
+            shelves = _extract_available_shelves()
+            # Bao gồm cả các vị trí đã đầy trong warehouse_config.json
+            cfg = _safe_load('warehouse_config.json', {})
+            slot_exists = False
+            for z in cfg.get('zones', []):
+                for rk in z.get('racks', []):
+                    for fl in rk.get('floors', []):
+                        for sl in fl.get('slots', []):
+                            if str(sl.get('slot_code', '')).upper() == slot_up:
+                                slot_exists = True
+                                break
+            if not slot_exists and not shelves:
+                slot_exists = True
+            if not slot_exists:
+                return jsonify({'error': f'Mã vị trí "{slot_up}" không tồn tại trong sơ đồ kho SANOVA!'}), 404
+
+            boxes_in_slot = [b for b in snap_boxes if str(b.get('slot_code', '')).upper() == slot_up]
+            return jsonify({
+                'status': 'ok',
+                'slot_code': slot_up,
+                'hierarchy': hierarchy,
+                'boxes': boxes_in_slot
+            })
+
+        if scan_type == 'BOX':
+            slot_up = str(body.get('slot_code', '')).strip().upper()
+            box_obj = next((
+                b for b in snap_boxes
+                if (b.get('internal_qr') == code or b.get('box_id', '').upper() == code.upper())
+                and str(b.get('slot_code', '')).upper() == slot_up
+            ), None)
+
+            if not box_obj:
+                return jsonify({
+                    'error': f'Box "{code}" không thuộc vị trí {slot_up} trong phạm vi kiểm kê! Nếu tìm thấy Box nằm nhầm kệ, hãy dùng nút "+ Ghi nhận bất thường → Sai vị trí".'
+                }), 404
+
+            already = (box_obj.get('counted_pcs') is not None)
+            return jsonify({'status': 'ok', 'box': box_obj, 'already_counted': already})
+
+    return jsonify({'error': 'Loại quét không hợp lệ'}), 400
+
+
+@app.route('/api/staff/stock-counts/<session_id>/counts', methods=['POST'])
+@staff_required
+def api_staff_stock_count_record_pcs(session_id):
+    """Ghi nhận PCS kiểm đếm thực tế (Chỉ lưu kết quả đếm, tuyệt đối không tự sửa tồn kho)."""
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+
+    slot_up = str(body.get('slot_code', '')).strip().upper()
+    box_id = str(body.get('box_id', '')).strip().upper()
+    counted_pcs = int(body.get('counted_pcs', 0))
+    condition = str(body.get('condition', 'Bình thường')).strip()
+
+    if counted_pcs < 0:
+        return jsonify({'error': 'Số lượng PCS thực tế không được phép âm'}), 400
+
+    with _stocktake_staff_lock:
+        data = _load_staff_stocktake_sessions()
+        sess = next((s for s in data.get('sessions', []) if s['id'].upper() == session_id.upper()), None)
+        if not sess:
+            return jsonify({'error': 'Không tìm thấy phiếu kiểm kê'}), 404
+
+        snap_boxes = sess.get('snapshot_boxes', [])
+        box_obj = next((b for b in snap_boxes if b.get('box_id', '').upper() == box_id), None)
+        if not box_obj:
+            return jsonify({'error': 'Không tìm thấy Box trong danh sách kiểm kê'}), 404
+
+        box_obj['counted_pcs'] = counted_pcs
+        box_obj['condition'] = condition
+        box_obj['count_round'] = int(box_obj.get('count_round', 0)) + 1
+        box_obj['counted_by'] = emp_name
+        box_obj['counted_at'] = datetime.now().strftime('%H:%M')
+
+        # Tính số vị trí đã hoàn tất kiểm đếm
+        checked_slots = {b['slot_code'] for b in snap_boxes if b.get('counted_pcs') is not None or b.get('issue_type')}
+        sess['counted_slots'] = max(int(sess.get('counted_slots', 0)), len(checked_slots))
+        sess['status'] = 'Đang kiểm kê'
+        _safe_save(STOCKTAKE_FILE, data)
+
+        slot_boxes = [b for b in snap_boxes if str(b.get('slot_code', '')).upper() == slot_up]
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', f"Kiểm đếm Box {box_id} ({counted_pcs} PCS)", session_id, f"Vị trí: {slot_up}")
+
+    return jsonify({
+        'status': 'ok',
+        'slot_boxes': slot_boxes,
+        'counted_slots': sess['counted_slots'],
+        'total_slots': sess.get('total_slots', 1)
+    })
+
+
+@app.route('/api/staff/stock-counts/<session_id>/issues', methods=['POST'])
+@staff_required
+def api_staff_stock_count_issues(session_id):
+    """Ghi nhận bất thường kiểm kê: Không tìm thấy Box, Sai vị trí, Box phát sinh, Box hư hỏng."""
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+
+    slot_up = str(body.get('slot_code', '')).strip().upper()
+    issue_type = str(body.get('issue_type', '')).upper()
+    box_code = str(body.get('box_code', '')).strip().upper()
+    sku = str(body.get('sku', '')).strip().upper()
+    actual_pcs = int(body.get('actual_pcs', 0))
+    note = str(body.get('note', '')).strip()
+
+    if not box_code or not note:
+        return jsonify({'error': 'Vui lòng nhập mã Box và ghi chú chi tiết bất thường'}), 400
+
+    with _stocktake_staff_lock:
+        data = _load_staff_stocktake_sessions()
+        sess = next((s for s in data.get('sessions', []) if s['id'].upper() == session_id.upper()), None)
+        if not sess:
+            return jsonify({'error': 'Không tìm thấy phiếu kiểm kê'}), 404
+
+        snap_boxes = sess.setdefault('snapshot_boxes', [])
+        existing = next((b for b in snap_boxes if b.get('box_id', '').upper() == box_code), None)
+
+        if issue_type == 'NOT_FOUND':
+            if not existing:
+                return jsonify({'error': f'Box {box_code} không có trong danh sách mốc tồn của đợt kiểm kê này.'}), 404
+            existing['issue_type'] = 'NOT_FOUND'
+            existing['counted_pcs'] = 0
+            existing['condition'] = f"Không tìm thấy Box ({note})"
+        elif issue_type == 'UNREGISTERED_BOX':
+            snap_boxes.append({
+                'box_id': box_code,
+                'internal_qr': box_code,
+                'sku': sku or 'UNKNOWN',
+                'product_name': f"Box phát sinh ({sku or 'Chưa định danh'})",
+                'slot_code': slot_up or 'PHAT-SINH',
+                'system_pcs': 0,
+                'counted_pcs': actual_pcs,
+                'condition': f"Box phát sinh ngoài hệ thống: {note}",
+                'issue_type': 'UNREGISTERED_BOX',
+                'counted_by': emp_name
+            })
+        elif issue_type == 'WRONG_LOCATION':
+            snap_boxes.append({
+                'box_id': box_code,
+                'internal_qr': box_code,
+                'sku': sku or (existing['sku'] if existing else 'SKU'),
+                'product_name': existing['product_name'] if existing else 'Box sai vị trí',
+                'slot_code': slot_up or 'SAI-VI-TRI',
+                'system_pcs': existing['system_pcs'] if existing else 0,
+                'counted_pcs': actual_pcs if actual_pcs > 0 else (existing['system_pcs'] if existing else 0),
+                'condition': f"Sai vị trí (Tìm thấy tại {slot_up}): {note}",
+                'issue_type': 'WRONG_LOCATION',
+                'counted_by': emp_name
+            })
+        else:
+            if existing:
+                existing['issue_type'] = 'DAMAGED_BOX'
+                existing['condition'] = f"Box hư hỏng: {note}"
+
+        _safe_save(STOCKTAKE_FILE, data)
+
+    return jsonify({'status': 'ok', 'message': 'Đã ghi nhận bất thường vào biên bản kiểm kê (Chờ Manager xử lý).'})
+
+
+@app.route('/api/staff/stock-counts/<session_id>/summary', methods=['GET'])
+@staff_required
+def api_staff_stock_count_summary(session_id):
+    data = _load_staff_stocktake_sessions()
+    sess = next((s for s in data.get('sessions', []) if s['id'].upper() == session_id.upper()), None)
+    if not sess:
+        return jsonify({'error': 'Không tìm thấy phiếu kiểm kê'}), 404
+
+    snap_boxes = sess.get('snapshot_boxes', [])
+    records = [b for b in snap_boxes if b.get('counted_pcs') is not None or b.get('issue_type')]
+
+    matched = sum(1 for r in records if not r.get('issue_type') and int(r.get('counted_pcs', 0)) == int(r.get('system_pcs', 0)))
+    diff_cnt = sum(1 for r in records if not r.get('issue_type') and int(r.get('counted_pcs', 0)) != int(r.get('system_pcs', 0)))
+    misc_cnt = sum(1 for r in records if r.get('issue_type') in ('WRONG_LOCATION', 'UNREGISTERED_BOX'))
+    lost_dmg = sum(1 for r in records if r.get('issue_type') in ('NOT_FOUND', 'DAMAGED_BOX'))
+
+    return jsonify({
+        'session_id': sess['id'],
+        'status': sess.get('status'),
+        'counted_slots': sess.get('counted_slots', 0),
+        'total_slots': sess.get('total_slots', 0),
+        'matched_boxes': matched,
+        'diff_boxes': diff_cnt,
+        'misc_boxes': misc_cnt,
+        'lost_damaged_boxes': lost_dmg,
+        'records': records
+    })
+
+
+@app.route('/api/staff/stock-counts/<session_id>/submit', methods=['POST'])
+@staff_required
+def api_staff_stock_count_submit(session_id):
+    """
+    STAFF gửi kết quả kiểm kê cho Manager:
+    - Không tự sửa tồn kho trên hệ thống
+    - Nếu có chênh lệch, tự động sinh yêu cầu điều chỉnh (DC-...) sang hàng đợi duyệt của Manager
+    """
+    user = session.get('user', {})
+    emp_name = user.get('name', 'Nhân viên kho')
+    body = request.get_json(silent=True) or {}
+    note = str(body.get('note', '')).strip()
+
+    with _stocktake_staff_lock:
+        data = _load_staff_stocktake_sessions()
+        sess = next((s for s in data.get('sessions', []) if s['id'].upper() == session_id.upper()), None)
+        if not sess:
+            return jsonify({'error': 'Không tìm thấy phiếu kiểm kê'}), 404
+        if sess.get('status') in ('Chờ phê duyệt', 'Hoàn tất'):
+            return jsonify({'error': 'Phiếu kiểm kê này đã được gửi hoặc hoàn tất trước đó!'}), 400
+
+        snap_boxes = sess.get('snapshot_boxes', [])
+        records = [b for b in snap_boxes if b.get('counted_pcs') is not None or b.get('issue_type')]
+        if not records:
+            return jsonify({'error': 'Vui lòng kiểm đếm ít nhất 01 Box hoặc vị trí trước khi gửi kết quả!'}), 400
+
+        shortage = sum(max(0, int(r.get('system_pcs', 0)) - int(r.get('counted_pcs', 0))) for r in records)
+        surplus = sum(max(0, int(r.get('counted_pcs', 0)) - int(r.get('system_pcs', 0))) for r in records)
+        has_any_issue = any(r.get('issue_type') for r in records)
+
+        sess['diff_abs_pcs'] = shortage + surplus
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
+
+        if shortage == 0 and surplus == 0 and not has_any_issue:
+            sess['status'] = 'Hoàn tất'
+            _safe_save(STOCKTAKE_FILE, data)
+            msg = f"Đã hoàn tất kiểm kê {session_id}: 100% số liệu khớp hệ thống."
+        else:
+            sess['status'] = 'Chờ phê duyệt'
+            adj_id = f"DC-{str(len(data.get('adjustments', [])) + 19).zfill(4)}"
+            diff_items = [
+                {
+                    'sku': r['sku'],
+                    'name': r['product_name'],
+                    'box_code': r['box_id'],
+                    'location': r['slot_code'],
+                    'system_pcs': int(r.get('system_pcs', 0)),
+                    'counted_pcs': int(r.get('counted_pcs', 0))
+                }
+                for r in records
+                if int(r.get('counted_pcs', 0)) != int(r.get('system_pcs', 0)) or r.get('issue_type')
+            ]
+
+            data.setdefault('adjustments', []).insert(0, {
+                'id': adj_id,
+                'session_id': session_id,
+                'count_type': sess.get('scope_type_label', 'Theo kệ'),
+                'scope': sess.get('scope', '').split('·')[0].strip(),
+                'full_scope_path': f"Kho chính > {sess.get('scope', '')}",
+                'sender': emp_name,
+                'snapshot_at': sess.get('snapshot_time', now_str),
+                'sent_at': now_str,
+                'total_shortage': shortage,
+                'total_surplus': surplus,
+                'status': 'Chờ phê duyệt',
+                'scope_completed': True,
+                'has_post_count_movement': False,
+                'explanation': note or 'Gửi kết quả kiểm đếm thực tế từ nhân viên kho.',
+                'items': diff_items,
+                'history': [
+                    {'time': now_str, 'actor': emp_name, 'action': 'Gửi kết quả kiểm kê', 'note': note or f'Tạo yêu cầu điều chỉnh {adj_id}'}
+                ]
+            })
+            _safe_save(STOCKTAKE_FILE, data)
+            msg = f"Đã gửi kết quả kiểm kê {session_id} và tạo yêu cầu điều chỉnh {adj_id} sang Manager phê duyệt."
+
+    if 'add_audit_log' in globals():
+        add_audit_log('Nghiệp vụ kho', 'Gửi kết quả kiểm kê kho cho Manager', session_id, f"Lệch: -{shortage} / +{surplus} PCS")
+
+    return jsonify({'status': 'ok', 'message': msg})
+# Lịch sử kiểm kê kho của nhân viên
+STAFF_TRANSACTIONS_FILE = 'staff_transactions.json'
+
+
+def _build_unified_staff_transactions():
+    """
+    Tổng hợp & đồng bộ tự động lịch sử sự kiện nghiệp vụ kho từ 7 phân hệ thực tế:
+    1. Nhập kho (inbound_receipts.json)
+    2. OUT – Lấy hàng (picking_orders.json)
+    3. RETURNED – Trả hàng (return_orders.json)
+    4. Pre-packing & Combo (prepacking_orders.json)
+    5. Đóng gói & 6. Bàn giao (packing_orders.json + approvals_data.json)
+    7. Kiểm kê kho (stocktake_data.json)
+    Tuyệt đối không trộn nhật ký hệ thống Admin (đăng nhập/đổi mật khẩu/phân quyền)
+    và không cho phép STAFF chỉnh sửa hay xóa lịch sử.
+    """
+    events = []
+    approvals = _safe_load('approvals_data.json', {})
+    processed_map = {t.get('id'): t for t in approvals.get('processed_tickets', [])}
+
+    # 1. Sự kiện Nhập kho
+    for r in _load_inbound_receipts():
+        boxes = r.get('boxes', [])
+        placed_boxes = [b for b in boxes if b.get('shelf_position_id')]
+        total_pcs = sum(int(b.get('quantity', 0)) for b in placed_boxes)
+        rev_info = processed_map.get(r['id'], {})
+        is_approved = (r.get('status') == 'Hoàn thành')
+        is_rejected = (r.get('status') == 'Cần xử lý lại')
+
+        st_label = 'Hoàn thành' if is_approved else ('Có vấn đề' if is_rejected else 'Chờ xác nhận')
+        delta_pcs = total_pcs if is_approved else 0
+
+        events.append({
+            'transaction_id': f"TX-IN-{r['id'].replace('NK-', '')}",
+            'transaction_type': 'INBOUND',
+            'type_label': 'Nhập kho',
+            'event_type': 'Xác nhận nhập lên kệ' if is_approved else ('Manager trả phiếu' if is_rejected else 'Đã xếp kệ, chờ duyệt'),
+            'reference_id': r['id'],
+            'related_order_id': r.get('doc_ref', ''),
+            'source_transaction_id': '',
+            'box_id': f"{len(placed_boxes)} Box" if len(placed_boxes) != 1 else placed_boxes[0]['box_id'],
+            'product_id': placed_boxes[0]['sku'] if placed_boxes else '--',
+            'operation_qty': total_pcs,
+            'quantity_unit': 'PCS',
+            'quantity_change': delta_pcs,
+            'location_snapshot': ', '.join(sorted({b['shelf_position_id'] for b in placed_boxes})) or 'Khu tiếp nhận',
+            'performed_by': r.get('assignee', 'Nhân viên kho'),
+            'approved_by': rev_info.get('reviewed_by', ''),
+            'occurred_at': r.get('created_at', datetime.now().strftime('%d/%m/%Y %H:%M')),
+            'date_ymd': str(r.get('created_at', ''))[:10] or datetime.now().strftime('%Y-%m-%d'),
+            'status': st_label,
+            'note': r.get('reject_reason') or r.get('notes', ''),
+            'source_url': f"/staff/inbound?ticket={r['id']}",
+            'details': [
+                {
+                    'box_id': b['box_id'],
+                    'sku': f"{b['sku']} · {b['product_name']}",
+                    'location': b.get('shelf_position_id') or 'Chưa xếp kệ',
+                    'op_qty': f"{b['quantity']} PCS",
+                    'delta_qty': f"+{b['quantity']} PCS" if is_approved else '0 (Chờ duyệt)'
+                }
+                for b in boxes
+            ]
+        })
+
+    # 2. Sự kiện OUT – Lấy hàng (Từng lượt giao dịch lấy hàng từ từng Box & vị trí cụ thể)
+    for o in _load_picking_orders():
+        for idx, tx in enumerate(o.get('transactions', []), start=1):
+            tx_id = tx.get('tx_id') if str(tx.get('tx_id', '')).startswith('TX-') else f"TX-OUT-{o['id'].replace('OUT-', '')}-{idx}"
+            events.append({
+                'transaction_id': tx_id,
+                'transaction_type': 'OUT',
+                'type_label': 'OUT – Lấy hàng',
+                'event_type': 'Đã lấy hàng khỏi kệ',
+                'reference_id': o['id'],
+                'related_order_id': o.get('order_code', ''),
+                'source_transaction_id': '',
+                'box_id': tx.get('box_id', '--'),
+                'product_id': f"{o['sku']} · {o.get('product_name', '')}",
+                'operation_qty': int(tx.get('picked_pcs', 0)),
+                'quantity_unit': 'PCS',
+                'quantity_change': -int(tx.get('picked_pcs', 0)),
+                'location_snapshot': tx.get('location_snapshot', '--'),
+                'performed_by': tx.get('staff_name', o.get('assignee', 'Nhân viên kho')),
+                'approved_by': '',
+                'occurred_at': f"{datetime.now().strftime('%d/%m/%Y')} {tx.get('time', '09:00')}",
+                'date_ymd': datetime.now().strftime('%Y-%m-%d'),
+                'status': 'Hoàn thành',
+                'note': o.get('shortage_note', ''),
+                'source_url': f"/staff/picking-returns?tab=OUT&ticket={o['id']}",
+                'details': [{
+                    'box_id': tx.get('box_id', '--'),
+                    'sku': o['sku'],
+                    'location': tx.get('location_snapshot', '--'),
+                    'op_qty': f"{tx.get('picked_pcs', 0)} PCS",
+                    'delta_qty': f"-{tx.get('picked_pcs', 0)} PCS"
+                }]
+            })
+
+    # 3. Sự kiện RETURNED – Trả hàng (Liên kết chặt chẽ với phiếu OUT nguồn)
+    for ret in _load_return_orders():
+        is_done = (ret.get('status') == 'Hoàn thành')
+        is_issue = (ret.get('status') == 'Chờ xử lý lỗi')
+        ret_pcs = int(ret.get('returned_pcs') or ret.get('return_qty', 0))
+        events.append({
+            'transaction_id': f"TX-RT-{ret['id'].replace('RETURN-', '')}",
+            'transaction_type': 'RETURNED',
+            'type_label': 'RETURNED – Trả hàng',
+            'event_type': 'Hoàn tất trả về kệ' if is_done else ('Cách ly hàng lỗi' if is_issue else 'Chờ trả về kệ'),
+            'reference_id': ret['id'],
+            'related_order_id': ret.get('order_code', ''),
+            'source_transaction_id': ret.get('out_order_id', ''),
+            'box_id': ret.get('source_box_id') or 'BOX-RT',
+            'product_id': f"{ret['sku']} · {ret.get('product_name', '')}",
+            'operation_qty': ret_pcs,
+            'quantity_unit': 'PCS',
+            'quantity_change': ret_pcs if is_done else 0,
+            'location_snapshot': ret.get('suggested_location_path') or ret.get('source_shelf_code', '--'),
+            'performed_by': ret.get('assignee', 'Nhân viên kho'),
+            'approved_by': '',
+            'occurred_at': f"{datetime.now().strftime('%d/%m/%Y')} {ret.get('created_at', '10:00')}",
+            'date_ymd': datetime.now().strftime('%Y-%m-%d'),
+            'status': 'Hoàn thành' if is_done else ('Có vấn đề' if is_issue else 'Chờ xác nhận'),
+            'note': ret.get('reason', ''),
+            'source_url': f"/staff/picking-returns?tab=RETURNED&ticket={ret['id']}",
+            'details': [
+                {
+                    'box_id': tx.get('box_id', '--'),
+                    'sku': ret['sku'],
+                    'location': tx.get('location_snapshot', '--'),
+                    'op_qty': f"{tx.get('returned_pcs', 0)} PCS",
+                    'delta_qty': f"+{tx.get('returned_pcs', 0)} PCS" if 'Nguyên vẹn' in tx.get('condition', '') else '0 (Cách ly)'
+                }
+                for tx in ret.get('transactions', [])
+            ]
+        })
+
+    # 4. Sự kiện Pre-packing & Combo (Biến động tồn = 0)
+    for pre in _safe_load(PREPACKING_FILE, []):
+        is_done = pre.get('status') in ('Sẵn sàng đóng gói', 'Đã chuyển đóng gói')
+        is_issue = pre.get('status') in ('Chờ bổ sung', 'Chờ xử lý lỗi')
+        events.append({
+            'transaction_id': f"TX-PRE-{pre['id'].replace('PRE-', '')}",
+            'transaction_type': 'PREPACKING',
+            'type_label': 'Pre-packing',
+            'event_type': pre.get('status', 'Đang chuẩn bị'),
+            'reference_id': pre['id'],
+            'related_order_id': pre.get('order_code', ''),
+            'source_transaction_id': ', '.join(pre.get('out_refs', [])),
+            'box_id': 'Combo' if pre.get('is_combo') else 'Đơn lẻ',
+            'product_id': pre.get('title', '--'),
+            'operation_qty': int(pre.get('prepared_qty', 0)),
+            'quantity_unit': 'Combo' if pre.get('is_combo') else 'PCS',
+            'quantity_change': 0,
+            'location_snapshot': 'Bàn Pre-packing',
+            'performed_by': pre.get('assignee', 'Nhân viên kho'),
+            'approved_by': '',
+            'occurred_at': f"{datetime.now().strftime('%d/%m/%Y')} {pre.get('created_at', '11:00')}",
+            'date_ymd': datetime.now().strftime('%Y-%m-%d'),
+            'status': 'Hoàn thành' if is_done else ('Có vấn đề' if is_issue else 'Chờ xác nhận'),
+            'note': '',
+            'source_url': '/staff/prepacking',
+            'details': [
+                {
+                    'box_id': ', '.join(it.get('source_boxes', [])) or '--',
+                    'sku': f"{it['sku']} · {it['product_name']}",
+                    'location': 'Bàn Pre-packing',
+                    'op_qty': f"{it['received_pcs']} PCS",
+                    'delta_qty': '0 (Đã trừ tại OUT)'
+                }
+                for it in pre.get('items', [])
+            ]
+        })
+
+    # 5 & 6. Sự kiện Đóng gói & Bàn giao (Biến động tồn = 0)
+    for pk in _safe_load(PACKING_FILE, []):
+        pkgs = pk.get('packages', [])
+        total_pcs = sum(int(x.get('pcs_equiv', x['qty'])) for p in pkgs for x in p.get('items', []))
+        if pk.get('packing_status') in ('IN_PROGRESS', 'COMPLETED', 'ISSUE'):
+            events.append({
+                'transaction_id': f"TX-PK-{pk['id'].replace('PK-', '')}",
+                'transaction_type': 'PACKING',
+                'type_label': 'Đóng gói',
+                'event_type': 'Hoàn tất đóng gói' if pk.get('packing_status') == 'COMPLETED' else 'Đang đóng gói',
+                'reference_id': pk['id'],
+                'related_order_id': pk.get('order_code', ''),
+                'source_transaction_id': pk.get('source_label', ''),
+                'box_id': ', '.join(p['package_code'] for p in pkgs) or f"{len(pkgs)} kiện",
+                'product_id': pk.get('summary_text', '--'),
+                'operation_qty': total_pcs,
+                'quantity_unit': 'PCS',
+                'quantity_change': 0,
+                'location_snapshot': 'Bàn đóng gói',
+                'performed_by': pk.get('assignee', 'Nhân viên kho'),
+                'approved_by': '',
+                'occurred_at': datetime.now().strftime('%d/%m/%Y %H:%M'),
+                'date_ymd': datetime.now().strftime('%Y-%m-%d'),
+                'status': 'Hoàn thành' if pk.get('packing_status') == 'COMPLETED' else ('Có vấn đề' if pk.get('packing_status') == 'ISSUE' else 'Chờ xác nhận'),
+                'note': '',
+                'source_url': f"/staff/packing-handover?ticket={pk['id']}",
+                'details': [
+                    {
+                        'box_id': p['package_code'],
+                        'sku': ', '.join(f"{x['name']} ({x['qty']} {x['unit']})" for x in p.get('items', [])) or 'Kiện trống',
+                        'location': 'Bàn đóng gói',
+                        'op_qty': f"{sum(int(x.get('pcs_equiv', x['qty'])) for x in p.get('items', []))} PCS",
+                        'delta_qty': '0 (Không trừ trùng)'
+                    }
+                    for p in pkgs
+                ]
+            })
+
+        if pk.get('handover_id'):
+            ho_id = pk['handover_id']
+            h_st = pk.get('handover_status')
+            st_ho = 'Hoàn thành' if h_st == 'APPROVED' else ('Có vấn đề' if h_st == 'REJECTED' else 'Chờ xác nhận')
+            events.append({
+                'transaction_id': f"TX-HO-{ho_id.replace('BG-', '')}",
+                'transaction_type': 'HANDOVER',
+                'type_label': 'Bàn giao',
+                'event_type': 'Manager xác nhận bàn giao' if h_st == 'APPROVED' else ('Manager trả phiếu bàn giao' if h_st == 'REJECTED' else 'Gửi bàn giao chờ duyệt'),
+                'reference_id': ho_id,
+                'related_order_id': pk.get('order_code', ''),
+                'source_transaction_id': pk['id'],
+                'box_id': f"{len(pkgs)} kiện",
+                'product_id': f"Đơn {pk.get('order_code')} ({pk.get('platform')})",
+                'operation_qty': total_pcs,
+                'quantity_unit': 'PCS',
+                'quantity_change': 0,
+                'location_snapshot': f"Người nhận: {pk.get('receiver', '--')}",
+                'performed_by': pk.get('handover_by') or pk.get('assignee', 'Nhân viên kho'),
+                'approved_by': pk.get('reviewed_by', ''),
+                'occurred_at': datetime.now().strftime('%d/%m/%Y %H:%M'),
+                'date_ymd': datetime.now().strftime('%Y-%m-%d'),
+                'status': st_ho,
+                'note': pk.get('reject_reason') or pk.get('handover_note', ''),
+                'source_url': f"/staff/packing-handover?ticket={pk['id']}",
+                'details': []
+            })
+
+    # 7. Sự kiện Kiểm kê kho (Chỉ ghi nhận số đếm, biến động tồn = 0 cho đến khi Manager duyệt điều chỉnh)
+    st_data = _safe_load(STOCKTAKE_FILE, {'sessions': [], 'adjustments': []})
+    for s in st_data.get('sessions', []):
+        if s.get('status') == 'Chờ thực hiện':
+            continue
+        is_done = (s.get('status') == 'Hoàn tất')
+        is_recount = (s.get('status') == 'Yêu cầu kiểm lại')
+        events.append({
+            'transaction_id': f"TX-KK-{s['id'].replace('KK-', '')}",
+            'transaction_type': 'STOCKTAKE',
+            'type_label': 'Kiểm kê kho',
+            'event_type': s.get('status', 'Đang kiểm kê'),
+            'reference_id': s['id'],
+            'related_order_id': '',
+            'source_transaction_id': '',
+            'box_id': f"{s.get('counted_slots', 0)}/{s.get('total_slots', 0)} vị trí",
+            'product_id': s.get('scope', '--'),
+            'operation_qty': int(s.get('counted_slots', 0)),
+            'quantity_unit': 'vị trí',
+            'quantity_change': 0,
+            'location_snapshot': s.get('scope', '--'),
+            'performed_by': s.get('assignee', 'Nhân viên kho'),
+            'approved_by': 'Manager' if is_done else '',
+            'occurred_at': s.get('snapshot_time') or datetime.now().strftime('%d/%m/%Y %H:%M'),
+            'date_ymd': datetime.now().strftime('%Y-%m-%d'),
+            'status': 'Hoàn thành' if is_done else ('Có vấn đề' if is_recount else 'Chờ xác nhận'),
+            'note': s.get('note', ''),
+            'source_url': f"/staff/stocktake?ticket={s['id']}",
+            'details': [
+                {
+                    'box_id': b['box_id'],
+                    'sku': f"{b['sku']} · {b['product_name']}",
+                    'location': b['slot_code'],
+                    'op_qty': f"{b['counted_pcs']} PCS",
+                    'delta_qty': '0 (Chờ Manager duyệt điều chỉnh)'
+                }
+                for b in s.get('snapshot_boxes', []) if b.get('counted_pcs') is not None
+            ]
+        })
+
+    return events
+
+
+# ================= ROUTES & API LỊCH SỬ GIAO DỊCH (STAFF) =================
+
+@app.route('/staff/history')
+@staff_required
+def staff_history_page():
+    return render_template('STAFF/staff_history.html')
+
+
+@app.route('/api/staff/transactions/summary', methods=['GET'])
+@staff_required
+def api_staff_transactions_summary():
+    events = _build_unified_staff_transactions()
+    today_ymd = datetime.now().strftime('%Y-%m-%d')
+    return jsonify({
+        'today': sum(1 for e in events if e.get('date_ymd') == today_ymd),
+        'completed': sum(1 for e in events if e.get('status') == 'Hoàn thành'),
+        'waiting': sum(1 for e in events if e.get('status') == 'Chờ xác nhận'),
+        'issues': sum(1 for e in events if e.get('status') == 'Có vấn đề')
+    })
+
+
+@app.route('/api/staff/transactions', methods=['GET'])
+@staff_required
+def api_staff_transactions_list():
+    events = _build_unified_staff_transactions()
+    q = str(request.args.get('q', '')).strip().lower()
+    tx_type = str(request.args.get('type', 'ALL')).strip().upper()
+    status = str(request.args.get('status', 'ALL')).strip()
+    date_range = str(request.args.get('range', 'TODAY')).strip().upper()
+    from_d = str(request.args.get('from', '')).strip()
+    to_d = str(request.args.get('to', '')).strip()
+
+    today_dt = datetime.now().date()
+    filtered = []
+
+    for e in events:
+        if tx_type != 'ALL' and e.get('transaction_type') != tx_type:
+            continue
+        if status != 'ALL' and e.get('status') != status:
+            continue
+
+        # Lọc theo khoảng thời gian
+        ev_date_str = str(e.get('date_ymd', ''))[:10]
+        try:
+            ev_dt = datetime.strptime(ev_date_str, '%Y-%m-%d').date()
+        except Exception:
+            ev_dt = today_dt
+
+        if date_range == 'TODAY' and ev_dt != today_dt:
+            continue
+        elif date_range == '7D' and (today_dt - ev_dt).days > 7:
+            continue
+        elif date_range == '30D' and (today_dt - ev_dt).days > 30:
+            continue
+        elif date_range == 'CUSTOM':
+            if from_d and ev_date_str < from_d:
+                continue
+            if to_d and ev_date_str > to_d:
+                continue
+
+        if q:
+            hay = f"{e['transaction_id']} {e['reference_id']} {e['related_order_id']} {e['box_id']} {e['product_id']} {e['location_snapshot']}".lower()
+            if q not in hay:
+                continue
+
+        filtered.append(e)
+
+    return jsonify({'items': filtered, 'total': len(filtered)})
+
+
+@app.route('/api/staff/transactions/<tx_id>', methods=['GET'])
+@staff_required
+def api_staff_transaction_detail(tx_id):
+    events = _build_unified_staff_transactions()
+    found = next((e for e in events if e['transaction_id'].upper() == tx_id.upper()), None)
+    if not found:
+        return jsonify({'error': 'Không tìm thấy giao dịch hoặc bạn không có quyền xem'}), 404
+    return jsonify({'transaction': found})
+
+
+@app.route('/api/staff/transactions/<tx_id>/trace', methods=['GET'])
+@staff_required
+def api_staff_transaction_trace(tx_id):
+    """Truy vết toàn bộ các giao dịch liên kết cùng mã đơn hàng hoặc phiếu nguồn."""
+    events = _build_unified_staff_transactions()
+    target = next((e for e in events if e['transaction_id'].upper() == tx_id.upper()), None)
+    if not target:
+        return jsonify({'chain': []})
+
+    order_ref = target.get('related_order_id')
+    ref_id = target.get('reference_id')
+    src_id = target.get('source_transaction_id')
+
+    chain = [
+        e for e in events
+        if e['transaction_id'] != target['transaction_id']
+        and (
+            (order_ref and e.get('related_order_id') == order_ref)
+            or (src_id and e.get('reference_id') in src_id)
+            or (ref_id and ref_id in str(e.get('source_transaction_id', '')))
+        )
+    ]
+    return jsonify({'chain': chain})
+
+# Tài Khoản Staff mặc định: Nhân viên kho (STAFF)
+# ================= ROUTES & API TÀI KHOẢN CÁ NHÂN (STAFF) =================
+
+@app.route('/staff/profile', methods=['GET'])
+@staff_required
+def staff_profile_page():
+    return render_template('STAFF/staff_profile.html')
+
+
+@app.route('/api/staff/profile', methods=['GET'])
+@staff_required
+def api_staff_profile_get():
+    """
+    Lấy trực tiếp 100% thông tin hồ sơ từ users.json do Admin tạo,
+    cùng danh sách quyền từ roles.json và chính sách mật khẩu từ system_settings.json.
+    """
+    sess_user = session.get('user', {})
+    username = sess_user.get('username')
+
+    users = load_users()
+    user_record = users.get(username)
+    if not user_record:
+        return jsonify({'error': 'Không tìm thấy hồ sơ tài khoản trong hệ thống'}), 404
+
+    role_name = user_record.get('role', 'Nhân viên kho')
+    # Đọc danh sách quyền thực tế của vai trò Nhân viên kho
+    roles_perm_map = load_roles()
+    perms_list = roles_perm_map.get(role_name, ROLE_PERMISSIONS.get('Nhân viên kho', []))
+
+    # Đọc chính sách mật khẩu hiện hành
+    sys_cfg = load_system_settings()
+    pwd_cfg = sys_cfg.get('password', {})
+    min_len = pwd_cfg.get('min_length', 8)
+    reqs = [f"Tối thiểu {min_len} ký tự"]
+    if pwd_cfg.get('require_uppercase'):
+        reqs.append("có chữ in hoa")
+    if pwd_cfg.get('require_number'):
+        reqs.append("có chữ số")
+    if pwd_cfg.get('require_special'):
+        reqs.append("có ký tự đặc biệt")
+
+    return jsonify({
+        'user': {
+            'username': username,
+            'staff_code': user_record.get('staff_code', '--'),
+            'name': user_record.get('name', ''),
+            'email': user_record.get('email', ''),
+            'phone': user_record.get('phone', ''),
+            'role': role_name,
+            'scope': user_record.get('scope', 'Kho chính - SANOVA'),
+            'status': user_record.get('status', 'Hoạt động'),
+            'created_at': user_record.get('created_at', ''),
+            'last_login': user_record.get('last_login', '')
+        },
+        'shift': get_current_shift_info(),
+        'permissions': perms_list,
+        'password_policy_text': f"Chính sách mật khẩu hệ thống: {', '.join(reqs)}."
+    })
+
+
+@app.route('/api/staff/profile', methods=['PATCH'])
+@staff_required
+def api_staff_profile_update():
+    """
+    Chỉ cho phép STAFF cập nhật số điện thoại và email liên hệ của chính mình.
+    Tuyệt đối chặn sửa họ tên, mã nhân viên, vai trò, kho làm việc hoặc trạng thái.
+    """
+    sess_user = session.get('user', {})
+    username = sess_user.get('username')
+    body = request.get_json(silent=True) or {}
+
+    phone = str(body.get('phone', '')).strip()
+    email = str(body.get('email', '')).strip()
+
+    if not email or '@' not in email:
+        return jsonify({'error': 'Địa chỉ email liên hệ không hợp lệ'}), 400
+
+    users = load_users()
+    if username not in users:
+        return jsonify({'error': 'Tài khoản không tồn tại'}), 404
+
+    target = users[username]
+    old_email = target.get('email', '')
+    old_phone = target.get('phone', '')
+
+    changes = []
+    if old_email != email:
+        changes.append({'field': 'Email liên hệ', 'before': old_email, 'after': email})
+        target['email'] = email
+    if old_phone != phone:
+        changes.append({'field': 'Số điện thoại', 'before': old_phone, 'after': phone})
+        target['phone'] = phone
+
+    save_users(users)
+
+    # Đồng bộ lại vào session hiện tại
+    session['user']['email'] = email
+    session.modified = True
+
+    msg = 'Đã cập nhật thông tin liên hệ thành công!'
+    if old_email != email:
+        msg = f'Đã cập nhật Email liên hệ sang {email}. Vui lòng kiểm tra hộp thư để xác minh địa chỉ mới.'
+
+    if changes and 'add_audit_log' in globals():
+        add_audit_log(
+            category='Tài khoản',
+            action='Nhân viên cập nhật thông tin liên hệ cá nhân',
+            target=username,
+            changes=changes,
+            result='Thành công'
+        )
+
+    return jsonify({'status': 'ok', 'message': msg})
+
+
+@app.route('/api/staff/change-password', methods=['POST'])
+@staff_required
+def api_staff_change_password():
+    """
+    Đổi mật khẩu đăng nhập cho STAFF:
+    - Chống thử sai liên tục (tối đa 5 lần trong phiên)
+    - Xác thực mật khẩu hiện tại từ users.json
+    - Kiểm tra tuân thủ chính sách mật khẩu của Admin (system_settings.json)
+    - Băm mật khẩu an toàn và ghi nhận sự kiện bảo mật (không lưu mật khẩu vào log)
+    """
+    fail_cnt = int(session.get('staff_pwd_fails', 0))
+    if fail_cnt >= 5:
+        return jsonify({'error': 'Bạn đã nhập sai mật khẩu hiện tại quá 5 lần. Vui lòng đăng xuất và đăng nhập lại!'}), 429
+
+    sess_user = session.get('user', {})
+    username = sess_user.get('username')
+    body = request.get_json(silent=True) or {}
+
+    cur_pwd = str(body.get('current_password', ''))
+    new_pwd = str(body.get('new_password', ''))
+    cfm_pwd = str(body.get('confirm_password', ''))
+
+    users = load_users()
+    if username not in users:
+        return jsonify({'error': 'Tài khoản không tồn tại'}), 404
+
+    if not verify_password(users[username].get('password'), cur_pwd):
+        session['staff_pwd_fails'] = fail_cnt + 1
+        if 'add_audit_log' in globals():
+            add_audit_log('Bảo mật', 'Nhân viên đổi mật khẩu thất bại (Sai mật khẩu cũ)', username, result='Thất bại')
+        return jsonify({'error': 'Mật khẩu hiện tại không chính xác!'}), 400
+
+    if new_pwd != cfm_pwd:
+        return jsonify({'error': 'Xác nhận mật khẩu mới không khớp!'}), 400
+
+    if cur_pwd == new_pwd:
+        return jsonify({'error': 'Mật khẩu mới phải khác mật khẩu hiện tại!'}), 400
+
+    # Kiểm tra tuân thủ chính sách mật khẩu trong system_settings.json
+    sys_cfg = load_system_settings()
+    pwd_cfg = sys_cfg.get('password', {})
+    min_len = int(pwd_cfg.get('min_length', 8))
+
+    if len(new_pwd) < min_len:
+        return jsonify({'error': f'Mật khẩu mới phải có tối thiểu {min_len} ký tự theo chính sách hệ thống!'}), 400
+    if pwd_cfg.get('require_uppercase') and not any(c.isupper() for c in new_pwd):
+        return jsonify({'error': 'Mật khẩu mới phải chứa ít nhất 1 chữ cái in hoa (A-Z)!'}), 400
+    if pwd_cfg.get('require_number') and not any(c.isdigit() for c in new_pwd):
+        return jsonify({'error': 'Mật khẩu mới phải chứa ít nhất 1 chữ số (0-9)!'}), 400
+    if pwd_cfg.get('require_special') and new_pwd.isalnum():
+        return jsonify({'error': 'Mật khẩu mới phải chứa ít nhất 1 ký tự đặc biệt!'}), 400
+
+    session['staff_pwd_fails'] = 0
+    users[username]['password'] = hash_password(new_pwd)
+    save_users(users)
+
+    if 'add_audit_log' in globals():
+        add_audit_log(
+            category='Bảo mật',
+            action='Nhân viên tự đổi mật khẩu tài khoản cá nhân',
+            target=username,
+            result='Thành công',
+            reason='Cập nhật mật khẩu cá nhân'
+        )
+
+    return jsonify({'status': 'ok', 'message': 'Đổi mật khẩu thành công!'})
+
+
+@app.route('/api/staff/sessions', methods=['GET'])
+@staff_required
+def api_staff_sessions_list():
+    """Liệt kê phiên hiện tại và lịch sử đăng nhập của chính nhân viên từ audit_logs.json."""
+    sess_user = session.get('user', {})
+    username = sess_user.get('username', '')
+    revoked = set(session.get('revoked_staff_sessions', []))
+
+    cur_ip = request.headers.get('X-Forwarded-For', request.remote_addr or '127.0.0.1')
+    cur_dev = request.headers.get('User-Agent', 'Trình duyệt hiện tại')[:65]
+
+    sessions_list = [{
+        'id': 'SES-CURRENT',
+        'device': cur_dev,
+        'ip': cur_ip,
+        'time': 'Đang hoạt động',
+        'is_current': True
+    }]
+
+    for lg in load_logs():
+        if lg.get('target') == username and 'Đăng nhập hệ thống' in str(lg.get('action', '')):
+            sid = lg.get('id', '')
+            if sid in revoked:
+                continue
+            sessions_list.append({
+                'id': sid,
+                'device': str(lg.get('device', 'Web Browser'))[:65],
+                'ip': lg.get('ip', '127.0.0.1'),
+                'time': lg.get('timestamp', ''),
+                'is_current': False
+            })
+            if len(sessions_list) >= 8:
+                break
+
+    return jsonify({'sessions': sessions_list})
+
+
+@app.route('/api/staff/sessions/<sess_id>', methods=['DELETE'])
+@staff_required
+def api_staff_session_revoke(sess_id):
+    revoked = set(session.get('revoked_staff_sessions', []))
+    revoked.add(sess_id)
+    session['revoked_staff_sessions'] = list(revoked)
+    return jsonify({'status': 'ok'})
 # ==========================================================
 # 14. KHỞI CHẠY ỨNG DỤNG FLASK
 

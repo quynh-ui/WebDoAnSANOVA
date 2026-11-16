@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đóng gói & Bàn giao · SANOVA WMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #063b2c;
+            --sidebar-active: #167963;
+            --brand-mint: #79b49f;
+            --primary: #0f766e;
+            --primary-hover: #0d5c56;
+            --bg-main: #f4f7f6;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --warning: #d97706;
+            --warning-bg: #fffbeb;
+            --info: #0284c7;
+            --info-bg: #f0f9ff;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+        }
+
+        /* ================= 1. SIDEBAR CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            left: 0;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .sidebar-top {
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .sidebar-top::-webkit-scrollbar { display: none; }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 10px 22px;
+        }
+
+        .brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-category {
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--brand-mint);
+            letter-spacing: 0.6px;
+            padding: 0 10px 14px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            color: #e2ece9;
+            text-decoration: none;
+            font-size: 14.5px;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.14);
+            padding-top: 14px;
+            margin-top: 10px;
+        }
+
+        .logout-link:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        /* ================= 2. VÙNG NỘI DUNG CHÍNH ================= */
+        .main-content {
+            flex-grow: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 24px 32px 48px;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #063b2c;
+            letter-spacing: -0.3px;
+        }
+
+        .page-sub {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header-icons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .circle-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #334155;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .circle-icon-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* 4 THẺ KPI DẠNG LƯỚI 2x2 GIỐNG ẢNH MẪU */
+        .kpi-grid-2x2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-box {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .kpi-box:hover {
+            border-color: #99f6e4;
+            transform: translateY(-2px);
+        }
+
+        .kpi-box-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .kpi-box-label {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .kpi-box-icon {
+            color: var(--primary);
+        }
+
+        .kpi-box-num {
+            font-size: 28px;
+            font-weight: 800;
+            color: #063b2c;
+            line-height: 1;
+        }
+
+        /* KHUNG DANH SÁCH ĐƠN CẦN XỬ LÝ */
+        .workspace-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px 28px;
+            margin-bottom: 20px;
+        }
+
+        .section-head-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #063b2c;
+        }
+
+        .count-pill {
+            padding: 5px 12px;
+            border-radius: 99px;
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 12.5px;
+            font-weight: 700;
+        }
+
+        .search-bar {
+            position: relative;
+            margin-bottom: 14px;
+        }
+
+        .search-bar svg {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            padding: 0 18px 0 42px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-input:focus { border-color: var(--primary); }
+
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .chip-btn {
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: #475569;
+            padding: 7px 15px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .chip-btn.active {
+            background: #eef2f1;
+            color: #063b2c;
+            border-color: #cbd5e1;
+        }
+
+        /* Danh sách thẻ đơn hàng giống ảnh mẫu */
+        .packing-cards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pk-card {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px;
+            background: #ffffff;
+            transition: all 0.15s;
+        }
+
+        .pk-card:hover {
+            border-color: #99f6e4;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+        }
+
+        .pk-card.selected-card {
+            border-color: var(--primary);
+            background: #f0fdf9;
+        }
+
+        .pk-card.returned-card {
+            border-left: 4px solid var(--danger);
+            background: #fffafa;
+        }
+
+        .pk-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .pk-code {
+            font-size: 15.5px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .st-doing { background: #e0f2fe; color: #0369a1; }
+        .st-handover { background: #fef3c7; color: #b45309; }
+        .st-returned { background: #fee2e2; color: #b91c1c; }
+        .st-done { background: #dcfce7; color: #15803d; }
+
+        .pk-summary {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .pk-meta {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .btn-full-detail {
+            width: 100%;
+            height: 40px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: var(--text-dark);
+            border-radius: 99px;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-full-detail:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #f0fdf9;
+        }
+
+        /* ================= PANEL CHI TIẾT ĐÓNG GÓI & BÀN GIAO ================= */
+        .detail-workspace {
+            background: #ffffff;
+            border: 1.5px solid #ccebe3;
+            border-radius: 16px;
+            padding: 22px 24px;
+            display: none;
+        }
+
+        .detail-workspace.open { display: block; }
+
+        .stage-block {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px;
+            background: #f8fafc;
+            margin-bottom: 16px;
+        }
+
+        .stage-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .stage-badge {
+            background: #063b2c;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 9px;
+            border-radius: 6px;
+        }
+
+        .stage-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #063b2c;
+        }
+
+        .info-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .info-cell {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .info-cell span { display: block; font-size: 11.5px; color: var(--text-muted); margin-bottom: 3px; }
+        .info-cell strong { font-size: 14px; font-weight: 800; color: #0f172a; }
+
+        .inner-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .inner-table th {
+            background: #f1f5f9;
+            padding: 9px 12px;
+            text-align: left;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .inner-table td {
+            padding: 10px 12px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+
+        .package-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .form-field { margin-bottom: 10px; }
+        .form-field label { display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+        .form-input, .form-select { width: 100%; height: 40px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; font-size: 13.5px; background: #ffffff; }
+        .form-input:read-only { background: #f1f5f9; font-weight: 700; }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-dark {
+            background: #0f172a;
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-dark:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-outline {
+            background: #ffffff;
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-danger-outline {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-backdrop.open { display: flex; }
+
+        .modal-card {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 460px;
+            max-width: 94vw;
+            padding: 22px;
+        }
+
+        @media (max-width: 960px) {
+            .kpi-grid-2x2, .info-grid-4, .form-grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. SIDEBAR NHÂN VIÊN KHO SANOVA CỐ ĐỊNH -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path>
+                    <polyline points="7 5 12 8 17 5"></polyline>
+                    <line x1="12" y1="8" x2="12" y2="13"></line>
+                    <path d="M7 10L12 13V18L7 21L2 18V13L7 10Z"></path>
+                    <polyline points="2 13 7 16 12 13"></polyline>
+                    <line x1="7" y1="16" x2="7" y2="21"></line>
+                    <path d="M17 10L22 13V18L17 21L12 18V13L17 10Z"></path>
+                    <polyline points="12 13 17 16 22 13"></polyline>
+                    <line x1="17" y1="16" x2="17" y2="21"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">NHÂN VIÊN KHO</div>
+
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/staff/dashboard" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Tổng quan công việc</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/inbound" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><line x1="16" y1="19" x2="22" y2="19"></line><line x1="19" y1="16" x2="19" y2="22"></line></svg>
+                        <span>Nhập kho &amp; lưu trữ</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/scan" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+                        <span>Quét QR / Barcode</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/picking-returns" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+                        <span>Lấy hàng &amp; Trả hàng</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/prepacking" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path><path d="M7 10L12 13V18L7 21L2 18V13L7 10Z"></path><path d="M17 10L22 13V18L17 21L12 18V13L17 10Z"></path></svg>
+                        <span>Pre-packing &amp; Combo</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/packing-handover" class="nav-link active">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><polyline points="16 16 18 18 22 14"></polyline></svg>
+                        <span>Đóng gói &amp; Bàn giao</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/stocktake" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                        <span>Kiểm kê kho</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/history" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
+                        <span>Lịch sử giao dịch</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/staff/profile" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>Tài khoản cá nhân</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/logout" class="nav-link logout-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span>Đăng xuất</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- 2. VÙNG NỘI DUNG ĐÓNG GÓI & BÀN GIAO -->
+    <main class="main-content">
+
+        <header class="top-header">
+            <div>
+                <h1 class="page-title">Đóng gói &amp; Bàn giao</h1>
+                <p class="page-sub">Quản lý đóng gói, kiện hàng và bàn giao đơn</p>
+            </div>
+            <div class="header-icons">
+                <a href="/staff/dashboard" class="circle-icon-btn" title="Thông báo công việc">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </a>
+                <a href="/staff/profile" class="circle-icon-btn" title="Tài khoản cá nhân">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </a>
+            </div>
+        </header>
+
+        <!-- 4 THẺ KPI 2x2 GIỐNG ẢNH MẪU -->
+        <section class="kpi-grid-2x2">
+            <div class="kpi-box" onclick="filterPackingByStatus('Chờ đóng gói')">
+                <div class="kpi-box-top">
+                    <span class="kpi-box-label">Chờ đóng gói</span>
+                    <span class="kpi-box-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                    </span>
+                </div>
+                <div class="kpi-box-num" id="kpiPkWait">00</div>
+            </div>
+
+            <div class="kpi-box" onclick="filterPackingByStatus('Đang đóng gói')">
+                <div class="kpi-box-top">
+                    <span class="kpi-box-label">Đang đóng gói</span>
+                    <span class="kpi-box-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path><polyline points="7 5 12 8 17 5"></polyline></svg>
+                    </span>
+                </div>
+                <div class="kpi-box-num" id="kpiPkDoing">00</div>
+            </div>
+
+            <div class="kpi-box" onclick="filterPackingByStatus('Chờ bàn giao')">
+                <div class="kpi-box-top">
+                    <span class="kpi-box-label">Chờ bàn giao</span>
+                    <span class="kpi-box-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                    </span>
+                </div>
+                <div class="kpi-box-num" id="kpiPkHandover">00</div>
+            </div>
+
+            <div class="kpi-box" onclick="filterPackingByStatus('Cần xử lý lại')">
+                <div class="kpi-box-top">
+                    <span class="kpi-box-label">Cần xử lý lại</span>
+                    <span class="kpi-box-icon" style="color:#dc2626;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </span>
+                </div>
+                <div class="kpi-box-num" id="kpiPkReturned">00</div>
+            </div>
+        </section>
+
+        <!-- DANH SÁCH ĐƠN CẦN XỬ LÝ -->
+        <section class="workspace-card">
+            <div class="section-head-row">
+                <h2 class="section-title">Danh sách đơn cần xử lý</h2>
+                <span class="count-pill" id="totalPackingCountBadge">0 phiếu</span>
+            </div>
+
+            <div class="search-bar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" class="search-input" id="searchPackingInput" placeholder="Tìm mã đơn hàng, mã phiếu..." oninput="renderPackingCards()">
+            </div>
+
+            <div class="filter-chips" id="packingFilterChips">
+                <button type="button" class="chip-btn active" data-st="ALL" onclick="filterPackingByStatus('ALL')">Tất cả</button>
+                <button type="button" class="chip-btn" data-st="Chờ đóng gói" onclick="filterPackingByStatus('Chờ đóng gói')">Chờ đóng</button>
+                <button type="button" class="chip-btn" data-st="Đang đóng gói" onclick="filterPackingByStatus('Đang đóng gói')">Đang đóng</button>
+                <button type="button" class="chip-btn" data-st="Chờ bàn giao" onclick="filterPackingByStatus('Chờ bàn giao')">Bàn giao</button>
+                <button type="button" class="chip-btn" data-st="Cần xử lý lại" onclick="filterPackingByStatus('Cần xử lý lại')">Xử lý lại</button>
+                <button type="button" class="chip-btn" data-st="Hoàn thành" onclick="filterPackingByStatus('Hoàn thành')">Hoàn thành</button>
+            </div>
+
+            <div class="packing-cards-list" id="packingCardsContainer"></div>
+        </section>
+
+        <!-- PANEL CHI TIẾT 2 GIAI ĐOẠN: GIAI ĐOẠN 1 (ĐÓNG GÓI) & GIAI ĐOẠN 2 (BÀN GIAO) -->
+        <section class="detail-workspace" id="packingDetailWorkspace">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <h3 class="section-title" id="detPkCode">PK-0025</h3>
+                    <span class="status-pill" id="detPkStatusBadge">--</span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-danger-outline" id="btnReportPkIssue" onclick="document.getElementById('pkIssueModal').classList.add('open')">Báo sai lệch / Lỗi</button>
+                    <button type="button" class="btn-outline" onclick="document.getElementById('packingDetailWorkspace').classList.remove('open')">Đóng</button>
+                </div>
+            </div>
+
+            <!-- Thông báo lý do nếu bị Manager trả phiếu -->
+            <div id="detRejectAlert" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-left:4px solid #dc2626; color:#991b1b; padding:12px 14px; border-radius:10px; font-size:13px; font-weight:600; margin-bottom:14px;"></div>
+
+            <div class="info-grid-4">
+                <div class="info-cell"><span>Mã đơn hàng</span><strong id="detOrderCode">--</strong></div>
+                <div class="info-cell"><span>Nền tảng</span><strong id="detPlatform">--</strong></div>
+                <div class="info-cell"><span>Loại đơn &amp; Nguồn</span><strong id="detTypeSource">--</strong></div>
+                <div class="info-cell"><span>Nhân viên phụ trách</span><strong id="detAssignee">--</strong></div>
+            </div>
+
+            <!-- ================= GIAI ĐOẠN 1: KIỂM TRA & ĐÓNG GÓI NHIỀU KIỆN ================= -->
+            <div class="stage-block">
+                <div class="stage-head">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="stage-badge">GIAI ĐOẠN 1</span>
+                        <span class="stage-title">Kiểm tra hàng &amp; Chia kiện đóng gói (Không trừ tồn kho)</span>
+                    </div>
+                    <button type="button" class="btn-primary" id="btnStartPacking" style="padding:7px 14px; font-size:12.5px;" onclick="startPackingOrder()">Bắt đầu đóng gói</button>
+                </div>
+
+                <!-- Bảng đối chiếu hàng cần đóng (Combo & Lẻ riêng biệt) -->
+                <div style="overflow-x:auto; margin-bottom:14px;">
+                    <table class="inner-table">
+                        <thead>
+                            <tr>
+                                <th>Hàng cần đóng (Combo / Sản phẩm lẻ)</th>
+                                <th>SL yêu cầu</th>
+                                <th>SL sẵn sàng</th>
+                                <th>Đã phân bổ vào kiện</th>
+                                <th>Còn lại</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pkItemsVerifyTbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Quản lý nhiều kiện hàng (Packages) -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <strong style="font-size:13.5px; color:#063b2c;">Danh sách kiện hàng đã đóng (<span id="pkgCountLabel">0</span> kiện)</strong>
+                    <button type="button" class="btn-outline" id="btnAddPackage" onclick="createNewPackage()">+ Thêm kiện / thùng hàng mới</button>
+                </div>
+
+                <div id="packagesContainer"></div>
+
+                <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+                    <button type="button" class="btn-primary" id="btnCompletePacking" onclick="completePackingStage()">Hoàn tất đóng gói → Chuyển sang Bàn giao</button>
+                </div>
+            </div>
+
+            <!-- ================= GIAI ĐOẠN 2: GHI NHẬN BÀN GIAO & GỬI MANAGER ================= -->
+            <div class="stage-block" style="background:#f0fdf9; border-color:#a7f3d0; margin-bottom:0;">
+                <div class="stage-head">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="stage-badge" style="background:#0f766e;">GIAI ĐOẠN 2</span>
+                        <span class="stage-title">Ghi nhận bàn giao &amp; Gửi Manager xác nhận</span>
+                    </div>
+                    <span id="handoverCodeLabel" style="font-size:12.5px; font-weight:800; color:#0f766e;">--</span>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="form-field">
+                        <label>Mã đơn hàng (Khóa theo đơn nguồn)</label>
+                        <input type="text" class="form-input" id="hoOrderCode" readonly>
+                    </div>
+                    <div class="form-field">
+                        <label>Nền tảng (Khóa theo đơn nguồn)</label>
+                        <input type="text" class="form-input" id="hoPlatform" readonly>
+                    </div>
+                    <div class="form-field">
+                        <label>Người / Đơn vị nhận bàn giao *</label>
+                        <input type="text" class="form-input" id="hoReceiverInput" placeholder="VD: Nguyễn Thị Lan (Shipper Shopee Express)">
+                    </div>
+                    <div class="form-field">
+                        <label>Số kiện &amp; Tổng PCS thực tế bàn giao</label>
+                        <input type="text" class="form-input" id="hoPkgSummary" readonly>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Danh sách mã kiện bàn giao &amp; Ghi chú</label>
+                    <input type="text" class="form-input" id="hoNoteInput" placeholder="VD: Bàn giao đầy đủ kiện nguyên vẹn, niêm phong đúng quy cách...">
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+                    <button type="button" class="btn-dark" id="btnSubmitHandover" onclick="submitHandoverToManager()">Gửi Manager xác nhận bàn giao</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL BÁO SAI LỆCH / LỖI ĐÓNG GÓI -->
+    <div class="modal-backdrop" id="pkIssueModal">
+        <div class="modal-card">
+            <h3 style="font-size:16px; font-weight:800; color:#991b1b; margin-bottom:8px;">Báo cáo sai lệch / Hàng lỗi khi đóng gói</h3>
+            <div class="form-field">
+                <label>Loại vấn đề *</label>
+                <select class="form-select" id="pkIssueType">
+                    <option value="Thiếu hàng khi đóng gói">Thiếu hàng khi đóng gói</option>
+                    <option value="Kiện / Sản phẩm bị hư hỏng">Kiện / Sản phẩm bị hư hỏng</option>
+                    <option value="Sai mã SKU / Combo">Sai mã SKU / Combo</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Chi tiết &amp; Lý do *</label>
+                <input type="text" class="form-input" id="pkIssueReason" placeholder="Mô tả chi tiết vấn đề phát sinh...">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+                <button type="button" class="btn-outline" onclick="document.getElementById('pkIssueModal').classList.remove('open')">Hủy</button>
+                <button type="button" class="btn-danger-outline" onclick="submitPackingIssue()">Gửi báo cáo</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pkState = {
+            orders: [],
+            statusFilter: 'ALL',
+            activeOrder: null
+        };
+
+        function filterPackingByStatus(st) {
+            pkState.statusFilter = st;
+            document.querySelectorAll('#packingFilterChips .chip-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.st === st);
+            });
+            renderPackingCards();
+        }
+
+        async function loadPackingOrders(selectId = null) {
+            try {
+                const res = await fetch('/api/staff/packing', { credentials: 'same-origin', cache: 'no-store' });
+                if (!res.ok) return;
+                const data = await res.json();
+                pkState.orders = data.orders || [];
+
+                const stats = data.stats || {};
+                document.getElementById('kpiPkWait').textContent = String(stats.waiting ?? 0).padStart(2, '0');
+                document.getElementById('kpiPkDoing').textContent = String(stats.in_progress ?? 0).padStart(2, '0');
+                document.getElementById('kpiPkHandover').textContent = String(stats.waiting_handover ?? 0).padStart(2, '0');
+                document.getElementById('kpiPkReturned').textContent = String(stats.returned ?? 0).padStart(2, '0');
+                document.getElementById('totalPackingCountBadge').textContent = `${pkState.orders.length} phiếu`;
+
+                renderPackingCards();
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const targetId = selectId || urlParams.get('ticket') || (pkState.activeOrder && pkState.activeOrder.id);
+                if (targetId) {
+                    const found = pkState.orders.find(x => x.id === targetId || x.handover_id === targetId);
+                    if (found) openPackingDetail(found.id);
+                }
+            } catch (e) {}
+        }
+
+        function getPkBadgeClass(st) {
+            if (st === 'Đang đóng gói') return 'st-doing';
+            if (st === 'Chờ bàn giao' || st === 'Chờ Manager xác nhận') return 'st-handover';
+            if (st === 'Cần xử lý lại' || st === 'Có vấn đề') return 'st-returned';
+            if (st === 'Hoàn thành') return 'st-done';
+            return '';
+        }
+
+        function renderPackingCards() {
+            const container = document.getElementById('packingCardsContainer');
+            const kw = (document.getElementById('searchPackingInput').value || '').trim().toLowerCase();
+
+            const filtered = pkState.orders.filter(o => {
+                if (pkState.statusFilter === 'Chờ bàn giao') {
+                    if (o.display_status !== 'Chờ bàn giao' && o.display_status !== 'Chờ Manager xác nhận') return false;
+                } else if (pkState.statusFilter !== 'ALL' && o.display_status !== pkState.statusFilter) {
+                    return false;
+                }
+
+                if (kw) {
+                    const hay = `${o.id} ${o.order_code} ${o.summary_text} ${o.platform}`.toLowerCase();
+                    if (!hay.includes(kw)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:32px; color:#64748b; border:1px dashed #cbd5e1; border-radius:12px;">Chưa có đơn hàng nào đủ điều kiện đóng gói trong danh sách.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(o => {
+                const isReturned = o.display_status === 'Cần xử lý lại';
+                const isSelected = pkState.activeOrder && pkState.activeOrder.id === o.id;
+                return `
+                    <div class="pk-card ${isReturned ? 'returned-card' : ''} ${isSelected ? 'selected-card' : ''}">
+                        <div class="pk-top">
+                            <span class="pk-code">${o.id}</span>
+                            <span class="status-pill ${getPkBadgeClass(o.display_status)}">${o.display_status}</span>
+                        </div>
+                        <div class="pk-summary">${o.summary_text}</div>
+                        <div class="pk-meta">${o.order_code} · ${o.platform} · ${o.order_type} · Nguồn: ${o.source_label}</div>
+                        ${isReturned && o.reject_reason ? `
+                            <div style="font-size:12.5px; color:#b91c1c; background:#fee2e2; padding:6px 10px; border-radius:8px; margin-bottom:10px; font-weight:600;">
+                                Manager trả lại: ${o.reject_reason}
+                            </div>
+                        ` : ''}
+                        <button type="button" class="btn-full-detail" onclick="openPackingDetail('${o.id}')">Xem chi tiết →</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function openPackingDetail(pkId) {
+            const res = await fetch(`/api/staff/packing/${encodeURIComponent(pkId)}`, { credentials: 'same-origin', cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const o = data.order;
+            pkState.activeOrder = o;
+
+            const panel = document.getElementById('packingDetailWorkspace');
+            panel.classList.add('open');
+
+            document.getElementById('detPkCode').textContent = o.id;
+            const badge = document.getElementById('detPkStatusBadge');
+            badge.textContent = o.display_status;
+            badge.className = `status-pill ${getPkBadgeClass(o.display_status)}`;
+
+            const rejAlert = document.getElementById('detRejectAlert');
+            if (o.display_status === 'Cần xử lý lại' && o.reject_reason) {
+                rejAlert.style.display = 'block';
+                rejAlert.textContent = `Phiếu bị Manager trả lại (${o.reviewed_by || 'Manager'}): ${o.reject_reason}`;
+            } else {
+                rejAlert.style.display = 'none';
+            }
+
+            document.getElementById('detOrderCode').textContent = o.order_code;
+            document.getElementById('detPlatform').textContent = o.platform;
+            document.getElementById('detTypeSource').textContent = `${o.order_type} (${o.source_label})`;
+            document.getElementById('detAssignee').textContent = o.assignee || 'Nhân viên kho';
+
+            const isPackingLocked = (o.packing_status === 'COMPLETED' && o.display_status !== 'Cần xử lý lại');
+            document.getElementById('btnStartPacking').disabled = (o.packing_status !== 'PENDING');
+            document.getElementById('btnAddPackage').disabled = isPackingLocked;
+            document.getElementById('btnCompletePacking').disabled = isPackingLocked;
+
+            // Render bảng đối chiếu hàng cần đóng
+            const items = o.items || [];
+            const packages = o.packages || [];
+            document.getElementById('pkItemsVerifyTbody').innerHTML = items.map(it => {
+                const packedQty = packages.reduce((sum, pkg) => {
+                    const found = (pkg.items || []).find(x => x.sku === it.sku);
+                    return sum + (found ? Number(found.qty) : 0);
+                }, 0);
+                const rem = Math.max(0, Number(it.required_qty) - packedQty);
+                return `
+                    <tr>
+                        <td><strong>${it.sku}</strong> · ${it.name} <span style="font-size:11.5px; color:#64748b;">(${it.item_group})</span></td>
+                        <td><strong>${it.required_qty} ${it.unit}</strong></td>
+                        <td>${it.ready_qty} ${it.unit}</td>
+                        <td style="color:#0f766e; font-weight:700;">${packedQty} ${it.unit}</td>
+                        <td style="color:${rem > 0 ? '#d97706' : '#059669'}; font-weight:700;">${rem} ${it.unit}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Render danh sách kiện hàng (Multi-package)
+            document.getElementById('pkgCountLabel').textContent = packages.length;
+            const pkgWrap = document.getElementById('packagesContainer');
+            if (packages.length === 0) {
+                pkgWrap.innerHTML = `<div style="font-size:13px; color:#64748b; padding:12px; background:#ffffff; border:1px dashed #cbd5e1; border-radius:10px;">Chưa tạo kiện hàng nào. Nhấn "+ Thêm kiện / thùng hàng mới" để bắt đầu đóng gói.</div>`;
+            } else {
+                pkgWrap.innerHTML = packages.map(pkg => `
+                    <div class="package-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <strong style="color:#063b2c; font-size:13.5px;">Kiện: ${pkg.package_code} · <span style="color:#059669;">${pkg.condition || 'Nguyên vẹn'}</span></strong>
+                            ${!isPackingLocked ? `
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <select id="selSku-${pkg.package_code}" class="form-select" style="height:32px; font-size:12px; width:190px;">
+                                        ${items.map(it => `<option value="${it.sku}">${it.sku} · ${it.name}</option>`).join('')}
+                                    </select>
+                                    <input type="number" id="inpQty-${pkg.package_code}" class="form-input" style="height:32px; width:68px; font-size:12px;" min="1" value="1">
+                                    <button type="button" class="btn-primary" style="padding:5px 10px; font-size:12px;" onclick="addItemToPackage('${pkg.package_code}')">+ Bỏ vào kiện</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div style="font-size:12.5px; color:#475569;">
+                            Nội dung kiện: ${(pkg.items || []).length ? pkg.items.map(x => `<strong>${x.name} (${x.qty} ${x.unit})</strong>`).join(', ') : '<em>Kiện trống</em>'}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Giai đoạn 2: Bàn giao
+            document.getElementById('handoverCodeLabel').textContent = o.handover_id ? `Phiếu bàn giao: ${o.handover_id}` : 'Chưa lập phiếu bàn giao';
+            document.getElementById('hoOrderCode').value = o.order_code;
+            document.getElementById('hoPlatform').value = o.platform;
+            document.getElementById('hoReceiverInput').value = o.receiver || '';
+            document.getElementById('hoNoteInput').value = o.handover_note || '';
+
+            const totalPcsPacked = packages.reduce((s, p) => s + (p.items || []).reduce((ss, it) => ss + Number(it.pcs_equiv || it.qty), 0), 0);
+            const pkgCodes = packages.map(p => p.package_code).join(', ');
+            document.getElementById('hoPkgSummary').value = `${packages.length} kiện (${pkgCodes || '--'}) · Tổng ${totalPcsPacked} PCS`;
+
+            const canSubmitHandover = (o.packing_status === 'COMPLETED' && o.display_status !== 'Chờ Manager xác nhận' && o.display_status !== 'Hoàn thành');
+            document.getElementById('btnSubmitHandover').disabled = !canSubmitHandover;
+
+            renderPackingCards();
+        }
+
+        async function startPackingOrder() {
+            const res = await fetch(`/api/staff/packing/${encodeURIComponent(pkState.activeOrder.id)}/start`, {
+                method: 'POST', credentials: 'same-origin'
+            });
+            if (res.ok) await loadPackingOrders(pkState.activeOrder.id);
+        }
+
+        async function createNewPackage() {
+            const res = await fetch(`/api/staff/packing/${encodeURIComponent(pkState.activeOrder.id)}/packages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({})
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Không thể tạo kiện mới');
+                return;
+            }
+            await loadPackingOrders(pkState.activeOrder.id);
+        }
+
+        async function addItemToPackage(pkgCode) {
+            const sku = document.getElementById(`selSku-${pkgCode}`).value;
+            const qty = Number(document.getElementById(`inpQty-${pkgCode}`).value || 0);
+            const res = await fetch(`/api/staff/packing/${encodeURIComponent(pkState.activeOrder.id)}/packages/${encodeURIComponent(pkgCode)}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ sku: sku, qty: qty })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Không thể phân bổ hàng vào kiện');
+                return;
+            }
+            await loadPackingOrders(pkState.activeOrder.id);
+        }
+
+        async function completePackingStage() {
+            const res = await fetch(`/api/staff/packing/${encodeURIComponent(pkState.activeOrder.id)}/complete`, {
+                method: 'POST', credentials: 'same-origin'
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Chưa đủ điều kiện hoàn tất đóng gói');
+                return;
+            }
+            alert('Đã hoàn tất đóng gói! Đơn hàng sẵn sàng ghi nhận bàn giao ở Giai đoạn 2.');
+            await loadPackingOrders(pkState.activeOrder.id);
+        }
+
+        async function submitPackingIssue() {
+            const payload = {
+                issue_type: document.getElementById('pkIssueType').value,
+                reason: document.getElementById('pkIssueReason').value.trim()
+            };
+            const res = await fetch(`/api/staff/packing/${encodeURIComponent(pkState.activeOrder.id)}/issues`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Lỗi gửi báo cáo');
+                return;
+            }
+            document.getElementById('pkIssueModal').classList.remove('open');
+            await loadPackingOrders(pkState.activeOrder.id);
+        }
+
+        async function submitHandoverToManager() {
+            const receiver = document.getElementById('hoReceiverInput').value.trim();
+            const note = document.getElementById('hoNoteInput').value.trim();
+            if (!receiver) {
+                alert('Bắt buộc nhập tên người hoặc đơn vị vận chuyển nhận bàn giao.');
+                return;
+            }
+
+            const resCreate = await fetch('/api/staff/handovers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    packing_id: pkState.activeOrder.id,
+                    receiver: receiver,
+                    note: note
+                })
+            });
+            const dCreate = await resCreate.json().catch(() => ({}));
+            if (!resCreate.ok) {
+                alert(dCreate.error || 'Không thể ghi nhận phiếu bàn giao');
+                return;
+            }
+
+            const resSub = await fetch(`/api/staff/handovers/${encodeURIComponent(dCreate.handover_id)}/submit`, {
+                method: 'POST', credentials: 'same-origin'
+            });
+            const dSub = await resSub.json().catch(() => ({}));
+            if (!resSub.ok) {
+                alert(dSub.error || 'Lỗi gửi phiếu bàn giao sang Manager');
+                return;
+            }
+
+            alert(`Đã gửi phiếu bàn giao ${dCreate.handover_id} sang Manager xác nhận thành công (Không trừ tồn kho lần hai).`);
+            await loadPackingOrders(pkState.activeOrder.id);
+        }
+
+        loadPackingOrders();
+    </script>
+</body>
+</html>

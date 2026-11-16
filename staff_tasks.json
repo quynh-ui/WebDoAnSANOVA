@@ -1,0 +1,62 @@
+[
+  {
+    "task_id": "TSK-NK-20261116-006",
+    "reference_id": "NK-20261116-006",
+    "task_type": "INBOUND",
+    "title": "Tiếp nhận và xếp kệ",
+    "category_label": "Nhập kho",
+    "quantity_text": "0 Box",
+    "time_label": "07:34",
+    "assigned_employee": "staffC",
+    "warehouse_id": "KHO-01",
+    "status": "Đang thực hiện",
+    "priority": "NORMAL",
+    "is_carryover": false,
+    "rejection_reason": ""
+  },
+  {
+    "task_id": "TSK-NK-20261115-005",
+    "reference_id": "NK-20261115-005",
+    "task_type": "INBOUND",
+    "title": "Tiếp nhận và xếp kệ",
+    "category_label": "Nhập kho",
+    "quantity_text": "0 Box",
+    "time_label": "21:14",
+    "assigned_employee": "staffC",
+    "warehouse_id": "KHO-01",
+    "status": "Đang thực hiện",
+    "priority": "NORMAL",
+    "is_carryover": false,
+    "rejection_reason": ""
+  },
+  {
+    "task_id": "TSK-NK-20261115-004",
+    "reference_id": "NK-20261115-004",
+    "task_type": "INBOUND",
+    "title": "Tiếp nhận và xếp kệ",
+    "category_label": "Nhập kho",
+    "quantity_text": "0 Box",
+    "time_label": "21:14",
+    "assigned_employee": "staffC",
+    "warehouse_id": "KHO-01",
+    "status": "Đang thực hiện",
+    "priority": "NORMAL",
+    "is_carryover": false,
+    "rejection_reason": ""
+  },
+  {
+    "task_id": "TSK-NK-20261115-003",
+    "reference_id": "NK-20261115-003",
+    "task_type": "INBOUND",
+    "title": "Tiếp nhận và xếp kệ",
+    "category_label": "Nhập kho",
+    "quantity_text": "0 Box",
+    "time_label": "21:14",
+    "assigned_employee": "staffC",
+    "warehouse_id": "KHO-01",
+    "status": "Đang thực hiện",
+    "priority": "NORMAL",
+    "is_carryover": false,
+    "rejection_reason": ""
+  }
+]

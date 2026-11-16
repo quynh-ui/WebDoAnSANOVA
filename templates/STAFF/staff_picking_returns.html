@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lấy hàng & Trả hàng · SANOVA WMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #063b2c;
+            --sidebar-active: #167963;
+            --brand-mint: #79b49f;
+            --primary: #0f766e;
+            --primary-hover: #0d5c56;
+            --bg-main: #f4f7f6;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --warning: #d97706;
+            --warning-bg: #fffbeb;
+            --info: #0284c7;
+            --info-bg: #f0f9ff;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+        }
+
+        /* ================= 1. SIDEBAR CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            left: 0;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .sidebar-top {
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .sidebar-top::-webkit-scrollbar { display: none; }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 10px 22px;
+        }
+
+        .brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-category {
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--brand-mint);
+            letter-spacing: 0.6px;
+            padding: 0 10px 14px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            color: #e2ece9;
+            text-decoration: none;
+            font-size: 14.5px;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.14);
+            padding-top: 14px;
+            margin-top: 10px;
+        }
+
+        .logout-link:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        /* ================= 2. VÙNG NỘI DUNG CHÍNH ================= */
+        .main-content {
+            flex-grow: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 24px 32px 48px;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #063b2c;
+            letter-spacing: -0.3px;
+        }
+
+        .page-sub {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header-icons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .circle-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #334155;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .circle-icon-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* 4 THẺ KPI ĐẦU TRANG (GIỐNG ẢNH MẪU) */
+        .kpi-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .kpi-card:hover {
+            border-color: #99f6e4;
+            transform: translateY(-2px);
+        }
+
+        .kpi-icon-box {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: #f0fdf9;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .kpi-val {
+            font-size: 26px;
+            font-weight: 800;
+            color: #063b2c;
+            line-height: 1.1;
+            margin-bottom: 4px;
+        }
+
+        .kpi-lbl {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* KHUNG CHỨA CHÍNH & THANH CHUYỂN ĐỔI 2 TAB LỚN */
+        .workspace-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px 28px;
+            margin-bottom: 20px;
+        }
+
+        .mode-switcher {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: #f4f7f6;
+            padding: 5px;
+            border-radius: 99px;
+            margin-bottom: 22px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .mode-tab-btn {
+            border: none;
+            background: transparent;
+            padding: 11px 16px;
+            border-radius: 99px;
+            font-size: 14.5px;
+            font-weight: 700;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-tab-btn.active {
+            background: #ffffff;
+            color: #063b2c;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+        }
+
+        .section-head-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #063b2c;
+        }
+
+        .section-sub {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Ô tìm kiếm & Chip lọc trạng thái */
+        .search-bar {
+            position: relative;
+            margin-bottom: 14px;
+        }
+
+        .search-bar svg {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            padding: 0 18px 0 42px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .search-input:focus { border-color: var(--primary); }
+
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .chip-btn {
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: #475569;
+            padding: 7px 15px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .chip-btn:hover { background: #f8fafc; }
+
+        .chip-btn.active {
+            background: #eef2f1;
+            color: #063b2c;
+            border-color: #cbd5e1;
+        }
+
+        /* Bảng danh sách phiếu giống ảnh mẫu */
+        .tickets-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tickets-table th {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .tickets-table td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13.5px;
+            vertical-align: middle;
+        }
+
+        .tickets-table tr {
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .tickets-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .tickets-table tbody tr.selected-row {
+            background: #f0fdf9;
+        }
+
+        .code-primary {
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 14px;
+        }
+
+        .code-secondary {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .st-doing { background: #eef2f1; color: #063b2c; }
+        .st-done { background: #dcfce7; color: #15803d; }
+        .st-shortage { background: #fee2e2; color: #b91c1c; }
+        .st-quarantine { background: #fef3c7; color: #b45309; }
+
+        /* ================= 3. KHU VỰC THAO TÁC CHI TIẾT PHIẾU OUT / RETURNED ================= */
+        .detail-workspace {
+            background: #ffffff;
+            border: 1.5px solid #ccebe3;
+            border-radius: 16px;
+            padding: 22px 24px;
+            display: none;
+        }
+
+        .detail-workspace.open { display: block; }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 18px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .info-strip-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .info-box {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        .info-box span {
+            display: block;
+            font-size: 11.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .info-box strong {
+            font-size: 15px;
+            font-weight: 800;
+            color: #063b2c;
+        }
+
+        .two-col-ops {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .ops-subcard {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px;
+            background: #f8fafc;
+        }
+
+        .ops-subcard h4 {
+            font-size: 14.5px;
+            font-weight: 800;
+            color: #063b2c;
+            margin-bottom: 12px;
+        }
+
+        .suggested-box-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .suggested-box-card:hover {
+            border-color: var(--primary);
+            background: #f0fdf9;
+        }
+
+        .form-field { margin-bottom: 12px; }
+
+        .form-field label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            height: 40px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 0 12px;
+            font-size: 13.5px;
+            background: #ffffff;
+            outline: none;
+        }
+
+        .form-input:focus, .form-select:focus { border-color: var(--primary); }
+
+        .btn-primary-full {
+            width: 100%;
+            height: 42px;
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .btn-primary-full:hover { background: var(--primary-hover); }
+        .btn-primary-full:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-outline-sm {
+            background: #ffffff;
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-danger-outline {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Bảng Lịch sử vị trí lấy hàng */
+        .history-log-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .history-log-table th {
+            background: #f1f5f9;
+            padding: 9px 12px;
+            text-align: left;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .history-log-table td {
+            padding: 10px 12px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+
+        /* Modal báo thiếu hàng */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-backdrop.open { display: flex; }
+
+        .modal-box {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 440px;
+            max-width: 94vw;
+            padding: 22px;
+        }
+
+        @media (max-width: 960px) {
+            .kpi-grid-4, .info-strip-grid, .two-col-ops { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. SIDEBAR NHÂN VIÊN KHO SANOVA CỐ ĐỊNH -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path>
+                    <polyline points="7 5 12 8 17 5"></polyline>
+                    <line x1="12" y1="8" x2="12" y2="13"></line>
+                    <path d="M7 10L12 13V18L7 21L2 18V13L7 10Z"></path>
+                    <polyline points="2 13 7 16 12 13"></polyline>
+                    <line x1="7" y1="16" x2="7" y2="21"></line>
+                    <path d="M17 10L22 13V18L17 21L12 18V13L17 10Z"></path>
+                    <polyline points="12 13 17 16 22 13"></polyline>
+                    <line x1="17" y1="16" x2="17" y2="21"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">NHÂN VIÊN KHO</div>
+
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/staff/dashboard" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Tổng quan công việc</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/inbound" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><line x1="16" y1="19" x2="22" y2="19"></line><line x1="19" y1="16" x2="19" y2="22"></line></svg>
+                        <span>Nhập kho &amp; lưu trữ</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/scan" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+                        <span>Quét QR / Barcode</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/picking-returns" class="nav-link active">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+                        <span>Lấy hàng &amp; Trả hàng</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/prepacking" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path><path d="M7 10L12 13V18L7 21L2 18V13L7 10Z"></path><path d="M17 10L22 13V18L17 21L12 18V13L17 10Z"></path></svg>
+                        <span>Pre-packing &amp; Combo</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/packing-handover" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><polyline points="16 16 18 18 22 14"></polyline></svg>
+                        <span>Đóng gói &amp; Bàn giao</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/stocktake" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                        <span>Kiểm kê kho</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/history" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
+                        <span>Lịch sử giao dịch</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/staff/profile" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>Tài khoản cá nhân</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/logout" class="nav-link logout-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span>Đăng xuất</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- 2. VÙNG NỘI DUNG LẤY HÀNG & TRẢ HÀNG -->
+    <main class="main-content">
+
+        <header class="top-header">
+            <div>
+                <h1 class="page-title">Lấy hàng &amp; Trả hàng</h1>
+                <p class="page-sub">Thực hiện OUT / RETURNED theo phiếu và vị trí lưu trữ</p>
+            </div>
+            <div class="header-icons">
+                <a href="/staff/dashboard" class="circle-icon-btn" title="Thông báo công việc">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </a>
+                <a href="/staff/profile" class="circle-icon-btn" title="Tài khoản cá nhân">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </a>
+            </div>
+        </header>
+
+        <!-- 4 THẺ KPI ĐẦU TRANG (GIỐNG ẢNH MẪU) -->
+        <section class="kpi-grid-4">
+            <div class="kpi-card" onclick="switchModeAndFilter('OUT', 'Chờ thực hiện')">
+                <div class="kpi-icon-box">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg>
+                </div>
+                <div class="kpi-val" id="kpiWaitPick">00</div>
+                <div class="kpi-lbl">Chờ lấy</div>
+            </div>
+
+            <div class="kpi-card" onclick="switchModeAndFilter('OUT', 'Đang thực hiện')">
+                <div class="kpi-icon-box">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                </div>
+                <div class="kpi-val" id="kpiDoingPick">00</div>
+                <div class="kpi-lbl">Đang lấy</div>
+            </div>
+
+            <div class="kpi-card" onclick="switchModeAndFilter('RETURNED', 'Chờ trả')">
+                <div class="kpi-icon-box">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                </div>
+                <div class="kpi-val" id="kpiWaitReturn">00</div>
+                <div class="kpi-lbl">Chờ trả</div>
+            </div>
+
+            <div class="kpi-card" onclick="switchModeAndFilter('RETURNED', 'Đang trả')">
+                <div class="kpi-icon-box">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <div class="kpi-val" id="kpiDoingReturn">00</div>
+                <div class="kpi-lbl">Đang trả</div>
+            </div>
+        </section>
+
+        <!-- KHỐI DANH SÁCH PHIẾU & CHUYỂN ĐỔI 2 TAB -->
+        <section class="workspace-card">
+            <div class="mode-switcher">
+                <button type="button" class="mode-tab-btn active" id="btnModeOut" onclick="switchMainMode('OUT')">OUT – Lấy hàng</button>
+                <button type="button" class="mode-tab-btn" id="btnModeReturned" onclick="switchMainMode('RETURNED')">RETURNED – Trả hàng</button>
+            </div>
+
+            <!-- KHU VỰC TAB 1: OUT - LẤY HÀNG -->
+            <div id="panelModeOut">
+                <div class="section-head-row">
+                    <div>
+                        <h2 class="section-title">Danh sách phiếu lấy hàng</h2>
+                        <p class="section-sub">Chọn phiếu để thực hiện nghiệp vụ giảm tồn trực tiếp tại kệ.</p>
+                    </div>
+                </div>
+
+                <div class="search-bar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" class="search-input" id="searchOutInput" placeholder="Tìm mã phiếu, đơn hàng, sản phẩm..." oninput="renderOutTable()">
+                </div>
+
+                <div class="filter-chips" id="outStatusChips">
+                    <button type="button" class="chip-btn active" data-st="ALL" onclick="filterOutByStatus('ALL')">Tất cả</button>
+                    <button type="button" class="chip-btn" data-st="Chờ thực hiện" onclick="filterOutByStatus('Chờ thực hiện')">Chờ thực hiện</button>
+                    <button type="button" class="chip-btn" data-st="Đang thực hiện" onclick="filterOutByStatus('Đang thực hiện')">Đang thực hiện</button>
+                    <button type="button" class="chip-btn" data-st="Thiếu hàng" onclick="filterOutByStatus('Thiếu hàng')">Thiếu hàng</button>
+                    <button type="button" class="chip-btn" data-st="Hoàn thành" onclick="filterOutByStatus('Hoàn thành')">Hoàn thành</button>
+                </div>
+
+                <div style="overflow-x:auto;">
+    <table class="tickets-table">
+        <thead>
+            <tr>
+                <th>Phiếu trả / Nguồn OUT</th>
+                <th>Sản phẩm &amp; SL</th>
+                <th>Vị trí trả đề xuất</th>
+                <th>Trạng thái</th>
+            </tr>
+        </thead>
+        <tbody id="retTicketsTbody"></tbody>
+    </table>
+</div>
+
+            <!-- KHU VỰC TAB 2: RETURNED - TRẢ HÀNG -->
+            <div id="panelModeReturned" style="display:none;">
+                <div class="section-head-row">
+                    <div>
+                        <h2 class="section-title">Danh sách phiếu trả hàng về kệ (RETURNED)</h2>
+                        <p class="section-sub">Chỉ tiếp nhận hàng đã OUT từ phiếu nguồn nhưng chưa bàn giao ra ngoài kho.</p>
+                    </div>
+                    <button type="button" class="btn-primary-full" style="width:auto; padding:0 18px; border-radius:99px;" onclick="openCreateReturnModal()">+ Tạo yêu cầu trả hàng từ phiếu OUT</button>
+                </div>
+
+                <div class="search-bar">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" class="search-input" id="searchRetInput" placeholder="Tìm mã phiếu trả, phiếu OUT nguồn, sản phẩm..." oninput="renderReturnTable()">
+                </div>
+
+                <div class="filter-chips" id="retStatusChips">
+                    <button type="button" class="chip-btn active" data-st="ALL" onclick="filterRetByStatus('ALL')">Tất cả</button>
+                    <button type="button" class="chip-btn" data-st="Chờ trả" onclick="filterRetByStatus('Chờ trả')">Chờ trả</button>
+                    <button type="button" class="chip-btn" data-st="Đang trả" onclick="filterRetByStatus('Đang trả')">Đang trả</button>
+                    <button type="button" class="chip-btn" data-st="Chờ xử lý lỗi" onclick="filterRetByStatus('Chờ xử lý lỗi')">Chờ xử lý lỗi</button>
+                    <button type="button" class="chip-btn" data-st="Hoàn thành" onclick="filterRetByStatus('Hoàn thành')">Hoàn thành</button>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="tickets-table">
+                        <thead>
+                            <tr>
+                                <th>Phiếu trả / Nguồn OUT</th>
+                                <th>Sản phẩm &amp; Số lượng</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="retTicketsTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. PANEL THAO TÁC CHI TIẾT PHIẾU OUT (4 KHU VỰC CHUẨN) -->
+        <section class="detail-workspace" id="outDetailWorkspace">
+            <!-- KHU VỰC 1: THÔNG TIN PHIẾU -->
+            <div class="detail-header">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <span style="font-size:11.5px; font-weight:800; color:#0f766e; background:#e6f4f1; padding:3px 9px; border-radius:6px;">KHU VỰC 1 · THÔNG TIN PHIẾU</span>
+                        <h3 class="section-title" id="detOutCode">OUT-0019</h3>
+                        <span class="status-pill" id="detOutStatusBadge">Chờ thực hiện</span>
+                    </div>
+                    <p class="section-sub" id="detOutMeta" style="margin-top:6px;">Đơn hàng: DH-0026 · Nền tảng: TikTok Shop · Nhân viên: --</p>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn-danger-outline" id="btnReportShortage" onclick="openShortageModal()">Báo thiếu hàng</button>
+                    <button type="button" class="btn-outline-sm" onclick="document.getElementById('outDetailWorkspace').classList.remove('open')">Đóng</button>
+                </div>
+            </div>
+
+            <div class="info-strip-grid">
+                <div class="info-box">
+                    <span>Sản phẩm cần lấy</span>
+                    <strong id="detOutProduct">--</strong>
+                </div>
+                <div class="info-box">
+                    <span>PCS yêu cầu</span>
+                    <strong id="detOutReqPcs">0 PCS</strong>
+                </div>
+                <div class="info-box">
+                    <span>PCS đã OUT</span>
+                    <strong id="detOutPickedPcs" style="color:#059669;">0 PCS</strong>
+                </div>
+                <div class="info-box">
+                    <span>PCS còn thiếu</span>
+                    <strong id="detOutRemPcs" style="color:#d97706;">0 PCS</strong>
+                </div>
+            </div>
+
+            <!-- Banner thông báo khi đã lấy đủ 100% PCS -->
+            <div id="outCompletedBanner" style="display:none; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:14px 18px; margin-bottom:18px; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                <div style="color:#065f46; font-size:13.5px; font-weight:700;">
+                    ✓ Đã lấy đủ 100% số lượng PCS yêu cầu. Tồn kho đã được trừ tại bước OUT, sẵn sàng chuyển công đoạn tiếp theo.
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <a href="/staff/prepacking" class="btn-primary-full" style="width:auto; height:36px; line-height:36px; padding:0 16px; text-decoration:none; font-size:13px;">Chuyển Pre-packing →</a>
+                    <a href="/staff/packing-handover" class="btn-outline-sm" style="text-decoration:none;">Sang Đóng gói →</a>
+                </div>
+            </div>
+
+            <div class="two-col-ops">
+                <!-- KHU VỰC 2: DANH SÁCH VỊ TRÍ & BOX KHẢ DỤNG -->
+                <div class="ops-subcard">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin-bottom:0;">Khu vực 2 · Vị trí &amp; Box khả dụng trên kệ</h4>
+                        <span id="availBoxCountBadge" style="font-size:11.5px; font-weight:700; color:#0f766e;">0 Box</span>
+                    </div>
+                    <div id="suggestedBoxesList" style="max-height:290px; overflow-y:auto;"></div>
+                </div>
+
+                <!-- KHU VỰC 3: THAO TÁC LẤY HÀNG -->
+                <div class="ops-subcard" id="outActionFormCard">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin-bottom:0;">Khu vực 3 · Thao tác lấy hàng (OUT)</h4>
+                        <span id="stepLockHint" style="font-size:11.5px; font-weight:700; color:#d97706;">Chưa chọn Box</span>
+                    </div>
+
+                    <div id="selectedBoxSummaryBox" style="display:none; background:#ffffff; border:1px solid #99f6e4; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:12.5px;">
+                        <div style="font-weight:800; color:#063b2c;" id="selBoxLabel">--</div>
+                        <div style="color:#475569; margin-top:2px;" id="selBoxRemainInfo">--</div>
+                    </div>
+
+                    <div class="form-field">
+                        <label>1. Quét mã vị trí kệ thực tế (Khu / Kệ / Tầng / Ô) *</label>
+                        <input type="text" class="form-input" id="outScanShelfInput" placeholder="Chọn Box bên trái hoặc quét mã vị trí kệ" oninput="validateOutFormReadiness()">
+                    </div>
+                    <div class="form-field">
+                        <label>2. Quét QR nội bộ của Box *</label>
+                        <input type="text" class="form-input" id="outScanBoxInput" placeholder="Quét QR Box (QR-SANOVA-...)" oninput="validateOutFormReadiness()">
+                    </div>
+                    <div class="form-field">
+                        <label>3. Số PCS thực tế lấy từ Box *</label>
+                        <input type="number" class="form-input" id="outPickQtyInput" min="0" value="0" disabled oninput="validateOutFormReadiness()">
+                    </div>
+                    <button type="button" class="btn-primary-full" id="btnConfirmOut" disabled onclick="submitConfirmOut()">Xác nhận OUT &amp; Trừ tồn kệ</button>
+                </div>
+            </div>
+
+            <!-- KHU VỰC 4: LỊCH SỬ ĐÃ LẤY -->
+            <h4 style="font-size:14.5px; font-weight:800; color:#063b2c; margin-bottom:10px;">Khu vực 4 · Lịch sử vị trí đã lấy hàng (OUT)</h4>
+            <div style="overflow-x:auto;">
+                <table class="history-log-table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Box</th>
+                            <th>Khu / Kệ / Tầng / Vị trí</th>
+                            <th>PCS lấy</th>
+                            <th>Tồn sau trong Box</th>
+                            <th>Nhân viên</th>
+                        </tr>
+                    </thead>
+                    <tbody id="outLocationHistoryTbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 4. PANEL THAO TÁC CHI TIẾT PHIẾU RETURNED (4 BƯỚC CHUẨN NGHIỆP VỤ) -->
+        <section class="detail-workspace" id="retDetailWorkspace">
+            <div class="detail-header">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <h3 class="section-title" id="detRetCode">RETURN-0005</h3>
+                        <span class="status-pill" id="detRetStatusBadge">Chờ trả</span>
+                    </div>
+                    <p class="section-sub" id="detRetMeta" style="margin-top:4px;">Phiếu OUT nguồn: -- · Đơn hàng liên quan: --</p>
+                </div>
+                <button type="button" class="btn-outline-sm" onclick="document.getElementById('retDetailWorkspace').classList.remove('open')">Đóng</button>
+            </div>
+
+            <!-- ================= BƯỚC 1: XÁC ĐỊNH HÀNG CẦN TRẢ ================= -->
+            <div style="margin-bottom: 18px;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <span style="background:#063b2c; color:#fff; font-size:11px; font-weight:800; padding:3px 9px; border-radius:6px;">BƯỚC 1</span>
+                    <h4 style="font-size:14.5px; font-weight:800; color:#063b2c;">Xác định hàng cần trả &amp; Kiểm tra điều kiện nguồn OUT</h4>
+                </div>
+                <div class="info-strip-grid" style="margin-bottom:0;">
+                    <div class="info-box">
+                        <span>Phiếu OUT nguồn &amp; Box nguồn</span>
+                        <strong id="detRetSourceInfo" style="font-size:13.5px;">--</strong>
+                    </div>
+                    <div class="info-box">
+                        <span>Sản phẩm cần trả</span>
+                        <strong id="detRetProductInfo" style="font-size:13.5px;">--</strong>
+                    </div>
+                    <div class="info-box">
+                        <span>Lý do trả hàng</span>
+                        <strong id="detRetReasonText" style="font-size:13px; color:#b45309;">--</strong>
+                    </div>
+                    <div class="info-box" style="background:#ecfdf5; border-color:#a7f3d0;">
+                        <span>PCS đủ điều kiện trả</span>
+                        <strong id="detRetEligible" style="color:#059669; font-size:16px;">0 PCS</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= BƯỚC 2 & BƯỚC 3 ================= -->
+            <div class="two-col-ops">
+                <!-- BƯỚC 2: XÁC ĐỊNH VỊ TRÍ TRẢ -->
+                <div class="ops-subcard">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                        <span style="background:#0f766e; color:#fff; font-size:11px; font-weight:800; padding:3px 9px; border-radius:6px;">BƯỚC 2</span>
+                        <h4 style="margin-bottom:0;">Xác định vị trí trả &amp; Kiểm tra sức chứa kệ</h4>
+                    </div>
+
+                    <div style="background:#ffffff; border:1px solid #99f6e4; border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+                        <div style="font-size:11.5px; color:#64748b; margin-bottom:3px;">Vị trí Khu – Kệ – Tầng – Ô được đề xuất:</div>
+                        <strong id="detRetSuggestedLoc" style="font-size:15px; color:#063b2c;">--</strong>
+                        <div id="detRetSourceBoxHint" style="font-size:12.5px; color:#0f766e; font-weight:700; margin-top:4px;">Box nguồn: --</div>
+                    </div>
+
+                    <!-- Kết quả kiểm tra sức chứa & tình trạng kệ thời gian thực -->
+                    <div id="retSlotCapacityCard" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; font-size:12.5px; margin-bottom:10px;">
+                        <div style="font-weight:700; color:#334155; margin-bottom:4px;">Tình trạng kệ &amp; sức chứa còn lại:</div>
+                        <div id="retSlotCapacityDetail" style="color:#64748b;">Đang kiểm tra sức chứa vị trí kệ...</div>
+                    </div>
+
+                    <p style="font-size:12px; color:#64748b; line-height:1.45;">
+                        * Vị trí trên chỉ là gợi ý. Nhân viên bắt buộc phải quét mã vị trí kệ thực tế ở <strong>Bước 3</strong> trước khi hệ thống cộng tồn.
+                    </p>
+                </div>
+
+                <!-- BƯỚC 3 & BƯỚC 4: QUÉT KIỂM TRA & XÁC NHẬN RETURNED -->
+                <div class="ops-subcard">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                        <span style="background:#0f766e; color:#fff; font-size:11px; font-weight:800; padding:3px 9px; border-radius:6px;">BƯỚC 3 &amp; 4</span>
+                        <h4 style="margin-bottom:0;">Quét kiểm tra &amp; Xác nhận RETURNED</h4>
+                    </div>
+
+                    <div class="form-field">
+                        <label>1. Xác nhận tình trạng chất lượng sản phẩm *</label>
+                        <select class="form-select" id="retConditionSelect" onchange="onReturnConditionChange()">
+                            <option value="GOOD">Nguyên vẹn · Đủ điều kiện nhập lại kệ</option>
+                            <option value="DAMAGED">Hàng có vấn đề về chất lượng · Chuyển cách ly (Không cộng tồn khả dụng)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-field">
+                        <label>2. Quét QR Box nhận hàng (Hoặc để trống nếu cấp Box mới)</label>
+                        <input type="text" class="form-input" id="retTargetBoxInput" placeholder="Quét QR Box nguồn (QR-SANOVA-...) hoặc để trống">
+                    </div>
+
+                    <div class="form-field" id="retShelfFieldGroup">
+                        <label>3. Quét mã vị trí kệ trả hàng thực tế *</label>
+                        <input type="text" class="form-input" id="retTargetShelfInput" placeholder="Bắt buộc quét mã kệ thực tế (VD: A1-002)" oninput="onReturnShelfInputChange()">
+                    </div>
+
+                    <div class="form-field">
+                        <label>4. Nhập số PCS thực tế đặt lại kệ *</label>
+                        <input type="number" class="form-input" id="retConfirmQtyInput" min="1" oninput="validateReturnStepReadiness()">
+                    </div>
+
+                    <div id="retStep4GuardHint" style="font-size:12px; font-weight:700; color:#d97706; margin-bottom:10px;">
+                        Vui lòng quét mã vị trí kệ thực tế để mở khóa xác nhận RETURNED.
+                    </div>
+
+                    <button type="button" class="btn-primary-full" id="btnConfirmReturn" disabled onclick="submitConfirmReturn()">
+                        Bước 4 · Xác nhận RETURNED &amp; Cộng tồn kho
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lịch sử giao dịch RETURNED đã ghi nhận -->
+            <h4 style="font-size:14px; font-weight:800; color:#063b2c; margin-bottom:8px;">Lịch sử giao dịch trả hàng (RETURNED)</h4>
+            <div style="overflow-x:auto;">
+                <table class="history-log-table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Box nhận</th>
+                            <th>Khu / Kệ / Tầng / Vị trí</th>
+                            <th>PCS trả</th>
+                            <th>Tình trạng</th>
+                            <th>Nhân viên</th>
+                        </tr>
+                    </thead>
+                    <tbody id="retHistoryTbody"></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL BÁO THIẾU HÀNG -->
+    <div class="modal-backdrop" id="shortageModal">
+        <div class="modal-box">
+            <h3 style="font-size:17px; font-weight:800; color:#991b1b; margin-bottom:8px;">Báo cáo thiếu hàng trên kệ</h3>
+            <p style="font-size:13px; color:#475569; margin-bottom:14px;">Hệ thống giữ nguyên số lượng yêu cầu gốc của đơn hàng và ghi nhận chênh lệch thiếu thực tế để Quản lý xử lý.</p>
+            <div class="form-field">
+                <label>Số PCS thực tế có thể lấy được</label>
+                <input type="number" class="form-input" id="shortageActualPcs" min="0">
+            </div>
+            <div class="form-field">
+                <label>Lý do thiếu hàng *</label>
+                <input type="text" class="form-input" id="shortageReasonInput" placeholder="VD: Kệ A1-010 hết hàng thực tế, Box cuối bị móp...">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+                <button type="button" class="btn-outline-sm" onclick="document.getElementById('shortageModal').classList.remove('open')">Hủy</button>
+                <button type="button" class="btn-danger-outline" onclick="submitReportShortage()">Gửi báo thiếu hàng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TẠO PHIẾU RETURNED TỪ PHIẾU OUT NGUỒN -->
+    <div class="modal-backdrop" id="createReturnModal">
+        <div class="modal-box">
+            <h3 style="font-size:17px; font-weight:800; color:#063b2c; margin-bottom:8px;">Tạo yêu cầu trả hàng (RETURNED)</h3>
+            <p style="font-size:13px; color:#475569; margin-bottom:14px;">Bắt buộc chọn phiếu OUT nguồn đã lấy hàng trước đó.</p>
+            <div class="form-field">
+                <label>Chọn phiếu OUT nguồn *</label>
+                <select class="form-select" id="newRetOutIdSelect"></select>
+            </div>
+            <div class="form-field">
+                <label>Số PCS đề nghị trả *</label>
+                <input type="number" class="form-input" id="newRetQtyInput" min="1" value="5">
+            </div>
+            <div class="form-field">
+                <label>Lý do trả hàng *</label>
+                <select class="form-select" id="newRetReasonSelect">
+                    <option value="Lấy dư so với nhu cầu đóng gói">Lấy dư so với nhu cầu đóng gói</option>
+                    <option value="Pre-packing Combo còn dư">Pre-packing Combo còn dư</option>
+                    <option value="Đơn hàng bị hủy trước bàn giao">Đơn hàng bị hủy trước bàn giao</option>
+                    <option value="Lấy nhầm sản phẩm">Lấy nhầm sản phẩm</option>
+                </select>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+                <button type="button" class="btn-outline-sm" onclick="document.getElementById('createReturnModal').classList.remove('open')">Hủy</button>
+                <button type="button" class="btn-primary-full" style="width:auto; padding:0 18px;" onclick="submitCreateReturnOrder()">Tạo phiếu trả hàng</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let prState = {
+            mode: 'OUT',
+            outOrders: [],
+            returnOrders: [],
+            outStatusFilter: 'ALL',
+            retStatusFilter: 'ALL',
+            activeOutOrder: null,
+            activeReturnOrder: null,
+            availableBoxes: []
+        };
+
+        function switchMainMode(mode) {
+            prState.mode = mode;
+            document.getElementById('btnModeOut').classList.toggle('active', mode === 'OUT');
+            document.getElementById('btnModeReturned').classList.toggle('active', mode === 'RETURNED');
+            document.getElementById('panelModeOut').style.display = mode === 'OUT' ? 'block' : 'none';
+            document.getElementById('panelModeReturned').style.display = mode === 'RETURNED' ? 'block' : 'none';
+            document.getElementById('outDetailWorkspace').classList.remove('open');
+            document.getElementById('retDetailWorkspace').classList.remove('open');
+        }
+
+        function switchModeAndFilter(mode, status) {
+            switchMainMode(mode);
+            if (mode === 'OUT') {
+                filterOutByStatus(status);
+            } else {
+                filterRetByStatus(status);
+            }
+        }
+
+        function filterOutByStatus(st) {
+            prState.outStatusFilter = st;
+            document.querySelectorAll('#outStatusChips .chip-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.st === st);
+            });
+            renderOutTable();
+        }
+
+        function filterRetByStatus(st) {
+            prState.retStatusFilter = st;
+            document.querySelectorAll('#retStatusChips .chip-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.st === st);
+            });
+            renderReturnTable();
+        }
+
+        async function loadPickingAndReturnsData() {
+            try {
+                const [resPick, resRet] = await Promise.all([
+                    fetch('/api/staff/picking', { credentials: 'same-origin', cache: 'no-store' }),
+                    fetch('/api/staff/returns', { credentials: 'same-origin', cache: 'no-store' })
+                ]);
+                if (!resPick.ok || !resRet.ok) return;
+
+                const pickData = await resPick.json();
+                const retData = await resRet.json();
+
+                prState.outOrders = pickData.orders || [];
+                prState.returnOrders = retData.orders || [];
+
+                document.getElementById('kpiWaitPick').textContent =
+                    String(prState.outOrders.filter(o => o.status === 'Chờ thực hiện').length).padStart(2, '0');
+                document.getElementById('kpiDoingPick').textContent =
+                    String(prState.outOrders.filter(o => o.status === 'Đang thực hiện').length).padStart(2, '0');
+                document.getElementById('kpiWaitReturn').textContent =
+                    String(prState.returnOrders.filter(r => r.status === 'Chờ trả').length).padStart(2, '0');
+                document.getElementById('kpiDoingReturn').textContent =
+                    String(prState.returnOrders.filter(r => r.status === 'Đang trả').length).padStart(2, '0');
+
+                renderOutTable();
+                renderReturnTable();
+
+                // Kiểm tra URL params (?tab=RETURNED, ?ticket=OUT-0018, ?box=..., ?sku=...)
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('tab') === 'RETURNED' && !prState.activeOutOrder) {
+                    switchMainMode('RETURNED');
+                }
+                const targetTicket = params.get('ticket');
+                if (targetTicket) {
+                    if (targetTicket.startsWith('OUT-')) openOutDetail(targetTicket);
+                    else if (targetTicket.startsWith('RETURN-')) {
+                        switchMainMode('RETURNED');
+                        openReturnDetail(targetTicket);
+                    }
+                } else if (params.get('box') || params.get('sku')) {
+                    const boxParam = params.get('box') || '';
+                    const skuParam = params.get('sku') || '';
+                    const matched = prState.outOrders.find(o => o.status !== 'Hoàn thành' && (!skuParam || o.sku === skuParam)) || prState.outOrders[0];
+                    if (matched) {
+                        await openOutDetail(matched.id);
+                        if (boxParam) {
+                            document.getElementById('outScanBoxInput').value = boxParam;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function getStatusPillClass(st) {
+            if (st === 'Hoàn thành') return 'st-done';
+            if (st === 'Đang thực hiện' || st === 'Đang trả') return 'st-doing';
+            if (st === 'Thiếu hàng') return 'st-shortage';
+            if (st === 'Chờ xử lý lỗi') return 'st-quarantine';
+            return '';
+        }
+
+        function renderOutTable() {
+            const tbody = document.getElementById('outTicketsTbody');
+            const kw = (document.getElementById('searchOutInput').value || '').trim().toLowerCase();
+
+            const filtered = prState.outOrders.filter(o => {
+                if (prState.outStatusFilter !== 'ALL' && o.status !== prState.outStatusFilter) return false;
+                if (kw) {
+                    const hay = `${o.id} ${o.order_code} ${o.sku} ${o.product_name}`.toLowerCase();
+                    if (!hay.includes(kw)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b; padding:24px;">Không có phiếu lấy hàng phù hợp.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(o => `
+                <tr class="${prState.activeOutOrder && prState.activeOutOrder.id === o.id ? 'selected-row' : ''}" onclick="openOutDetail('${o.id}')">
+                    <td>
+                        <div class="code-primary">${o.id}</div>
+                        <div class="code-secondary">${o.order_code}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight:700; color:#0f172a;">${o.product_name || o.sku}</div>
+                        <div class="code-secondary">${o.picked_pcs}/${o.required_pcs} PCS</div>
+                    </td>
+                    <td><span class="status-pill ${getStatusPillClass(o.status)}">${o.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        let slotCheckTimer = null;
+
+        function renderReturnTable() {
+            const tbody = document.getElementById('retTicketsTbody');
+            const kw = (document.getElementById('searchRetInput').value || '').trim().toLowerCase();
+
+            const filtered = prState.returnOrders.filter(r => {
+                if (prState.retStatusFilter !== 'ALL' && r.status !== prState.retStatusFilter) return false;
+                if (kw) {
+                    const hay = `${r.id} ${r.out_order_id} ${r.sku} ${r.product_name} ${r.reason}`.toLowerCase();
+                    if (!hay.includes(kw)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b; padding:24px;">Chưa có phiếu trả hàng phù hợp.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(r => `
+                <tr class="${prState.activeReturnOrder && prState.activeReturnOrder.id === r.id ? 'selected-row' : ''}" onclick="openReturnDetail('${r.id}')">
+                    <td>
+                        <div class="code-primary">${r.id}</div>
+                        <div class="code-secondary">Nguồn: ${r.out_order_id}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight:700; color:#0f172a;">${r.product_name || r.sku}</div>
+                        <div class="code-secondary">${r.returned_pcs}/${r.return_qty} PCS · <span style="color:#b45309; font-weight:600;">${r.reason}</span></div>
+                    </td>
+                    <td>
+                        <div style="font-weight:700; color:#063b2c; font-size:13px;">${r.suggested_location_path || r.source_shelf_code || '--'}</div>
+                        <div class="code-secondary">Box nguồn: ${r.source_box_id || 'Cấp Box mới'} · <em>Đề xuất</em></div>
+                    </td>
+                    <td><span class="status-pill ${getStatusPillClass(r.status)}">${r.status}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        async function checkReturnSlotCapacity(slotCode) {
+            const detailEl = document.getElementById('retSlotCapacityDetail');
+            const cardEl = document.getElementById('retSlotCapacityCard');
+            if (!slotCode) {
+                detailEl.textContent = 'Chưa có mã vị trí kệ.';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/staff/returns/check-slot/${encodeURIComponent(slotCode)}`, { credentials: 'same-origin' });
+                const data = await res.json();
+                if (!res.ok || !data.exists) {
+                    cardEl.style.borderColor = '#fecaca';
+                    cardEl.style.background = '#fef2f2';
+                    detailEl.innerHTML = `<span style="color:#b91c1c; font-weight:700;">⚠ Vị trí ${slotCode} không tồn tại trong Cấu hình kho!</span>`;
+                    return;
+                }
+                if (!data.is_available) {
+                    cardEl.style.borderColor = '#fecaca';
+                    cardEl.style.background = '#fef2f2';
+                    detailEl.innerHTML = `<span style="color:#b91c1c; font-weight:700;">⚠ ${data.full_path} đang ở trạng thái "${data.status}" hoặc đã đầy sức chứa (${data.current_boxes}/${data.max_boxes} Box).</span>`;
+                } else {
+                    cardEl.style.borderColor = '#a7f3d0';
+                    cardEl.style.background = '#f0fdf9';
+                    detailEl.innerHTML = `
+                        <div style="color:#065f46; font-weight:700;">✓ ${data.full_path} · Trạng thái: ${data.status}</div>
+                        <div style="color:#475569; margin-top:3px;">Sức chứa còn trống: <strong>${data.rem_boxes}/${data.max_boxes} Box</strong> · Tải trọng trống: <strong>${data.rem_weight} kg</strong></div>
+                    `;
+                }
+            } catch (e) {}
+        }
+
+        function onReturnShelfInputChange() {
+            validateReturnStepReadiness();
+            const val = (document.getElementById('retTargetShelfInput').value || '').trim();
+            clearTimeout(slotCheckTimer);
+            if (val.length >= 4) {
+                slotCheckTimer = setTimeout(() => checkReturnSlotCapacity(val), 300);
+            }
+        }
+
+        function onReturnConditionChange() {
+            const cond = document.getElementById('retConditionSelect').value;
+            const shelfGroup = document.getElementById('retShelfFieldGroup');
+            shelfGroup.style.display = cond === 'DAMAGED' ? 'none' : 'block';
+            validateReturnStepReadiness();
+        }
+
+        function validateReturnStepReadiness() {
+            const ret = prState.activeReturnOrder;
+            const btn = document.getElementById('btnConfirmReturn');
+            const hint = document.getElementById('retStep4GuardHint');
+            if (!ret || ret.status === 'Hoàn thành') {
+                btn.disabled = true;
+                hint.textContent = 'Phiếu trả hàng đã hoàn tất.';
+                return;
+            }
+
+            const cond = document.getElementById('retConditionSelect').value;
+            const shelfVal = (document.getElementById('retTargetShelfInput').value || '').trim();
+            const qty = Number(document.getElementById('retConfirmQtyInput').value || 0);
+            const remEligible = Math.max(0, ret.return_qty - ret.returned_pcs);
+
+            if (qty <= 0 || qty > remEligible) {
+                btn.disabled = true;
+                hint.style.color = '#dc2626';
+                hint.textContent = `Số PCS trả thực tế phải từ 1 đến ${remEligible} PCS.`;
+                return;
+            }
+
+            if (cond === 'GOOD' && !shelfVal) {
+                btn.disabled = true;
+                hint.style.color = '#d97706';
+                hint.textContent = 'Bước 3 chưa xong: Vui lòng quét mã vị trí kệ thực tế để mở khóa Bước 4.';
+                return;
+            }
+
+            btn.disabled = false;
+            hint.style.color = '#059669';
+            hint.textContent = cond === 'DAMAGED'
+                ? 'Sẵn sàng chuyển hàng lỗi sang khu cách ly (Không cộng tồn khả dụng).'
+                : `Sẵn sàng xác nhận RETURNED: Cộng +${qty} PCS vào vị trí ${shelfVal.toUpperCase()}.`;
+        }
+
+        function openReturnDetail(retId) {
+            const ret = prState.returnOrders.find(r => r.id === retId);
+            if (!ret) return;
+            prState.activeReturnOrder = ret;
+
+            const panel = document.getElementById('retDetailWorkspace');
+            panel.classList.add('open');
+
+            document.getElementById('detRetCode').textContent = ret.id;
+            const badge = document.getElementById('detRetStatusBadge');
+            badge.textContent = ret.status;
+            badge.className = `status-pill ${getStatusPillClass(ret.status)}`;
+
+            document.getElementById('detRetMeta').textContent =
+                `Phiếu OUT nguồn: ${ret.out_order_id} · Đơn hàng liên quan: ${ret.order_code || '--'}`;
+
+            // Bước 1
+            document.getElementById('detRetSourceInfo').textContent = `${ret.out_order_id} · Box ${ret.source_box_id || 'Mới'}`;
+            document.getElementById('detRetProductInfo').textContent = `${ret.sku} · ${ret.product_name}`;
+            document.getElementById('detRetReasonText').textContent = ret.reason;
+
+            const remToReturn = Math.max(0, ret.return_qty - ret.returned_pcs);
+            document.getElementById('detRetEligible').textContent = `${remToReturn} PCS`;
+
+            // Bước 2
+            document.getElementById('detRetSuggestedLoc').textContent = ret.suggested_location_path || ret.source_shelf_code || 'Chưa xác định';
+            document.getElementById('detRetSourceBoxHint').textContent =
+                `Box nguồn: ${ret.source_box_id || 'Cấp Box mới'} · Đã OUT ${ret.source_out_pcs} PCS (Đã dùng ${ret.consumed_pcs} PCS)`;
+            if (ret.source_shelf_code) {
+                checkReturnSlotCapacity(ret.source_shelf_code);
+            }
+
+            // Bước 3 & 4 (Để trống ô quét vị trí kệ để bắt buộc nhân viên quét xác nhận thực tế)
+            const condSel = document.getElementById('retConditionSelect');
+            condSel.value = ret.reason === 'Hàng có vấn đề về chất lượng' ? 'DAMAGED' : 'GOOD';
+            document.getElementById('retTargetBoxInput').value = ret.source_box_id || '';
+            document.getElementById('retTargetShelfInput').value = '';
+            document.getElementById('retConfirmQtyInput').value = remToReturn;
+
+            onReturnConditionChange();
+
+            // Lịch sử RETURNED
+            const txs = ret.transactions || [];
+            const histTbody = document.getElementById('retHistoryTbody');
+            if (txs.length === 0) {
+                histTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:14px;">Chưa có giao dịch đặt hàng trả về kệ.</td></tr>`;
+            } else {
+                histTbody.innerHTML = txs.map(tx => `
+                    <tr>
+                        <td>${tx.time}</td>
+                        <td><strong>${tx.box_id}</strong></td>
+                        <td><strong style="color:#0f766e;">${tx.location_snapshot}</strong></td>
+                        <td><strong>+${tx.returned_pcs} PCS</strong></td>
+                        <td>${tx.condition}</td>
+                        <td>${tx.staff_name}</td>
+                    </tr>
+                `).join('');
+            }
+
+            renderReturnTable();
+        }
+
+        function validateOutFormReadiness() {
+            const order = prState.activeOutOrder;
+            const shelfVal = (document.getElementById('outScanShelfInput').value || '').trim();
+            const boxVal = (document.getElementById('outScanBoxInput').value || '').trim();
+            const qtyInput = document.getElementById('outPickQtyInput');
+            const btnConfirm = document.getElementById('btnConfirmOut');
+            const hintEl = document.getElementById('stepLockHint');
+
+            if (!order || order.status === 'Hoàn thành' || order.status === 'Hủy') {
+                qtyInput.disabled = true;
+                btnConfirm.disabled = true;
+                hintEl.textContent = 'Phiếu đã kết thúc';
+                return;
+            }
+
+            if (prState.availableBoxes.length === 0) {
+                qtyInput.value = 0;
+                qtyInput.disabled = true;
+                btnConfirm.disabled = true;
+                hintEl.textContent = 'Không có Box khả dụng';
+                hintEl.style.color = '#dc2626';
+                return;
+            }
+
+            if (!boxVal) {
+                qtyInput.value = 0;
+                qtyInput.disabled = true;
+                btnConfirm.disabled = true;
+                hintEl.textContent = '1. Hãy chọn hoặc quét Box';
+                hintEl.style.color = '#d97706';
+                return;
+            }
+
+            if (!shelfVal) {
+                qtyInput.disabled = true;
+                btnConfirm.disabled = true;
+                hintEl.textContent = '2. Cần quét vị trí kệ';
+                hintEl.style.color = '#d97706';
+                return;
+            }
+
+            // Đã đủ Box + Vị trí -> Mở khóa nhập PCS & nút Xác nhận OUT
+            qtyInput.disabled = false;
+            const qty = Number(qtyInput.value || 0);
+            const remOrder = Math.max(0, order.required_pcs - order.picked_pcs);
+            const maxBoxQty = selectedBoxForOut ? Number(selectedBoxForOut.quantity) : remOrder;
+            const maxAllowed = Math.min(remOrder, maxBoxQty);
+
+            if (qty <= 0 || qty > maxAllowed) {
+                btnConfirm.disabled = true;
+                hintEl.textContent = `Nhập PCS từ 1 đến ${maxAllowed}`;
+                hintEl.style.color = '#dc2626';
+            } else {
+                btnConfirm.disabled = false;
+                hintEl.textContent = 'Sẵn sàng xác nhận OUT';
+                hintEl.style.color = '#059669';
+            }
+        }
+        // Mở chi tiết phiếu OUT & nạp Box khả dụng thực tế
+        async function openOutDetail(outId) {
+            const res = await fetch(`/api/staff/picking/${encodeURIComponent(outId)}`, { credentials: 'same-origin', cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json();
+            const order = data.order;
+            prState.activeOutOrder = order;
+            prState.availableBoxes = data.available_boxes || [];
+            selectedBoxForOut = null;
+
+            const panel = document.getElementById('outDetailWorkspace');
+            panel.classList.add('open');
+
+            document.getElementById('detOutCode').textContent = order.id;
+            const badge = document.getElementById('detOutStatusBadge');
+            badge.textContent = order.status;
+            badge.className = `status-pill ${getStatusPillClass(order.status)}`;
+
+            document.getElementById('detOutMeta').textContent =
+                `Đơn hàng: ${order.order_code} · Nền tảng: ${order.platform || 'Shopee'} · Phụ trách: ${order.assignee}`;
+            document.getElementById('detOutProduct').textContent = `${order.sku} · ${order.product_name}`;
+            document.getElementById('detOutReqPcs').textContent = `${order.required_pcs} PCS`;
+            document.getElementById('detOutPickedPcs').textContent = `${order.picked_pcs} PCS`;
+
+            const rem = Math.max(0, order.required_pcs - order.picked_pcs);
+            document.getElementById('detOutRemPcs').textContent = `${rem} PCS`;
+
+            // Reset Khu vực 3 về trạng thái khóa an toàn cho đến khi chọn Box
+            document.getElementById('outScanShelfInput').value = '';
+            document.getElementById('outScanBoxInput').value = '';
+            document.getElementById('outPickQtyInput').value = 0;
+            document.getElementById('selectedBoxSummaryBox').style.display = 'none';
+
+            const isCompleted = (order.status === 'Hoàn thành' || rem === 0);
+            document.getElementById('outCompletedBanner').style.display = isCompleted ? 'flex' : 'none';
+            document.getElementById('btnReportShortage').disabled = isCompleted;
+
+            // Render Khu vực 2: Vị trí & Box khả dụng
+            document.getElementById('availBoxCountBadge').textContent = `${prState.availableBoxes.length} Box khả dụng`;
+            const boxListEl = document.getElementById('suggestedBoxesList');
+
+            if (prState.availableBoxes.length === 0) {
+                boxListEl.innerHTML = `
+                    <div style="font-size:13px; color:#991b1b; padding:14px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; line-height:1.5;">
+                        <strong>Không tìm thấy Box đang lưu trữ khả dụng cho ${order.sku}.</strong><br>
+                        Nguyên nhân có thể do sản phẩm chưa nhập kho, Box chưa xếp lên kệ hoặc chưa được Manager xác nhận nhập kho. Vui lòng kiểm tra hoặc bấm <strong>Báo thiếu hàng</strong>.
+                    </div>`;
+            } else {
+                boxListEl.innerHTML = prState.availableBoxes.map(b => `
+                    <div class="suggested-box-card" onclick="selectSuggestedBox('${b.box_id}')">
+                        <div>
+                            <strong style="font-size:13.5px; color:#063b2c;">${b.box_id} · ${b.location_hierarchy || b.shelf_position_id}</strong>
+                            <div style="font-size:11.5px; color:#64748b; margin-top:2px;">QR: ${b.internal_qr} · Tồn khả dụng: <strong style="color:#0f766e;">${b.quantity} PCS</strong></div>
+                        </div>
+                        <button type="button" class="chip-btn" style="padding:5px 12px; font-size:12px; background:#ecfdf5; color:#065f46; border-color:#a7f3d0;">Chọn Box</button>
+                    </div>
+                `).join('');
+            }
+
+            // Render Khu vực 4: Lịch sử vị trí đã lấy
+            const txs = order.transactions || [];
+            const histTbody = document.getElementById('outLocationHistoryTbody');
+            if (txs.length === 0) {
+                histTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:16px;">Chưa phát sinh lượt lấy hàng nào trên phiếu này.</td></tr>`;
+            } else {
+                histTbody.innerHTML = txs.map(tx => `
+                    <tr>
+                        <td>${tx.time}</td>
+                        <td><strong>${tx.box_id}</strong></td>
+                        <td><strong style="color:#0f766e;">${tx.location_snapshot}</strong></td>
+                        <td><strong>${tx.picked_pcs} PCS</strong></td>
+                        <td>${tx.remaining_in_box} PCS</td>
+                        <td>${tx.staff_name}</td>
+                    </tr>
+                `).join('') + `
+                    <tr style="background:#f8fafc; font-weight:800;">
+                        <td colspan="3">Tổng cộng đã OUT</td>
+                        <td>${order.picked_pcs} PCS</td>
+                        <td colspan="2"></td>
+                    </tr>
+                `;
+            }
+
+            validateOutFormReadiness();
+            renderOutTable();
+        }
+
+        function selectSuggestedBox(boxId) {
+            const box = prState.availableBoxes.find(b => b.box_id === boxId);
+            if (!box || !prState.activeOutOrder) return;
+            selectedBoxForOut = box;
+
+            document.getElementById('outScanShelfInput').value = box.shelf_position_id;
+            document.getElementById('outScanBoxInput').value = box.internal_qr;
+
+            const remOrder = Math.max(1, prState.activeOutOrder.required_pcs - prState.activeOutOrder.picked_pcs);
+            const pickAmount = Math.min(remOrder, Number(box.quantity));
+            const qtyInput = document.getElementById('outPickQtyInput');
+            qtyInput.max = pickAmount;
+            qtyInput.value = pickAmount;
+
+            const sumBox = document.getElementById('selectedBoxSummaryBox');
+            sumBox.style.display = 'block';
+            document.getElementById('selBoxLabel').textContent = `Đã chọn: ${box.box_id} (${box.location_hierarchy || box.shelf_position_id})`;
+            document.getElementById('selBoxRemainInfo').textContent =
+                `Tồn trước OUT: ${box.quantity} PCS · Đề xuất lấy: ${pickAmount} PCS · Tồn dự kiến còn lại: ${box.quantity - pickAmount} PCS`;
+
+            validateOutFormReadiness();
+        }
+
+        // Xác nhận 1 lượt OUT
+        async function submitConfirmOut() {
+            if (!prState.activeOutOrder) return;
+            const shelfCode = document.getElementById('outScanShelfInput').value.trim();
+            const boxQr = document.getElementById('outScanBoxInput').value.trim();
+            const qty = Number(document.getElementById('outPickQtyInput').value || 0);
+
+            if (!shelfCode || !boxQr || qty <= 0) {
+                alert('Vui lòng nhập đầy đủ vị trí kệ, mã QR Box và số PCS hợp lệ.');
+                return;
+            }
+
+            const txKey = `${prState.activeOutOrder.id}-${boxQr}-${Date.now()}`;
+            const res = await fetch(`/api/staff/picking/${encodeURIComponent(prState.activeOutOrder.id)}/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    shelf_code: shelfCode,
+                    box_qr: boxQr,
+                    pick_pcs: qty,
+                    idempotency_key: txKey
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Không thể thực hiện OUT hàng');
+                return;
+            }
+
+            document.getElementById('outScanBoxInput').value = '';
+            await loadPickingAndReturnsData();
+            await openOutDetail(prState.activeOutOrder.id);
+        }
+
+        // Báo thiếu hàng
+        function openShortageModal() {
+            if (!prState.activeOutOrder) return;
+            document.getElementById('shortageActualPcs').value = prState.activeOutOrder.picked_pcs;
+            document.getElementById('shortageReasonInput').value = '';
+            document.getElementById('shortageModal').classList.add('open');
+        }
+
+        async function submitReportShortage() {
+            const reason = document.getElementById('shortageReasonInput').value.trim();
+            if (!reason) {
+                alert('Bắt buộc nhập lý do thiếu hàng.');
+                return;
+            }
+            const res = await fetch(`/api/staff/picking/${encodeURIComponent(prState.activeOutOrder.id)}/shortage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ reason: reason })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Lỗi gửi báo thiếu hàng');
+                return;
+            }
+            document.getElementById('shortageModal').classList.remove('open');
+            await loadPickingAndReturnsData();
+            await openOutDetail(prState.activeOutOrder.id);
+        }
+
+        // Mở tạo yêu cầu RETURNED từ phiếu OUT nguồn
+        function openCreateReturnModal() {
+            const eligibleOuts = prState.outOrders.filter(o => o.picked_pcs > 0);
+            const sel = document.getElementById('newRetOutIdSelect');
+            if (eligibleOuts.length === 0) {
+                alert('Chưa có phiếu OUT nào đã lấy hàng để lập yêu cầu trả hàng.');
+                return;
+            }
+            sel.innerHTML = eligibleOuts.map(o =>
+                `<option value="${o.id}">${o.id} (${o.order_code}) · ${o.product_name} (Đã OUT: ${o.picked_pcs} PCS)</option>`
+            ).join('');
+            document.getElementById('createReturnModal').classList.add('open');
+        }
+
+        async function submitCreateReturnOrder() {
+            const outId = document.getElementById('newRetOutIdSelect').value;
+            const qty = Number(document.getElementById('newRetQtyInput').value || 0);
+            const reason = document.getElementById('newRetReasonSelect').value;
+
+            const res = await fetch('/api/staff/returns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ out_order_id: outId, return_qty: qty, reason: reason })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Không thể tạo phiếu trả hàng');
+                return;
+            }
+            document.getElementById('createReturnModal').classList.remove('open');
+            await loadPickingAndReturnsData();
+            if (data.return_order) {
+                openReturnDetail(data.return_order.id);
+            }
+        }
+
+        // Mở chi tiết phiếu RETURNED
+        async function openReturnDetail(retId) {
+            const ret = prState.returnOrders.find(r => r.id === retId);
+            if (!ret) return;
+            prState.activeReturnOrder = ret;
+
+            const panel = document.getElementById('retDetailWorkspace');
+            panel.classList.add('open');
+
+            document.getElementById('detRetCode').textContent = ret.id;
+            const badge = document.getElementById('detRetStatusBadge');
+            badge.textContent = ret.status;
+            badge.className = `status-pill ${getStatusPillClass(ret.status)}`;
+
+            document.getElementById('detRetMeta').textContent =
+                `Phiếu OUT nguồn: ${ret.out_order_id} · Sản phẩm: ${ret.sku} (${ret.product_name}) · Lý do: ${ret.reason}`;
+
+            document.getElementById('detRetOutTotal').textContent = `${ret.source_out_pcs} PCS`;
+            document.getElementById('detRetConsumed').textContent = `${ret.consumed_pcs} PCS`;
+            document.getElementById('detRetAlreadyReturned').textContent = `${ret.returned_pcs} PCS`;
+
+            const eligible = Math.max(0, ret.source_out_pcs - ret.consumed_pcs - ret.returned_pcs);
+            document.getElementById('detRetEligible').textContent = `${eligible} PCS`;
+            document.getElementById('retConfirmQtyInput').value = Math.min(eligible, ret.return_qty - ret.returned_pcs) || eligible;
+            document.getElementById('retTargetBoxInput').value = ret.source_box_id || '';
+            document.getElementById('retTargetShelfInput').value = ret.source_shelf_code || '';
+
+            document.getElementById('btnConfirmReturn').disabled = (ret.status === 'Hoàn thành' || eligible === 0);
+            renderReturnTable();
+        }
+
+        function toggleReturnShelfRequired() {
+            const cond = document.getElementById('retConditionSelect').value;
+            document.getElementById('retShelfFieldGroup').style.opacity = cond === 'DAMAGED' ? '0.5' : '1';
+        }
+
+        // Xác nhận RETURNED
+        async function submitConfirmReturn() {
+            if (!prState.activeReturnOrder) return;
+            const qty = Number(document.getElementById('retConfirmQtyInput').value || 0);
+            const condition = document.getElementById('retConditionSelect').value;
+            const targetBox = document.getElementById('retTargetBoxInput').value.trim();
+            const targetShelf = document.getElementById('retTargetShelfInput').value.trim();
+
+            const res = await fetch(`/api/staff/returns/${encodeURIComponent(prState.activeReturnOrder.id)}/confirm`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    actual_return_pcs: qty,
+                    condition: condition,
+                    target_box: targetBox,
+                    target_shelf: targetShelf
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Không thể xác nhận trả hàng');
+                return;
+            }
+            alert(data.message || 'Đã xác nhận RETURNED và cập nhật tồn kho thành công!');
+            await loadPickingAndReturnsData();
+            openReturnDetail(prState.activeReturnOrder.id);
+        }
+
+        loadPickingAndReturnsData();
+    </script>
+</body>
+</html>

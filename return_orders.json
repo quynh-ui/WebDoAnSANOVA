@@ -1,0 +1,18 @@
+[
+  {
+    "id": "RETURN-0005",
+    "out_order_id": "OUT-0018",
+    "sku": "SP0001",
+    "product_name": "Sữa rửa mặt dịu nhẹ 150ml",
+    "source_out_pcs": 50,
+    "consumed_pcs": 40,
+    "return_qty": 10,
+    "returned_pcs": 0,
+    "source_box_id": "BOX-0025-02",
+    "source_shelf_code": "A1-002",
+    "reason": "Lấy dư so với nhu cầu đóng gói",
+    "assignee": "Nguyên Văn C",
+    "status": "Chờ trả",
+    "created_at": "10:15"
+  }
+]

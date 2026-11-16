@@ -1,0 +1,66 @@
+[
+  {
+    "id": "OUT-0018",
+    "order_code": "DH-0025",
+    "platform": "Shopee",
+    "sku": "SP0001",
+    "product_name": "Sữa rửa mặt dịu nhẹ 150ml",
+    "required_pcs": 80,
+    "picked_pcs": 50,
+    "consumed_pcs": 40,
+    "assignee": "Nguyên Văn C",
+    "status": "Đang thực hiện",
+    "shortage_note": "",
+    "transactions": [
+      {
+        "tx_id": "TX-INIT-01",
+        "time": "09:30",
+        "box_id": "BOX-0025-01",
+        "internal_qr": "QR-SANOVA-NK0025-01",
+        "location_snapshot": "A1-001",
+        "picked_pcs": 50,
+        "remaining_in_box": 0,
+        "staff_name": "Nguyên Văn C"
+      }
+    ]
+  },
+  {
+    "id": "OUT-0019",
+    "order_code": "DH-0026",
+    "platform": "TikTok Shop",
+    "sku": "SP0002",
+    "product_name": "Kem dưỡng ẩm phục hồi 50g",
+    "required_pcs": 40,
+    "picked_pcs": 0,
+    "consumed_pcs": 0,
+    "assignee": "Nguyên Văn C",
+    "status": "Chờ thực hiện",
+    "shortage_note": "",
+    "transactions": []
+  },
+  {
+    "id": "OUT-0020",
+    "order_code": "DH-0027",
+    "platform": "Lazada",
+    "sku": "SP0001",
+    "product_name": "Sữa rửa mặt dịu nhẹ 150ml",
+    "required_pcs": 20,
+    "picked_pcs": 20,
+    "consumed_pcs": 20,
+    "assignee": "Nguyên Văn C",
+    "status": "Hoàn thành",
+    "shortage_note": "",
+    "transactions": [
+      {
+        "tx_id": "TX-INIT-02",
+        "time": "08:45",
+        "box_id": "BOX-0025-02",
+        "internal_qr": "QR-SANOVA-NK0025-02",
+        "location_snapshot": "A1-002",
+        "picked_pcs": 20,
+        "remaining_in_box": 4,
+        "staff_name": "Nguyên Văn C"
+      }
+    ]
+  }
+]

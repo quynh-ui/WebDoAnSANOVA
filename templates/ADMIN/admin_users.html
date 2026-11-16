@@ -548,14 +548,14 @@
                         <td><strong>{{ u.name }}</strong></td>
                         <td style="color: #64748b;">{{ u.username }}</td>
                         <td>
-                            {% if u.role == 'Quản trị viên' %}
-                                <span class="role-pill role-admin">Quản trị viên</span>
-                            {% elif u.role == 'Quản lý kho' %}
-                                <span class="role-pill role-manager">Quản lý kho</span>
-                            {% elif u.role == 'Nhân viên kho' %}
-                                <span class="role-pill role-staff">Nhân viên kho</span>
+                            {% if 'Quản trị viên' in u.role %}
+                                <span class="role-pill role-admin">{{ u.role }}</span>
+                            {% elif 'Quản lý kho' in u.role %}
+                                <span class="role-pill role-manager">{{ u.role }}</span>
+                            {% elif 'Nhân viên kho' in u.role %}
+                                <span class="role-pill role-staff">{{ u.role }}</span>
                             {% else %}
-                                <span class="role-pill role-coord">Điều phối / Kế toán kho</span>
+                                <span class="role-pill role-coord">{{ u.role }}</span>
                             {% endif %}
                         </td>
                         <td>

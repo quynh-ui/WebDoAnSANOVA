@@ -1,0 +1,70 @@
+[
+  {
+    "id": "PRE-0016",
+    "order_code": "DH-0027",
+    "platform": "Lazada",
+    "is_combo": false,
+    "title": "Sữa rửa mặt dịu nhẹ 150ml",
+    "out_refs": [
+      "OUT-0020"
+    ],
+    "required_qty": 20,
+    "prepared_qty": 20,
+    "assignee": "Nguyên Văn C",
+    "status": "Đang chuẩn bị",
+    "items": [
+      {
+        "sku": "SP0001",
+        "product_name": "Sữa rửa mặt dịu nhẹ 150ml",
+        "qty_per_unit": 1,
+        "out_pcs": 20,
+        "received_pcs": 20,
+        "defective_pcs": 0,
+        "source_boxes": [
+          "BOX-0025-02"
+        ]
+      }
+    ],
+    "batches": [
+      {
+        "time": "13:48",
+        "qty": 20,
+        "staff_name": "Nguyên Văn C"
+      }
+    ],
+    "issues": [],
+    "created_at": "13:47",
+    "max_possible_qty": 20
+  },
+  {
+    "id": "PRE-0015",
+    "order_code": "DH-0025",
+    "platform": "Shopee",
+    "is_combo": false,
+    "title": "Sữa rửa mặt dịu nhẹ 150ml",
+    "out_refs": [
+      "OUT-0018"
+    ],
+    "required_qty": 80,
+    "prepared_qty": 0,
+    "assignee": "Nguyên Văn C",
+    "status": "Chờ chuẩn bị",
+    "items": [
+      {
+        "sku": "SP0001",
+        "product_name": "Sữa rửa mặt dịu nhẹ 150ml",
+        "qty_per_unit": 1,
+        "out_pcs": 50,
+        "received_pcs": 50,
+        "defective_pcs": 0,
+        "source_boxes": [
+          "BOX-0025-01"
+        ]
+      }
+    ],
+    "batches": [],
+    "issues": [],
+    "created_at": "13:47",
+    "max_possible_qty": 50
+  }
+]

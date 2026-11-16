@@ -1,0 +1,24 @@
+[
+  {
+    "id": "SCN-073638-769",
+    "code": "BOX-0025-01",
+    "code_type": "BOX",
+    "type_label": "Box nội bộ",
+    "summary": "BN500 · 24 PCS · Đã xếp kệ, chờ duyệt",
+    "found": true,
+    "staff_code": "staffC",
+    "staff_name": "Nguyên Văn C",
+    "time": "07:36:38 · 16/11/2026"
+  },
+  {
+    "id": "SCN-073635-DF6",
+    "code": "A1-001",
+    "code_type": "SHELF",
+    "type_label": "Vị trí kệ",
+    "summary": "Khu A · 6/10 Box",
+    "found": true,
+    "staff_code": "staffC",
+    "staff_name": "Nguyên Văn C",
+    "time": "07:36:35 · 16/11/2026"
+  }
+]

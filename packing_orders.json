@@ -1,0 +1,31 @@
+[
+  {
+    "id": "PK-0025",
+    "order_code": "DH-0027",
+    "platform": "Lazada",
+    "order_type": "Đơn lẻ",
+    "source_label": "OUT (OUT-0020)",
+    "summary_text": "20 Sữa rửa mặt dịu nhẹ 150ml",
+    "assignee": "Nguyên Văn C",
+    "packing_status": "PENDING",
+    "handover_status": "NONE",
+    "display_status": "Chờ đóng gói",
+    "items": [
+      {
+        "sku": "SP0001",
+        "name": "Sữa rửa mặt dịu nhẹ 150ml",
+        "item_group": "Sản phẩm lẻ",
+        "unit": "PCS",
+        "required_qty": 20,
+        "ready_qty": 20,
+        "pcs_multiplier": 1
+      }
+    ],
+    "packages": [],
+    "handover_id": "",
+    "receiver": "",
+    "handover_note": "",
+    "reject_reason": "",
+    "handover_history": []
+  }
+]
