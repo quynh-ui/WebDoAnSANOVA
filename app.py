@@ -403,24 +403,30 @@ def has_permission(user_role, module_id, action_id):
 @app.route("/welcome")
 def welcome():
     if "user" in session:
-        role = session["user"].get("role")
-        if role == "Quản trị viên":
+        role = session["user"].get("role", "")
+        if "Quản trị viên" in role:
             return redirect(url_for("admin_dashboard"))
-        if role == "Quản lý kho":
+        if "Quản lý kho" in role:
             return redirect(url_for("warehouse_manager_dashboard"))
-        if role == "Nhân viên kho":
+        if "Điều phối" in role or "Kế toán" in role:
+            return redirect(url_for("dispatcher_dashboard_page"))
+        if "Nhân viên" in role:
             return redirect(url_for("staff_dashboard_page"))
     return render_template("welcome.html")
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # 1. Nếu đã có phiên đăng nhập trước đó -> điều hướng đúng vai trò
     if 'user' in session:
         role = session['user'].get('role', '')
         if 'Quản trị viên' in role:
             return redirect(url_for('admin_dashboard'))
         elif 'Quản lý kho' in role:
             return redirect(url_for('warehouse_manager_dashboard'))
-        elif 'Nhân viên' in role or 'Staff' in role:
+        elif 'Điều phối' in role or 'Kế toán' in role:
+            return redirect(url_for('dispatcher_dashboard_page'))
+        else:
             return redirect(url_for('staff_dashboard_page'))
 
     error = None
@@ -456,10 +462,10 @@ def login():
                 user_info['last_login'] = datetime.now().strftime("%d/%m/%Y · %H:%M")
                 save_users(users)
 
-                # Không bật session.permanent dài ngày để luôn yêu cầu xác thực lại khi hết phiên/đăng xuất
                 session.permanent = False
                 session['user'] = {
                     'username': matched_username,
+                    'staff_code': user_info.get('staff_code', matched_username),
                     'name': user_info.get('name'),
                     'email': user_info.get('email'),
                     'role': user_info.get('role'),
@@ -473,11 +479,14 @@ def login():
                     result="Thành công"
                 )
 
+                # 2. ĐIỀU HƯỚNG SAU KHI ĐĂNG NHẬP THÀNH CÔNG CHO ĐỦ 4 VAI TRÒ
                 role_name = user_info.get('role', '')
                 if 'Quản trị viên' in role_name:
                     return redirect(url_for('admin_dashboard'))
                 elif 'Quản lý kho' in role_name:
                     return redirect('/warehouse/manager')
+                elif 'Điều phối' in role_name or 'Kế toán' in role_name:
+                    return redirect(url_for('dispatcher_dashboard_page'))
                 else:
                     return redirect('/staff/dashboard')
         else:
@@ -8938,6 +8947,3156 @@ def api_staff_session_revoke(sess_id):
     revoked.add(sess_id)
     session['revoked_staff_sessions'] = list(revoked)
     return jsonify({'status': 'ok'})
+
+
+
+# IV . DISPATCHER : Điều phối
+#==========
+#Dashboard & API cho nhân viên kho (STAFF)
+import hashlib
+
+PLATFORM_ORDERS_FILE = str(BASE_DIR / "sales_platform_orders.json")
+
+
+def dispatcher_required(f):
+    @wraps(f)
+    @login_required
+    def decorated(*args, **kwargs):
+        role = session["user"].get("role", "")
+        if not any(k in role for k in ("Điều phối", "Kế toán", "Quản trị viên")):
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
+
+
+def _parse_disp_date(raw_val):
+    if not raw_val:
+        return None
+    s = str(raw_val).strip()
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(s[:10], fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+@app.route("/dispatcher")
+@dispatcher_required
+def dispatcher_dashboard_page():
+    return render_template(
+        "DISPATCHER/dispatcher_dashboard.html",
+        current_user=session.get("user", {})
+    )
+
+
+@app.route("/api/dispatcher/dashboard", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_dashboard():
+    today_date = datetime.now().date()
+    date_from = _parse_disp_date(request.args.get("date_from")) or today_date
+    date_to = _parse_disp_date(request.args.get("date_to")) or today_date
+    platform_filter = (request.args.get("platform") or "ALL").strip()
+
+    # 1. Đọc danh mục sản phẩm từ Manager (products_catalog.json)
+    catalog_raw = read_json(PRODUCTS_FILE, [])
+    catalog_list = catalog_raw.get("products", []) if isinstance(catalog_raw, dict) else catalog_raw
+    sku_name_map = {
+        str(p.get("sku", "")).upper(): p.get("name", p.get("sku", ""))
+        for p in catalog_list if p.get("sku")
+    }
+
+    # 2. Đọc phiếu yêu cầu lấy hàng & tiến độ OUT thực tế của Staff (picking_orders.json)
+    picking_list = read_json(PICKING_FILE, [])
+    if isinstance(picking_list, dict):
+        picking_list = picking_list.get("orders", [])
+
+    # 3. Đọc tiến độ Pre-packing & Đóng gói từ Staff (prepacking_orders.json, packing_orders.json)
+    prepack_list = read_json(PREPACKING_FILE, [])
+    if isinstance(prepack_list, dict):
+        prepack_list = prepack_list.get("orders", [])
+    prepack_by_order = {
+        str(p.get("order_code", "")).upper(): p
+        for p in prepack_list if p.get("order_code")
+    }
+
+    packing_list = read_json(PACKING_FILE, [])
+    if isinstance(packing_list, dict):
+        packing_list = packing_list.get("orders", [])
+    packing_by_order = {
+        str(pk.get("order_code", "")).upper(): pk
+        for pk in packing_list if pk.get("order_code")
+    }
+
+    # 4. Đọc kết quả Bàn giao đã được Manager xác nhận (approvals_data.json)
+    approvals = read_json(APPROVALS_FILE, {})
+    processed_tickets = approvals.get("processed_tickets", [])
+    confirmed_handovers = {
+        str(t.get("order_or_po", "")).upper(): t
+        for t in processed_tickets
+        if t.get("category") == "HANDOVER" and "xác nhận" in str(t.get("status", "")).lower()
+    }
+
+    # 5. Đọc dữ liệu nền tảng bán hàng do Điều phối nhập (sales_platform_orders.json)
+    platform_orders = read_json(PLATFORM_ORDERS_FILE, [])
+
+    # Tổng hợp & lọc danh sách phiếu theo phạm vi Ngày + Nền tảng
+    filtered_tickets = []
+    for o in picking_list:
+        raw_created = o.get("created_at") or datetime.now().strftime("%Y-%m-%d")
+        o_date = _parse_disp_date(raw_created) or today_date
+        if not (date_from <= o_date <= date_to):
+            continue
+
+        plat = o.get("platform") or "Shopee"
+        if platform_filter != "ALL" and plat.lower() != platform_filter.lower():
+            continue
+
+        pick_id = o.get("id") or o.get("pick_id") or ""
+        order_code = str(o.get("order_code") or o.get("order_id") or "").upper()
+        sku = str(o.get("sku", "")).upper()
+
+        req_pcs = int(o.get("required_pcs", o.get("qty_pcs", 0)) or 0)
+        picked_pcs = int(o.get("picked_pcs", 0) or 0)
+
+        pre_obj = prepack_by_order.get(order_code, {})
+        pk_obj = packing_by_order.get(order_code, {})
+        ho_obj = confirmed_handovers.get(order_code)
+
+        # Tính số lượng đã đóng gói & đã bàn giao
+        packed_pcs = 0
+        if pk_obj:
+            if pk_obj.get("packing_status") == "COMPLETED":
+                packed_pcs = picked_pcs
+            else:
+                packed_pcs = sum(
+                    int(it.get("pcs_equiv", it.get("qty", 0)))
+                    for pkg in pk_obj.get("packages", [])
+                    for it in pkg.get("items", [])
+                )
+
+        is_handed = bool(ho_obj) or (pk_obj.get("handover_status") == "APPROVED")
+        handed_pcs = req_pcs if is_handed else 0
+
+        # Chuẩn hóa trạng thái phiếu thống nhất trên toàn hệ thống
+        raw_st = o.get("status", "Chờ thực hiện")
+        if is_handed:
+            norm_status = "Đã bàn giao"
+        elif raw_st in ("Thiếu hàng", "Thiếu tồn"):
+            norm_status = "Thiếu tồn"
+        elif pk_obj.get("packing_status") in ("IN_PROGRESS", "COMPLETED") or pre_obj.get("status") in ("Đang chuẩn bị", "Sẵn sàng đóng gói", "Đã chuyển đóng gói"):
+            norm_status = "Pre-packing / Đóng gói"
+        elif raw_st == "Đang thực hiện" or (0 < picked_pcs < req_pcs):
+            norm_status = "Đang lấy hàng"
+        elif raw_st == "Hoàn thành" and not is_handed:
+            norm_status = "Pre-packing / Đóng gói"
+        else:
+            norm_status = "Chờ lấy hàng"
+
+        last_tx_time = ""
+        if o.get("transactions"):
+            last_tx_time = o["transactions"][-1].get("time", "")
+        updated_str = f"{last_tx_time}, {o_date.strftime('%d/%m')}" if last_tx_time else o_date.strftime("%d/%m/%Y")
+
+        filtered_tickets.append({
+            "pick_id": pick_id,
+            "order_code": order_code,
+            "platform": plat,
+            "sku": sku,
+            "product_name": sku_name_map.get(sku, o.get("product_name", sku)),
+            "qty_requested": req_pcs,
+            "qty_out": picked_pcs,
+            "qty_packed": packed_pcs,
+            "qty_handed": handed_pcs,
+            "status": norm_status,
+            "is_overdue": bool(o.get("is_overdue", False)),
+            "shortage_note": o.get("shortage_note", ""),
+            "updated_at": updated_str,
+            "detail_url": f"/dispatcher/order-tracking?pick_id={pick_id}"
+        })
+
+    # Lọc dữ liệu đối soát nền tảng bán hàng theo cùng bộ lọc
+    filtered_recon = []
+    for po in platform_orders:
+        p_date = _parse_disp_date(po.get("order_date") or po.get("created_at")) or today_date
+        if not (date_from <= p_date <= date_to):
+            continue
+        plat = po.get("platform") or "Shopee"
+        if platform_filter != "ALL" and plat.lower() != platform_filter.lower():
+            continue
+        filtered_recon.append(po)
+
+    # 6 thẻ KPI đếm theo PHIẾU
+    total_tickets = len(filtered_tickets)
+    processing_tickets = sum(
+        1 for t in filtered_tickets
+        if t["status"] in ("Chờ lấy hàng", "Đang lấy hàng", "Pre-packing / Đóng gói")
+    )
+    shortage_tickets = sum(1 for t in filtered_tickets if t["status"] == "Thiếu tồn")
+    handed_over_tickets = sum(1 for t in filtered_tickets if t["status"] == "Đã bàn giao")
+    pending_reconcile = sum(1 for r in filtered_recon if r.get("reconcile_status", "Chờ đối soát") == "Chờ đối soát")
+    discrepancy_tickets = (
+        sum(1 for r in filtered_recon if r.get("reconcile_status") == "Có chênh lệch")
+        + sum(1 for t in filtered_tickets if t["status"] == "Có chênh lệch")
+    )
+
+    # Tiến độ xử lý hôm nay (tính theo trạng thái hiện tại của phiếu + hiển thị PCS tách bạch)
+    w_t = [t for t in filtered_tickets if t["status"] == "Chờ lấy hàng"]
+    p_t = [t for t in filtered_tickets if t["status"] in ("Đang lấy hàng", "Thiếu tồn")]
+    pk_t = [t for t in filtered_tickets if t["status"] == "Pre-packing / Đóng gói"]
+    hd_t = [t for t in filtered_tickets if t["status"] == "Đã bàn giao"]
+
+    denom = max(total_tickets, 1)
+    pct_w = round(len(w_t) * 100 / denom) if total_tickets else 0
+    pct_p = round(len(p_t) * 100 / denom) if total_tickets else 0
+    pct_pk = round(len(pk_t) * 100 / denom) if total_tickets else 0
+    pct_hd = max(0, 100 - pct_w - pct_p - pct_pk) if total_tickets else 0
+
+    # Công việc cần xử lý (sắp xếp theo mức ưu tiên: Thiếu tồn -> Quá hạn -> Chênh lệch -> Chờ đối soát)
+    priority_tasks = []
+    for t in filtered_tickets:
+        if t["status"] == "Thiếu tồn":
+            missing_pcs = max(0, t["qty_requested"] - t["qty_out"])
+            priority_tasks.append({
+                "rank": 1,
+                "icon": "⚠️",
+                "icon_bg": "#fef2f2",
+                "icon_color": "#dc2626",
+                "title": f"Phiếu {t['pick_id']} – Thiếu {missing_pcs} PCS {t['product_name']}",
+                "subtitle": t["shortage_note"] or "Cần chọn phương án xử lý",
+                "priority": "URGENT",
+                "time": t["updated_at"].split(",")[0],
+                "action_url": f"/dispatcher/order-tracking?pick_id={t['pick_id']}"
+            })
+        elif t["is_overdue"] and t["status"] != "Đã bàn giao":
+            priority_tasks.append({
+                "rank": 2,
+                "icon": "⏰",
+                "icon_bg": "#fffbeb",
+                "icon_color": "#d97706",
+                "title": f"Phiếu {t['pick_id']} chậm tiến độ xử lý",
+                "subtitle": f"Trạng thái: {t['status']} · {t['qty_out']}/{t['qty_requested']} PCS",
+                "priority": "HIGH",
+                "time": t["updated_at"].split(",")[0],
+                "action_url": f"/dispatcher/order-tracking?pick_id={t['pick_id']}"
+            })
+
+    for r in filtered_recon:
+        if r.get("reconcile_status") == "Có chênh lệch":
+            diff = abs(int(r.get("diff_pcs", 0) or 0))
+            priority_tasks.append({
+                "rank": 3,
+                "icon": "⚖️",
+                "icon_bg": "#fef2f2",
+                "icon_color": "#dc2626",
+                "title": f"Chênh lệch {diff} PCS {r.get('product_name', r.get('sku', ''))}",
+                "subtitle": "Cần đối soát và xử lý",
+                "priority": "NORMAL",
+                "time": str(r.get("updated_at", ""))[-5:],
+                "action_url": f"/dispatcher/outbound-reconciliation?order_id={r.get('order_id', '')}"
+            })
+        elif r.get("reconcile_status", "Chờ đối soát") == "Chờ đối soát":
+            priority_tasks.append({
+                "rank": 4,
+                "icon": "🕒",
+                "icon_bg": "#eff6ff",
+                "icon_color": "#2563eb",
+                "title": f"Dữ liệu {r.get('platform', 'Shopee')} chưa đối soát",
+                "subtitle": "Chờ kiểm tra dữ liệu",
+                "priority": "HIGH",
+                "time": str(r.get("updated_at", ""))[-5:],
+                "action_url": "/dispatcher/reconciliation-data"
+            })
+
+    priority_tasks.sort(key=lambda x: x["rank"])
+
+    # Hoạt động gần đây (5-10 sự kiện mới nhất từ audit_logs.json)
+    logs = load_logs()
+    recent_activities = []
+    for lg in logs:
+        if lg.get("category") in ("Nghiệp vụ kho", "NGHIỆP VỤ KHO", "Điều phối"):
+            recent_activities.append({
+                "actor": lg.get("actor") or lg.get("by", "Hệ thống"),
+                "message": f"{lg.get('action')} ({lg.get('target')})",
+                "time": lg.get("timestamp", "")
+            })
+        if len(recent_activities) >= 8:
+            break
+
+    notifications = [
+        {
+            "title": item["title"],
+            "desc": item["subtitle"],
+            "time": item["time"],
+            "url": item["action_url"]
+        }
+        for item in priority_tasks[:5]
+    ]
+
+    result = {
+        "synced_at": datetime.now().strftime("%H:%M:%S"),
+        "kpis": {
+            "total_tickets": total_tickets,
+            "delta_total": "+12%" if total_tickets else "+0%",
+            "processing_tickets": processing_tickets,
+            "delta_processing": "+1%" if processing_tickets else "+0%",
+            "shortage_tickets": shortage_tickets,
+            "delta_shortage": "+0%",
+            "handed_over_tickets": handed_over_tickets,
+            "delta_handed_over": "+0%",
+            "pending_reconcile": pending_reconcile,
+            "delta_pending_recon": "+2%" if pending_reconcile else "+0%",
+            "discrepancy_tickets": discrepancy_tickets,
+            "delta_discrepancy": "+0%"
+        },
+        "priority_tasks": priority_tasks[:6],
+        "progress": {
+            "total_pcs": sum(t["qty_requested"] for t in filtered_tickets),
+            "waiting_tickets": len(w_t),
+            "waiting_pcs": sum(t["qty_requested"] for t in w_t),
+            "pct_waiting": pct_w,
+            "picking_tickets": len(p_t),
+            "picking_pcs": sum(t["qty_out"] for t in p_t),
+            "pct_picking": pct_p,
+            "packing_tickets": len(pk_t),
+            "packing_pcs": sum(t["qty_packed"] for t in pk_t),
+            "pct_packing": pct_pk,
+            "handed_tickets": len(hd_t),
+            "handed_pcs": sum(t["qty_handed"] for t in hd_t),
+            "pct_handed": pct_hd
+        },
+        "recent_tickets": filtered_tickets[:8],
+        "recent_activities": recent_activities,
+        "notifications": notifications
+    }
+    result["state_hash"] = hashlib.md5(
+        json.dumps(result, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    return jsonify(result)
+
+# CHỨC NĂNG YÊU CẦU LẤY HÀNG (DISPATCHER PICKING REQUESTS)
+
+_disp_pick_lock = threading.Lock()
+
+def _compute_real_available_pcs(sku):
+    """Đọc tồn khả dụng thực tế từ kho dùng chung (Box 'Đang lưu trữ' & on_shelf)."""
+    sku_up = str(sku or "").strip().upper()
+    receipts = _load_inbound_receipts() if "_load_inbound_receipts" in globals() else read_json(INBOUND_FILE, [])
+    box_avail = 0
+    for r in receipts:
+        for b in r.get("boxes", []):
+            if (
+                str(b.get("sku", "")).upper() == sku_up
+                and b.get("box_status") == "Đang lưu trữ"
+                and b.get("shelf_position_id")
+            ):
+                box_avail += int(b.get("quantity", 0) or 0)
+
+    wh_data = read_json(WAREHOUSE_FILE, {})
+    inv_item = next((x for x in wh_data.get("inventory", []) if str(x.get("sku", "")).upper() == sku_up), None)
+    shelf_avail = int(inv_item.get("on_shelf", 0) or 0) if inv_item else 0
+    return max(box_avail, shelf_avail)
+
+def _get_active_warehouse_staffs():
+    """Đọc danh sách nhân viên kho đang Hoạt động từ users.json của Admin."""
+    users = load_users()
+    staffs = []
+    for uname, u in users.items():
+        if u.get("status") != "Hoạt động":
+            continue
+        role_str = str(u.get("role", ""))
+        if "Nhân viên" in role_str or "Staff" in role_str:
+            code = u.get("staff_code") or uname
+            staffs.append({
+                "username": uname,
+                "staff_code": code,
+                "name": u.get("name", uname),
+                "label": f"{code} – {u.get('name', uname)}"
+            })
+    return staffs
+
+
+def _get_active_catalog_skus():
+    """Đọc danh mục SKU Đang sử dụng từ products_catalog.json của Manager kèm tồn khả dụng."""
+    raw = read_json(PRODUCTS_FILE, [])
+    prods = raw.get("products", []) if isinstance(raw, dict) else raw
+    result = []
+    for p in prods:
+        if p.get("status", "Đang sử dụng") != "Đang sử dụng":
+            continue
+        sku = str(p.get("sku", "")).upper()
+        if not sku:
+            continue
+        result.append({
+            "sku": sku,
+            "name": p.get("name", sku),
+            "category": p.get("category", ""),
+            "unit": p.get("unit", "PCS"),
+            "is_combo_catalog": (p.get("category") == "Combo" or bool(p.get("combo_items"))),
+            "available_pcs": _compute_real_available_pcs(sku)
+        })
+    return result
+
+
+def _normalize_dispatcher_ticket(o, sku_name_map):
+    """
+    Chuẩn hóa phiếu yêu cầu lấy hàng:
+    - Tính OUT ròng = Tổng OUT hợp lệ - Tổng RETURNED đã hoàn tất trả kệ từ phiếu OUT này
+    - Phân biệt rõ 'Còn cần lấy' (yêu cầu - OUT ròng) với 'Thiếu tồn' (chỉ khi thiếu trước phát hành hoặc Staff đã báo thiếu)
+    """
+    pick_id = o.get("id") or o.get("pick_id")
+    ret_orders = _load_return_orders() if "_load_return_orders" in globals() else read_json(RETURNS_FILE, [])
+
+    # Tính tổng PCS đã RETURNED hợp lệ từ phiếu OUT này
+    returned_by_sku = {}
+    returned_tx_rows = []
+    for r in ret_orders:
+        if str(r.get("out_order_id", "")).upper() == str(pick_id).upper() and r.get("status") == "Hoàn thành":
+            r_sku = str(r.get("sku", "")).upper()
+            r_qty = int(r.get("returned_pcs", 0) or 0)
+            returned_by_sku[r_sku] = returned_by_sku.get(r_sku, 0) + r_qty
+            for rtx in r.get("transactions", []):
+                returned_tx_rows.append({
+                    "type": "RETURNED",
+                    "time": rtx.get("time", ""),
+                    "box_id": rtx.get("box_id", "--"),
+                    "location_snapshot": rtx.get("location_snapshot", "--"),
+                    "qty_pcs": -int(rtx.get("returned_pcs", 0) or 0),
+                    "staff_name": rtx.get("staff_name", "")
+                })
+
+    items = o.get("items")
+    if not items:
+        sku = str(o.get("sku", "")).upper()
+        req_q = int(o.get("required_pcs", o.get("qty_pcs", 0)) or 0)
+        raw_picked = int(o.get("picked_pcs", 0) or 0)
+        net_picked = max(0, raw_picked - returned_by_sku.get(sku, 0))
+        items = [{
+            "sku": sku,
+            "product_name": sku_name_map.get(sku, o.get("product_name", sku)),
+            "requested_pcs": req_q,
+            "picked_pcs": net_picked,
+            "is_combo_item": bool(o.get("is_combo", False)),
+            "combo_qty": int(o.get("combo_qty", 0) or 0),
+            "shortage_pcs": int(o.get("shortage_pcs", 0) or 0)
+        }]
+    else:
+        for it in items:
+            s_up = str(it.get("sku", "")).upper()
+            raw_p = int(it.get("picked_pcs", 0) or 0)
+            it["net_picked_pcs"] = max(0, raw_p - returned_by_sku.get(s_up, 0))
+
+    total_req = sum(int(i.get("requested_pcs", 0) or 0) for i in items)
+    total_net_out = sum(int(i.get("net_picked_pcs", i.get("picked_pcs", 0)) or 0) for i in items)
+    total_rem_to_pick = max(0, total_req - total_net_out)
+
+    # Xác định trạng thái chuẩn (không nhầm 'Còn cần lấy' với 'Thiếu tồn')
+    raw_st = o.get("status", "Chờ thực hiện")
+    shortage_source = o.get("shortage_source", "")  # 'PRE_PUBLISH' | 'STAFF_REPORTED' | ''
+    shortage_pcs_flag = int(o.get("shortage_pcs", 0) or 0)
+
+    if raw_st == "Nháp":
+        disp_status = "Nháp"
+    elif raw_st in ("Đã hủy", "Hủy"):
+        disp_status = "Đã hủy"
+    elif raw_st in ("Thiếu hàng", "Thiếu tồn"):
+        disp_status = "Thiếu tồn"
+        if not shortage_source:
+            shortage_source = "STAFF_REPORTED" if total_net_out > 0 else "PRE_PUBLISH"
+        if shortage_pcs_flag <= 0:
+            shortage_pcs_flag = total_rem_to_pick
+    elif raw_st == "Hoàn tất một phần":
+        disp_status = "Hoàn tất một phần"
+    elif raw_st in ("Hoàn thành", "Hoàn tất lấy hàng") or (total_req > 0 and total_net_out >= total_req):
+        disp_status = "Hoàn tất lấy hàng"
+    elif raw_st == "Đang thực hiện" or total_net_out > 0:
+        disp_status = "Đang lấy hàng"
+    else:
+        disp_status = "Chờ xử lý"
+
+    # Gộp lịch sử giao dịch OUT + RETURNED thực tế
+    merged_txs = []
+    for tx in o.get("transactions", []):
+        merged_txs.append({
+            "type": "OUT",
+            "time": tx.get("time", "--"),
+            "box_id": tx.get("box_id", "--"),
+            "location_snapshot": tx.get("location_snapshot", "--"),
+            "qty_pcs": int(tx.get("picked_pcs", 0) or 0),
+            "staff_name": tx.get("staff_name", o.get("assignee", ""))
+        })
+    merged_txs.extend(returned_tx_rows)
+
+    return {
+        "pick_id": pick_id,
+        "order_code": str(o.get("order_code") or o.get("order_id") or "").upper(),
+        "platform": o.get("platform", "Shopee"),
+        "priority": o.get("priority", "Bình thường"),
+        "deadline": o.get("deadline", ""),
+        "assignee": o.get("assignee", ""),
+        "assignee_code": o.get("assignee_code", ""),
+        "status": disp_status,
+        "shortage_source": shortage_source,
+        "shortage_pcs": shortage_pcs_flag,
+        "shortage_note": o.get("shortage_note", ""),
+        "items": items,
+        "sku_count": len(items),
+        "sku_summary": items[0]["product_name"] if len(items) == 1 else f"{len(items)} sản phẩm ({', '.join(x['sku'] for x in items)})",
+        "total_req_pcs": total_req,
+        "total_out_pcs": total_net_out,
+        "total_rem_pcs": total_rem_to_pick,
+        "note": o.get("note", ""),
+        "created_at": o.get("created_at", datetime.now().strftime("%d/%m/%Y %H:%M")),
+        "updated_at": o.get("updated_at") or o.get("created_at", ""),
+        "transactions": merged_txs,
+        "history": o.get("history", [])
+    }
+
+
+@app.route("/dispatcher/picking-requests")
+@dispatcher_required
+def dispatcher_picking_requests_page():
+    return render_template(
+        "DISPATCHER/dispatcher_picking_requests.html",
+        current_user=session.get("user", {})
+    )
+
+
+@app.route("/api/dispatcher/picking-requests", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_picking_list():
+    catalog = _get_active_catalog_skus()
+    sku_name_map = {c["sku"]: c["name"] for c in catalog}
+
+    picking_list = read_json(PICKING_FILE, [])
+    tickets = [_normalize_dispatcher_ticket(o, sku_name_map) for o in picking_list]
+
+    counts = {
+        "ALL": len(tickets),
+        "WAITING": sum(1 for t in tickets if t["status"] in ("Chờ xử lý", "Nháp")),
+        "PICKING": sum(1 for t in tickets if t["status"] == "Đang lấy hàng"),
+        "SHORTAGE": sum(1 for t in tickets if t["status"] == "Thiếu tồn"),
+        "COMPLETED": sum(1 for t in tickets if t["status"] in ("Hoàn tất lấy hàng", "Hoàn tất một phần")),
+        "CANCELLED": sum(1 for t in tickets if t["status"] == "Đã hủy")
+    }
+
+    return jsonify({
+        "tickets": tickets,
+        "counts": counts,
+        "staffs": _get_active_warehouse_staffs(),
+        "skus": catalog,
+        "synced_at": datetime.now().strftime("%H:%M:%S")
+    })
+
+
+@app.route("/api/dispatcher/picking-requests/check-stock", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_check_stock():
+    body = request.get_json(silent=True) or {}
+    req_items = body.get("items", [])
+    checked = []
+    has_shortage = False
+    for it in req_items:
+        sku = str(it.get("sku", "")).strip().upper()
+        req_pcs = int(it.get("requested_pcs", 0) or 0)
+        avail = _compute_real_available_pcs(sku)
+        shortage = max(0, req_pcs - avail)
+        if shortage > 0:
+            has_shortage = True
+        checked.append({
+            "sku": sku,
+            "requested_pcs": req_pcs,
+            "available_pcs": avail,
+            "shortage_pcs": shortage
+        })
+    return jsonify({"items": checked, "has_shortage": has_shortage})
+
+
+@app.route("/api/dispatcher/picking-requests", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_create_picking_request():
+    """
+    Tạo phiếu yêu cầu lấy hàng:
+    - Chặn trùng mã đơn hàng đang hiệu lực (trừ khi Điều phối xác nhận tạo bổ sung)
+    - Phân biệt rõ 'Chờ bổ sung toàn bộ' vs 'Phát hành một phần' (không phát hành 0 PCS cho Staff)
+    - Khi chọn 'Điều chỉnh yêu cầu', lưu rõ PCS ban đầu, PCS mới, PCS giảm và bắt buộc lý do
+    - Hỗ trợ cấu hình Combo theo từng dòng SKU
+    """
+    dispatcher_name = session.get("user", {}).get("name", "Điều phối viên")
+    body = request.get_json(silent=True) or {}
+
+    mode = str(body.get("mode", "PUBLISH")).upper()  # 'DRAFT' | 'PUBLISH'
+    platform = str(body.get("platform", "Shopee")).strip()
+    order_code = str(body.get("order_code", "")).strip().upper()
+    allow_dup = bool(body.get("allow_duplicate_order", False))
+    priority = str(body.get("priority", "Bình thường")).strip()
+    deadline = str(body.get("deadline", "")).strip()
+    assignee_code = str(body.get("assignee_code", "")).strip()
+    shortage_policy = str(body.get("shortage_policy", "")).strip()
+    adjust_reason = str(body.get("adjust_reason", "")).strip()
+    note = str(body.get("note", "")).strip()
+    raw_items = body.get("items", [])
+
+    if not order_code:
+        return jsonify({"error": "Vui lòng nhập Mã tham chiếu / Mã đơn hàng nguồn!"}), 400
+    if not raw_items:
+        return jsonify({"error": "Phiếu yêu cầu phải có ít nhất 01 sản phẩm (SKU)!"}), 400
+
+    picking_list = read_json(PICKING_FILE, [])
+    dup_ticket = next(
+        (o for o in picking_list if str(o.get("order_code", "")).upper() == order_code and o.get("status") not in ("Đã hủy", "Hủy")),
+        None
+    )
+    if dup_ticket and not allow_dup:
+        return jsonify({
+            "error": f"Mã đơn '{order_code}' đã tồn tại ở phiếu {dup_ticket.get('id')} ({dup_ticket.get('status')}). Nếu cần tách phiếu bổ sung, hãy tích chọn xác nhận tạo bổ sung!",
+            "duplicate_pick_id": dup_ticket.get("id")
+        }), 409
+
+    staffs = _get_active_warehouse_staffs()
+    staff_obj = next((s for s in staffs if s["staff_code"] == assignee_code or s["username"] == assignee_code), None)
+    if mode == "PUBLISH" and not staff_obj:
+        return jsonify({"error": "Vui lòng chọn Nhân viên kho đang hoạt động để phát hành phiếu!"}), 400
+
+    catalog = _get_active_catalog_skus()
+    sku_map = {c["sku"]: c for c in catalog}
+
+    clean_items = []
+    any_shortage = False
+    for it in raw_items:
+        sku = str(it.get("sku", "")).strip().upper()
+        req_pcs = int(it.get("requested_pcs", 0) or 0)
+        is_combo_item = bool(it.get("is_combo_item", False))
+        combo_qty = int(it.get("combo_qty", 0) or 0)
+
+        if sku not in sku_map or req_pcs <= 0:
+            return jsonify({"error": f"Sản phẩm {sku} không hợp lệ hoặc số lượng <= 0!"}), 400
+        if is_combo_item and combo_qty <= 0:
+            return jsonify({"error": f"SKU {sku} được đánh dấu thuộc Combo, vui lòng nhập số lượng Combo > 0!"}), 400
+
+        avail = _compute_real_available_pcs(sku)
+        short_pcs = max(0, req_pcs - avail)
+        if short_pcs > 0:
+            any_shortage = True
+
+        clean_items.append({
+            "sku": sku,
+            "product_name": sku_map[sku]["name"],
+            "initial_requested_pcs": req_pcs,
+            "requested_pcs": req_pcs,
+            "picked_pcs": 0,
+            "available_pcs": avail,
+            "shortage_pcs": short_pcs,
+            "is_combo_item": is_combo_item,
+            "combo_qty": combo_qty if is_combo_item else 0
+        })
+
+    if any_shortage and mode == "PUBLISH" and not shortage_policy:
+        return jsonify({"error": "Phát hiện thiếu tồn: Vui lòng chủ động chọn phương án xử lý thiếu tồn trước khi tiếp tục!"}), 400
+
+    if any_shortage and shortage_policy == "ADJUST_QTY" and not adjust_reason:
+        return jsonify({"error": "Khi chọn Điều chỉnh yêu cầu, bắt buộc nhập Lý do điều chỉnh!"}), 400
+
+    if any_shortage and shortage_policy == "CANCEL_ALL":
+        return jsonify({"error": "Bạn đã chọn Hủy yêu cầu do thiếu tồn; phiếu không được phát hành xuống kho."}), 400
+
+    with _disp_pick_lock:
+        picking_list = read_json(PICKING_FILE, [])
+        seq = len(picking_list) + 25
+        pick_id = f"OUT-{str(seq).zfill(4)}"
+        while any((o.get("id") or o.get("pick_id")) == pick_id for o in picking_list):
+            seq += 1
+            pick_id = f"OUT-{str(seq).zfill(4)}"
+
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        first_item = clean_items[0]
+        total_avail_all = sum(min(x["requested_pcs"], x["available_pcs"]) for x in clean_items)
+        total_short_all = sum(x["shortage_pcs"] for x in clean_items)
+
+        # Xử lý từng phương án thiếu tồn khi Phát hành
+        send_to_staff = False
+        staff_dispatch_pcs = 0
+        init_status = "Nháp"
+        shortage_src = ""
+        shortage_note = ""
+        history_detail = ""
+
+        if mode == "DRAFT":
+            init_status = "Nháp"
+            history_detail = f"Lưu nháp phiếu ({sum(x['requested_pcs'] for x in clean_items)} PCS)"
+        elif not any_shortage:
+            init_status = "Chờ thực hiện"
+            send_to_staff = True
+            staff_dispatch_pcs = sum(x["requested_pcs"] for x in clean_items)
+            history_detail = f"Phát hành đủ {staff_dispatch_pcs} PCS · Giao cho {staff_obj['label']}"
+        else:
+            if shortage_policy == "ADJUST_QTY":
+                if total_avail_all <= 0:
+                    return jsonify({"error": "Tồn khả dụng bằng 0 PCS, không thể điều chỉnh về mức đáp ứng!"}), 400
+                old_total = sum(x["requested_pcs"] for x in clean_items)
+                for x in clean_items:
+                    x["requested_pcs"] = min(x["requested_pcs"], x["available_pcs"])
+                    x["shortage_pcs"] = 0
+                init_status = "Chờ thực hiện"
+                send_to_staff = True
+                staff_dispatch_pcs = total_avail_all
+                shortage_note = f"Điều chỉnh từ {old_total} → {total_avail_all} PCS. Lý do: {adjust_reason}"
+                history_detail = f"Điều chỉnh yêu cầu ({old_total} → {total_avail_all} PCS) và phát hành · Lý do: {adjust_reason}"
+
+            elif shortage_policy == "PARTIAL_RELEASE":
+                if total_avail_all <= 0:
+                    return jsonify({"error": "Tồn khả dụng bằng 0 PCS, không thể phát hành một phần!"}), 400
+                init_status = "Thiếu tồn"
+                shortage_src = "PRE_PUBLISH"
+                send_to_staff = True
+                staff_dispatch_pcs = total_avail_all
+                shortage_note = f"Phát hành trước {total_avail_all} PCS · Giữ {total_short_all} PCS chờ bổ sung"
+                history_detail = f"Phát hành một phần {total_avail_all} PCS cho {staff_obj['label']}; giữ {total_short_all} PCS chờ bổ sung"
+
+            elif shortage_policy == "WAIT_ALL":
+                # Giữ toàn bộ phiếu ở trạng thái Thiếu tồn, KHÔNG phát hành việc lấy 0 PCS cho Staff
+                init_status = "Thiếu tồn"
+                shortage_src = "PRE_PUBLISH"
+                send_to_staff = False
+                staff_dispatch_pcs = 0
+                shortage_note = f"Giữ toàn bộ phiếu chờ bổ sung {total_short_all} PCS (Chưa phát hành cho Staff)"
+                history_detail = f"Giữ toàn bộ phiếu chờ bổ sung {total_short_all} PCS · Không phát hành 0 PCS"
+
+        final_req_pcs = sum(x["requested_pcs"] for x in clean_items)
+        new_ticket = {
+            "id": pick_id,
+            "pick_id": pick_id,
+            "order_code": order_code,
+            "platform": platform,
+            "priority": priority,
+            "deadline": deadline,
+            "is_combo": any(x["is_combo_item"] for x in clean_items),
+            "sku": first_item["sku"],
+            "product_name": first_item["product_name"],
+            "required_pcs": final_req_pcs,
+            "dispatched_pcs": staff_dispatch_pcs,
+            "picked_pcs": 0,
+            "consumed_pcs": 0,
+            "items": clean_items,
+            "assignee": staff_obj["name"] if staff_obj else "",
+            "assignee_code": staff_obj["staff_code"] if staff_obj else "",
+            "status": init_status,
+            "shortage_source": shortage_src,
+            "shortage_pcs": total_short_all if init_status == "Thiếu tồn" else 0,
+            "shortage_policy": shortage_policy,
+            "shortage_note": shortage_note,
+            "note": note,
+            "created_by": dispatcher_name,
+            "created_at": now_str,
+            "updated_at": now_str,
+            "transactions": [],
+            "history": [{
+                "time": now_str,
+                "actor": dispatcher_name,
+                "action": "Tạo & xử lý phiếu yêu cầu lấy hàng",
+                "detail": history_detail
+            }]
+        }
+        picking_list.insert(0, new_ticket)
+        write_json(PICKING_FILE, picking_list)
+
+        # Chỉ đẩy công việc sang Staff khi số PCS được phép phát hành > 0
+        if send_to_staff and staff_obj and staff_dispatch_pcs > 0:
+            tasks = read_json(STAFF_TASKS_FILE, [])
+            tasks.insert(0, {
+                "task_id": f"TSK-{pick_id}",
+                "reference_id": pick_id,
+                "task_type": "OUT",
+                "title": f"Lấy hàng đơn {order_code} ({first_item['product_name']})",
+                "category_label": "Lấy hàng & Trả hàng",
+                "quantity_text": f"0/{staff_dispatch_pcs} PCS",
+                "time_label": datetime.now().strftime("%H:%M"),
+                "assigned_employee": staff_obj["staff_code"],
+                "warehouse_id": "KHO-01",
+                "status": "Chờ thực hiện",
+                "priority": "HIGH" if priority == "Khẩn" else "NORMAL",
+                "is_carryover": False,
+                "rejection_reason": ""
+            })
+            write_json(STAFF_TASKS_FILE, tasks)
+
+    if "add_audit_log" in globals():
+        add_audit_log("Nghiệp vụ kho", "Tạo phiếu yêu cầu lấy hàng", pick_id, history_detail)
+
+    return jsonify({"status": "ok", "pick_id": pick_id, "dispatched_to_staff": send_to_staff}), 201
+
+
+@app.route("/api/dispatcher/picking-requests/<pick_id>/assign", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_assign_staff(pick_id):
+    dispatcher_name = session.get("user", {}).get("name", "Điều phối viên")
+    body = request.get_json(silent=True) or {}
+    new_code = str(body.get("assignee_code", "")).strip()
+
+    staffs = _get_active_warehouse_staffs()
+    staff_obj = next((s for s in staffs if s["staff_code"] == new_code or s["username"] == new_code), None)
+    if not staff_obj:
+        return jsonify({"error": "Nhân viên được chọn không tồn tại hoặc đang bị khóa!"}), 400
+
+    with _disp_pick_lock:
+        picking_list = read_json(PICKING_FILE, [])
+        ticket = next((o for o in picking_list if (o.get("id") or o.get("pick_id")) == pick_id), None)
+        if not ticket:
+            return jsonify({"error": "Không tìm thấy phiếu yêu cầu"}), 404
+        if ticket.get("status") in ("Hoàn thành", "Hoàn tất lấy hàng", "Đã hủy"):
+            return jsonify({"error": "Phiếu đã hoàn tất hoặc đã hủy, không thể đổi phân công!"}), 400
+
+        old_staff = ticket.get("assignee") or "Chưa phân công"
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        ticket["assignee"] = staff_obj["name"]
+        ticket["assignee_code"] = staff_obj["staff_code"]
+        ticket["updated_at"] = now_str
+        ticket.setdefault("history", []).append({
+            "time": now_str,
+            "actor": dispatcher_name,
+            "action": "Đổi nhân viên phụ trách",
+            "detail": f"{old_staff} → {staff_obj['label']} (Bảo toàn {ticket.get('picked_pcs', 0)} PCS đã OUT)"
+        })
+        write_json(PICKING_FILE, picking_list)
+
+        tasks = read_json(STAFF_TASKS_FILE, [])
+        for t in tasks:
+            if t.get("reference_id") == pick_id:
+                t["assigned_employee"] = staff_obj["staff_code"]
+        write_json(STAFF_TASKS_FILE, tasks)
+
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/dispatcher/picking-requests/<pick_id>/resolve-shortage", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_resolve_shortage(pick_id):
+    dispatcher_name = session.get("user", {}).get("name", "Điều phối viên")
+    body = request.get_json(silent=True) or {}
+    decision = str(body.get("decision", "")).upper()
+    reason = str(body.get("reason", "")).strip()
+
+    if decision not in ("WAIT_STOCK", "ADJUST_QTY", "CANCEL_REMAINING", "RELEASE_AVAILABLE"):
+        return jsonify({"error": "Vui lòng chọn phương án xử lý hợp lệ!"}), 400
+    if not reason:
+        return jsonify({"error": "Bắt buộc nhập lý do xử lý thiếu tồn!"}), 400
+
+    with _disp_pick_lock:
+        picking_list = read_json(PICKING_FILE, [])
+        ticket = next((o for o in picking_list if (o.get("id") or o.get("pick_id")) == pick_id), None)
+        if not ticket:
+            return jsonify({"error": "Không tìm thấy phiếu yêu cầu"}), 404
+
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        picked = int(ticket.get("picked_pcs", 0) or 0)
+        old_req = int(ticket.get("required_pcs", 0) or 0)
+
+        if decision == "RELEASE_AVAILABLE":
+            avail = _compute_real_available_pcs(ticket.get("sku"))
+            can_dispatch = min(old_req - picked, avail)
+            if can_dispatch <= 0:
+                return jsonify({"error": "Hiện tồn khả dụng trên kệ vẫn bằng 0 PCS, chưa thể phát hành thêm!"}), 400
+            ticket["dispatched_pcs"] = picked + can_dispatch
+            ticket["status"] = "Chờ thực hiện" if (picked + can_dispatch) >= old_req else "Thiếu tồn"
+            ticket["shortage_pcs"] = max(0, old_req - (picked + can_dispatch))
+            detail_log = f"Phát hành bổ sung {can_dispatch} PCS xuống kho. Lý do: {reason}"
+
+            tasks = read_json(STAFF_TASKS_FILE, [])
+            existing_task = next((t for t in tasks if t.get("reference_id") == pick_id), None)
+            if existing_task:
+                existing_task["quantity_text"] = f"{picked}/{picked + can_dispatch} PCS"
+                existing_task["status"] = "Đang thực hiện" if picked > 0 else "Chờ thực hiện"
+            elif ticket.get("assignee_code"):
+                tasks.insert(0, {
+                    "task_id": f"TSK-{pick_id}",
+                    "reference_id": pick_id,
+                    "task_type": "OUT",
+                    "title": f"Lấy hàng đơn {ticket.get('order_code')} ({ticket.get('product_name')})",
+                    "category_label": "Lấy hàng & Trả hàng",
+                    "quantity_text": f"{picked}/{picked + can_dispatch} PCS",
+                    "time_label": datetime.now().strftime("%H:%M"),
+                    "assigned_employee": ticket.get("assignee_code"),
+                    "warehouse_id": "KHO-01",
+                    "status": "Chờ thực hiện",
+                    "priority": "HIGH" if ticket.get("priority") == "Khẩn" else "NORMAL",
+                    "is_carryover": False,
+                    "rejection_reason": ""
+                })
+            write_json(STAFF_TASKS_FILE, tasks)
+
+        elif decision == "WAIT_STOCK":
+            ticket["status"] = "Thiếu tồn"
+            ticket["shortage_note"] = f"Chờ bổ sung {max(0, old_req - picked)} PCS · {reason}"
+            detail_log = f"Giữ phần thiếu ({max(0, old_req - picked)} PCS) chờ bổ sung tồn. Lý do: {reason}"
+
+        elif decision == "ADJUST_QTY":
+            if picked <= 0:
+                avail = _compute_real_available_pcs(ticket.get("sku"))
+                if avail <= 0:
+                    return jsonify({"error": "Tồn khả dụng = 0 PCS, hãy chọn Hủy phiếu hoặc Chờ bổ sung!"}), 400
+                new_req = avail
+                ticket["status"] = "Chờ thực hiện"
+            else:
+                new_req = picked
+                ticket["status"] = "Hoàn thành"
+
+            ticket["initial_required_pcs"] = ticket.get("initial_required_pcs", old_req)
+            ticket["required_pcs"] = new_req
+            ticket["shortage_pcs"] = 0
+            for it in ticket.get("items", []):
+                it["requested_pcs"] = int(it.get("picked_pcs", 0)) if picked > 0 else min(it["requested_pcs"], _compute_real_available_pcs(it["sku"]))
+                it["shortage_pcs"] = 0
+            ticket["shortage_note"] = f"Điều chỉnh: {old_req} → {new_req} PCS ({reason})"
+            detail_log = f"Điều chỉnh yêu cầu từ {old_req} PCS xuống {new_req} PCS. Lý do: {reason}"
+
+        else:  # CANCEL_REMAINING
+            if picked > 0:
+                ticket["status"] = "Hoàn tất một phần"
+                ticket["shortage_pcs"] = 0
+                ticket["shortage_note"] = f"Chốt {picked}/{old_req} PCS đã OUT; hủy {old_req - picked} PCS thiếu ({reason})"
+                detail_log = f"Giữ {picked} PCS đã OUT, hủy {old_req - picked} PCS phần còn lại. Lý do: {reason}"
+            else:
+                ticket["status"] = "Đã hủy"
+                ticket["shortage_pcs"] = 0
+                ticket["shortage_note"] = f"Hủy phiếu do thiếu tồn: {reason}"
+                detail_log = f"Hủy toàn bộ phiếu chưa thực hiện ({old_req} PCS). Lý do: {reason}"
+
+        ticket["updated_at"] = now_str
+        ticket.setdefault("history", []).append({
+            "time": now_str,
+            "actor": dispatcher_name,
+            "action": "Xử lý ngoại lệ thiếu tồn",
+            "detail": detail_log
+        })
+        write_json(PICKING_FILE, picking_list)
+
+    if "add_audit_log" in globals():
+        add_audit_log("Nghiệp vụ kho", "Điều phối xử lý thiếu tồn phiếu lấy hàng", pick_id, detail_log)
+
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/dispatcher/picking-requests/<pick_id>/cancel", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_cancel_picking(pick_id):
+    dispatcher_name = session.get("user", {}).get("name", "Điều phối viên")
+    body = request.get_json(silent=True) or {}
+    reason = str(body.get("reason", "")).strip() or "Điều phối hủy yêu cầu"
+
+    with _disp_pick_lock:
+        picking_list = read_json(PICKING_FILE, [])
+        ticket = next((o for o in picking_list if (o.get("id") or o.get("pick_id")) == pick_id), None)
+        if not ticket:
+            return jsonify({"error": "Không tìm thấy phiếu yêu cầu"}), 404
+
+        if int(ticket.get("picked_pcs", 0) or 0) > 0:
+            return jsonify({
+                "error": f"Phiếu {pick_id} đã phát sinh giao dịch OUT ({ticket.get('picked_pcs')} PCS). Không được phép hủy xóa phiếu!"
+            }), 400
+
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        ticket["status"] = "Đã hủy"
+        ticket["updated_at"] = now_str
+        ticket.setdefault("history", []).append({
+            "time": now_str,
+            "actor": dispatcher_name,
+            "action": "Hủy phiếu yêu cầu lấy hàng",
+            "detail": reason
+        })
+        write_json(PICKING_FILE, picking_list)
+
+        tasks = read_json(STAFF_TASKS_FILE, [])
+        tasks = [t for t in tasks if t.get("reference_id") != pick_id]
+        write_json(STAFF_TASKS_FILE, tasks)
+
+    if "add_audit_log" in globals():
+        add_audit_log("Nghiệp vụ kho", "Hủy phiếu yêu cầu lấy hàng", pick_id, reason)
+
+    return jsonify({"status": "ok"})
+
+# CHỨC NĂNG THEO DÕI XỬ LÝ ĐƠN (DISPATCHER ORDER TRACKING)
+def _get_sla_thresholds_minutes():
+    """Đọc ngưỡng cảnh báo chậm lấy hàng / đóng gói từ system_settings.json."""
+    cfg = load_system_settings() if "load_system_settings" in globals() else read_json(SETTINGS_FILE, {})
+    ops_cfg = cfg.get("operations", {}) if isinstance(cfg, dict) else {}
+    return {
+        "pick_delay_min": int(ops_cfg.get("pick_start_sla_minutes", 30) or 30),
+        "pack_delay_min": int(ops_cfg.get("pack_finish_sla_minutes", 45) or 45)
+    }
+
+
+def _parse_dt_flexible(raw_str):
+    if not raw_str:
+        return None
+    s = str(raw_str).strip().replace("T", " ")
+    for fmt in (
+        "%d/%m/%Y %H:%M:%S",
+        "%d/%m/%Y %H:%M",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+        "%d/%m/%Y"
+    ):
+        try:
+            return datetime.strptime(s[:len(fmt) + 2].strip(), fmt)
+        except ValueError:
+            continue
+    return None
+
+
+@app.route("/dispatcher/order-tracking")
+@dispatcher_required
+def dispatcher_order_tracking_page():
+    return render_template(
+        "DISPATCHER/dispatcher_order_tracking.html",
+        current_user=session.get("user", {})
+    )
+
+
+@app.route("/api/dispatcher/order-tracking", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_order_tracking():
+    try:
+        now_dt = datetime.now()
+        today_date = now_dt.date()
+        sla_cfg = _get_sla_thresholds_minutes()
+
+        date_range = str(request.args.get("range", "TODAY")).strip().upper()
+        from_str = str(request.args.get("from", "")).strip()
+        to_str = str(request.args.get("to", "")).strip()
+        date_from = _parse_dt_flexible(from_str).date() if _parse_dt_flexible(from_str) else None
+        date_to = _parse_dt_flexible(to_str).date() if _parse_dt_flexible(to_str) else None
+
+        catalog = _get_active_catalog_skus() if "_get_active_catalog_skus" in globals() else []
+        sku_name_map = {c["sku"]: c["name"] for c in catalog}
+
+        picking_list = read_json(PICKING_FILE, [])
+        if isinstance(picking_list, dict):
+            picking_list = picking_list.get("orders", [])
+
+        ret_orders = _load_return_orders() if "_load_return_orders" in globals() else read_json(RETURNS_FILE, [])
+        if isinstance(ret_orders, dict):
+            ret_orders = ret_orders.get("orders", [])
+
+        prepack_list = read_json(PREPACKING_FILE, [])
+        if isinstance(prepack_list, dict):
+            prepack_list = prepack_list.get("orders", [])
+
+        packing_list = read_json(PACKING_FILE, [])
+        if isinstance(packing_list, dict):
+            packing_list = packing_list.get("orders", [])
+
+        approvals = read_json(APPROVALS_FILE, {})
+        if not isinstance(approvals, dict):
+            approvals = {}
+
+        prepack_by_order = {str(p.get("order_code", "")).upper(): p for p in prepack_list if p.get("order_code")}
+        packing_by_order = {str(pk.get("order_code", "")).upper(): pk for pk in packing_list if pk.get("order_code")}
+
+        pending_bg_by_order = {
+            str(t.get("order_or_po", "")).upper(): t
+            for t in approvals.get("pending_tickets", [])
+            if t.get("category") == "HANDOVER"
+        }
+        approved_bg_by_order = {
+            str(t.get("order_or_po", "")).upper(): t
+            for t in approvals.get("processed_tickets", [])
+            if t.get("category") == "HANDOVER" and "xác nhận" in str(t.get("status", "")).lower()
+        }
+
+        tracked_orders = []
+
+        for o in picking_list:
+            raw_st = o.get("status", "Chờ thực hiện")
+            if raw_st in ("Nháp", "Đã hủy", "Hủy"):
+                continue
+
+            created_str = o.get("created_at") or now_dt.strftime("%d/%m/%Y %H:%M")
+            created_dt = _parse_dt_flexible(created_str) or now_dt
+            o_date = created_dt.date()
+
+            if date_range == "TODAY" and o_date != today_date:
+                continue
+            elif date_range == "7D" and (today_date - o_date).days > 7:
+                continue
+            elif date_range == "30D" and (today_date - o_date).days > 30:
+                continue
+            elif date_range == "CUSTOM":
+                if date_from and o_date < date_from:
+                    continue
+                if date_to and o_date > date_to:
+                    continue
+
+            pick_id = o.get("id") or o.get("pick_id") or ""
+            order_code = str(o.get("order_code") or o.get("order_id") or "").upper()
+            platform = o.get("platform", "Shopee")
+            priority = o.get("priority", "Bình thường")
+            deadline_str = o.get("deadline", "")
+            updated_str = o.get("updated_at") or created_str
+            deadline_dt = _parse_dt_flexible(deadline_str)
+
+            pre_obj = prepack_by_order.get(order_code)
+            pk_obj = packing_by_order.get(order_code)
+            pending_bg = pending_bg_by_order.get(order_code)
+            approved_bg = approved_bg_by_order.get(order_code)
+
+            has_combo = bool(o.get("is_combo", False)) or bool(pre_obj and pre_obj.get("is_combo"))
+
+            returned_by_sku = {}
+            tx_logs = []
+            for tx in o.get("transactions", []):
+                tx_logs.append({
+                    "type": "OUT",
+                    "box_id": tx.get("box_id", "--"),
+                    "location": tx.get("location_snapshot", "--"),
+                    "qty_pcs": int(tx.get("picked_pcs", 0) or 0),
+                    "staff": tx.get("staff_name", o.get("assignee", "")),
+                    "time": tx.get("time", "--")
+                })
+
+            for r in ret_orders:
+                if str(r.get("out_order_id", "")).upper() == str(pick_id).upper() and r.get("status") == "Hoàn thành":
+                    r_sku = str(r.get("sku", "")).upper()
+                    r_qty = int(r.get("returned_pcs", 0) or 0)
+                    returned_by_sku[r_sku] = returned_by_sku.get(r_sku, 0) + r_qty
+                    for rtx in r.get("transactions", []):
+                        tx_logs.append({
+                            "type": "RETURNED",
+                            "box_id": rtx.get("box_id", "--"),
+                            "location": rtx.get("location_snapshot", "--"),
+                            "qty_pcs": -int(rtx.get("returned_pcs", 0) or 0),
+                            "staff": rtx.get("staff_name", ""),
+                            "time": rtx.get("time", "--")
+                        })
+
+            raw_items = o.get("items") or [{
+                "sku": o.get("sku", ""),
+                "product_name": o.get("product_name", ""),
+                "requested_pcs": int(o.get("required_pcs", 0) or 0),
+                "picked_pcs": int(o.get("picked_pcs", 0) or 0)
+            }]
+
+            sku_lines = []
+            for it in raw_items:
+                s_code = str(it.get("sku", "")).upper()
+                req_pcs = int(it.get("requested_pcs", 0) or 0)
+                raw_out = int(it.get("picked_pcs", 0) or 0)
+                net_out = max(0, raw_out - returned_by_sku.get(s_code, 0))
+
+                packed_pcs = 0
+                if pk_obj:
+                    if pk_obj.get("packing_status") == "COMPLETED":
+                        packed_pcs = net_out
+                    else:
+                        for pkg in pk_obj.get("packages", []):
+                            for p_it in pkg.get("items", []):
+                                if str(p_it.get("sku", "")).upper() == s_code:
+                                    packed_pcs += int(p_it.get("pcs_equiv", p_it.get("qty", 0)) or 0)
+
+                is_handed_ok = bool(approved_bg) or (pk_obj and pk_obj.get("handover_status") == "APPROVED")
+                handed_pcs = packed_pcs if is_handed_ok else 0
+
+                sku_lines.append({
+                    "sku": s_code,
+                    "product_name": sku_name_map.get(s_code, it.get("product_name", s_code)),
+                    "requested_pcs": req_pcs,
+                    "out_pcs": net_out,
+                    "packed_pcs": packed_pcs,
+                    "handed_pcs": handed_pcs
+                })
+
+            total_req = sum(x["requested_pcs"] for x in sku_lines)
+            total_out = sum(x["out_pcs"] for x in sku_lines)
+            total_packed = sum(x["packed_pcs"] for x in sku_lines)
+            total_handed = sum(x["handed_pcs"] for x in sku_lines)
+
+            pick_progress_pct = min(100.0, round((total_out / total_req) * 100, 1)) if total_req > 0 else 0.0
+
+            is_handed_done = bool(approved_bg) or (pk_obj and pk_obj.get("handover_status") == "APPROVED")
+            out_ratio = min(1.0, total_out / total_req) if total_req > 0 else 0.0
+            pack_ratio = min(1.0, total_packed / total_req) if total_req > 0 else 0.0
+            hand_ratio = 1.0 if is_handed_done else 0.0
+
+            if has_combo:
+                pre_req = int(pre_obj.get("required_qty", 1) or 1) if pre_obj else 1
+                pre_done = int(pre_obj.get("prepared_qty", 0) or 0) if pre_obj else 0
+                pre_ratio = min(1.0, pre_done / max(pre_req, 1)) if pre_obj else 0.0
+                overall_progress_pct = round(out_ratio * 40 + pre_ratio * 20 + pack_ratio * 20 + hand_ratio * 20)
+                weight_formula_note = "Trọng số đơn Combo: OUT 40% · Pre-packing 20% · Đóng gói 20% · Bàn giao 20%"
+            else:
+                overall_progress_pct = round(out_ratio * 50 + pack_ratio * 25 + hand_ratio * 25)
+                weight_formula_note = "Trọng số đơn lẻ: OUT 50% · Đóng gói 25% · Bàn giao 25%"
+
+            is_waiting_handover = (
+                not is_handed_done
+                and (
+                    bool(pending_bg)
+                    or (pk_obj and pk_obj.get("packing_status") == "COMPLETED")
+                    or (pk_obj and pk_obj.get("handover_status") == "SUBMITTED")
+                )
+            )
+            is_packing = (
+                not is_handed_done
+                and not is_waiting_handover
+                and (
+                    (pk_obj and pk_obj.get("packing_status") in ("PENDING", "IN_PROGRESS", "ISSUE"))
+                    or (not has_combo and total_req > 0 and total_out >= total_req)
+                )
+            )
+            is_prepacking = (
+                not is_handed_done
+                and not is_waiting_handover
+                and not is_packing
+                and has_combo
+                and total_out > 0
+                and (not pre_obj or pre_obj.get("status") != "Đã chuyển đóng gói")
+            )
+            is_picking = (
+                not is_handed_done
+                and not is_waiting_handover
+                and not is_packing
+                and not is_prepacking
+                and (raw_st == "Đang thực hiện" or total_out > 0)
+            )
+
+            if is_handed_done:
+                stage_key, stage_label = "HANDED_OVER", "Đã bàn giao"
+            elif is_waiting_handover:
+                stage_key, stage_label = "WAITING_HANDOVER", "Chờ bàn giao"
+            elif is_packing:
+                stage_key, stage_label = "PACKING", "Đóng gói"
+            elif is_prepacking:
+                stage_key, stage_label = "PREPACKING", "Pre-packing"
+            elif is_picking:
+                stage_key, stage_label = "PICKING", "Đang OUT"
+            else:
+                stage_key, stage_label = "WAITING_PICK", "Chờ lấy hàng"
+
+            has_real_shortage = (raw_st in ("Thiếu hàng", "Thiếu tồn")) or (int(o.get("shortage_pcs", 0) or 0) > 0)
+
+            alerts = []
+            if deadline_dt and now_dt > deadline_dt and stage_key != "HANDED_OVER":
+                alerts.append({"code": "OVERDUE", "label": "Quá hạn", "level": "danger"})
+            if has_real_shortage:
+                alerts.append({"code": "SHORTAGE", "label": "Thiếu tồn", "level": "warning"})
+            if stage_key == "WAITING_PICK":
+                elapsed_min = (now_dt - created_dt).total_seconds() / 60.0
+                if elapsed_min > sla_cfg["pick_delay_min"]:
+                    alerts.append({"code": "SLOW_PICK", "label": "Chậm lấy hàng", "level": "warning"})
+            if stage_key == "PACKING" and deadline_dt and now_dt > deadline_dt:
+                alerts.append({"code": "SLOW_PACK", "label": "Chậm đóng gói", "level": "warning"})
+            if pending_bg or (pk_obj and pk_obj.get("handover_status") == "SUBMITTED"):
+                alerts.append({"code": "WAIT_MGR_HANDOVER", "label": "Chờ Manager xác nhận BG", "level": "info"})
+            if total_packed > total_out or total_handed > total_packed:
+                alerts.append({"code": "QTY_ANOMALY", "label": "Số lượng bất thường", "level": "danger"})
+
+            unified_history = []
+            for h in o.get("history", []):
+                unified_history.append({
+                    "time": h.get("time", created_str),
+                    "event": h.get("action", "Cập nhật phiếu"),
+                    "detail": h.get("detail", ""),
+                    "actor": h.get("actor", "Điều phối")
+                })
+            if not unified_history:
+                unified_history.append({
+                    "time": created_str,
+                    "event": f"Tạo & phát hành phiếu {pick_id}",
+                    "detail": f"Yêu cầu {total_req} PCS · Giao cho {o.get('assignee', 'Staff')}",
+                    "actor": o.get("created_by", "Điều phối")
+                })
+
+            for tx in tx_logs:
+                if tx["type"] == "OUT":
+                    unified_history.append({
+                        "time": tx["time"],
+                        "event": f"OUT {tx['qty_pcs']} PCS từ {tx['box_id']} ({tx['location']})",
+                        "detail": f"Phiếu {pick_id}",
+                        "actor": tx["staff"] or o.get("assignee", "Staff")
+                    })
+                else:
+                    unified_history.append({
+                        "time": tx["time"],
+                        "event": f"RETURNED {abs(tx['qty_pcs'])} PCS về {tx['location']}",
+                        "detail": f"Box {tx['box_id']}",
+                        "actor": tx["staff"] or o.get("assignee", "Staff")
+                    })
+
+            if o.get("shortage_note"):
+                unified_history.append({
+                    "time": updated_str,
+                    "event": "Ghi nhận ngoại lệ thiếu tồn",
+                    "detail": o.get("shortage_note"),
+                    "actor": o.get("assignee", "Staff")
+                })
+
+            if pk_obj and pk_obj.get("packing_status") == "COMPLETED":
+                unified_history.append({
+                    "time": updated_str,
+                    "event": f"Hoàn tất đóng gói ({len(pk_obj.get('packages', []))} kiện · {total_packed} PCS)",
+                    "detail": f"Phiếu đóng gói {pk_obj.get('id', '')}",
+                    "actor": pk_obj.get("assignee", "Staff")
+                })
+
+            if pending_bg:
+                unified_history.append({
+                    "time": pending_bg.get("sent_at", updated_str),
+                    "event": f"Gửi bàn giao {pending_bg.get('id')} chờ Manager xác nhận",
+                    "detail": f"Người nhận: {pending_bg.get('receiver', '--')}",
+                    "actor": pending_bg.get("sender", "Staff")
+                })
+
+            if approved_bg:
+                unified_history.append({
+                    "time": approved_bg.get("reviewed_at", updated_str),
+                    "event": f"Manager xác nhận bàn giao {approved_bg.get('id')}",
+                    "detail": f"Hoàn tất {total_handed} PCS",
+                    "actor": approved_bg.get("reviewed_by", "Manager")
+                })
+
+            prepack_info = {
+                "applicable": has_combo,
+                "id": pre_obj.get("id", "--") if pre_obj else "--",
+                "status": pre_obj.get("status", "Chờ chuẩn bị") if (has_combo and pre_obj) else ("Chờ chuyển bàn Pre-pack" if has_combo else "Không áp dụng"),
+                "required_qty": int(pre_obj.get("required_qty", 0) or 0) if pre_obj else 0,
+                "prepared_qty": int(pre_obj.get("prepared_qty", 0) or 0) if pre_obj else 0,
+                "assignee": pre_obj.get("assignee", o.get("assignee", "")) if pre_obj else o.get("assignee", "")
+            }
+
+            packing_info = {
+                "id": pk_obj.get("id", "--") if pk_obj else "--",
+                "status": pk_obj.get("display_status", "Chưa bắt đầu") if pk_obj else "Chưa bắt đầu",
+                "packages_count": len(pk_obj.get("packages", [])) if pk_obj else 0,
+                "packages": pk_obj.get("packages", []) if pk_obj else [],
+                "packed_pcs": total_packed,
+                "assignee": pk_obj.get("assignee", o.get("assignee", "")) if pk_obj else o.get("assignee", "")
+            }
+
+            handover_source = approved_bg or pending_bg or {}
+            handover_info = {
+                "id": handover_source.get("id") or (pk_obj.get("handover_id") if pk_obj else "--") or "--",
+                "status": "Đã xác nhận bàn giao" if is_handed_done else ("Chờ Manager xác nhận" if is_waiting_handover else "Chưa bàn giao"),
+                "receiver": handover_source.get("receiver") or (pk_obj.get("receiver") if pk_obj else "--") or "--",
+                "sender": handover_source.get("sender") or o.get("assignee", "--"),
+                "reviewed_by": handover_source.get("reviewed_by") or (pk_obj.get("reviewed_by") if pk_obj else "--") or "--",
+                "reviewed_at": handover_source.get("reviewed_at", "--"),
+                "total_pcs": total_handed if is_handed_done else total_packed
+            }
+
+            sku_summary = (
+                sku_lines[0]["product_name"] + f" ({sku_lines[0]['sku']})"
+                if len(sku_lines) == 1
+                else f"{len(sku_lines)} SKU ({', '.join(x['sku'] for x in sku_lines)})"
+            )
+
+            tracked_orders.append({
+                "pick_id": pick_id,
+                "order_code": order_code,
+                "platform": platform,
+                "priority": priority,
+                "deadline": deadline_str.replace("T", " ") if deadline_str else "--",
+                "created_at": created_str,
+                "updated_at": updated_str,
+                "assignee": o.get("assignee", "Chưa phân công"),
+                "has_combo": has_combo,
+                "note": o.get("note", "—"),
+                "stage_key": stage_key,
+                "stage_label": stage_label,
+                "pick_progress_pct": pick_progress_pct,
+                "overall_progress_pct": overall_progress_pct,
+                "weight_formula_note": weight_formula_note,
+                "has_real_shortage": has_real_shortage,
+                "total_req_pcs": total_req,
+                "total_out_pcs": total_out,
+                "total_packed_pcs": total_packed,
+                "total_handed_pcs": total_handed,
+                "total_rem_out_pcs": max(0, total_req - total_out),
+                "sku_summary": sku_summary,
+                "sku_lines": sku_lines,
+                "alerts": alerts,
+                "tx_logs": tx_logs,
+                "prepack_info": prepack_info,
+                "packing_info": packing_info,
+                "handover_info": handover_info,
+                "history": unified_history
+            })
+
+        kpi_counts = {
+            "ALL": len(tracked_orders),
+            "WAITING_PICK": sum(1 for x in tracked_orders if x["stage_key"] == "WAITING_PICK"),
+            "PICKING": sum(1 for x in tracked_orders if x["stage_key"] == "PICKING"),
+            "PREPACKING": sum(1 for x in tracked_orders if x["stage_key"] == "PREPACKING"),
+            "PACKING": sum(1 for x in tracked_orders if x["stage_key"] == "PACKING"),
+            "WAITING_HANDOVER": sum(1 for x in tracked_orders if x["stage_key"] == "WAITING_HANDOVER"),
+            "HANDED_OVER": sum(1 for x in tracked_orders if x["stage_key"] == "HANDED_OVER")
+        }
+
+        staffs = _get_active_warehouse_staffs() if "_get_active_warehouse_staffs" in globals() else []
+
+        return jsonify({
+            "orders": tracked_orders,
+            "counts": kpi_counts,
+            "staffs": staffs,
+            "synced_at": now_dt.strftime("%H:%M:%S")
+        })
+    except Exception as exc:
+        app.logger.exception("Lỗi API /api/dispatcher/order-tracking")
+        return jsonify({"error": str(exc)}), 500
+
+
+# CHỨC NĂNG DỮ LIỆU ĐỐI SOÁT (DISPATCHER RECONCILIATION DATA)
+import csv
+import io
+import uuid
+
+RECON_DATA_FILE = str(BASE_DIR / "sales_platform_orders.json")
+RECON_BATCHES_FILE = str(BASE_DIR / "reconciliation_batches.json")
+_recon_data_lock = threading.Lock()
+
+
+def _normalize_platform_name(raw_plat):
+    s = str(raw_plat or "").strip().lower()
+    if "tiktok" in s:
+        return "TikTok Shop"
+    if "lazada" in s:
+        return "Lazada"
+    if "shopee" in s:
+        return "Shopee"
+    return raw_plat.strip() if raw_plat else "Shopee"
+
+
+def _find_sanova_link_for_record(order_code, platform, sku, picking_list, approvals_data):
+    """Ghép nối bản ghi nền tảng với phiếu lấy hàng (OUT) & phiếu bàn giao (BG) đã xác nhận."""
+    ord_up = str(order_code or "").strip().upper()
+    sku_up = str(sku or "").strip().upper()
+
+    matched_pick = None
+    for o in picking_list:
+        o_code = str(o.get("order_code") or o.get("order_id") or "").strip().upper()
+        if o_code != ord_up:
+            continue
+        items = o.get("items") or [{"sku": o.get("sku", "")}]
+        if any(str(it.get("sku", "")).strip().upper() == sku_up for it in items):
+            matched_pick = o
+            break
+
+    confirmed_bg = None
+    for bg in approvals_data.get("processed_tickets", []):
+        if bg.get("category") == "HANDOVER" and "xác nhận" in str(bg.get("status", "")).lower():
+            if str(bg.get("order_or_po", "")).strip().upper() == ord_up:
+                confirmed_bg = bg
+                break
+
+    if matched_pick:
+        pick_id = matched_pick.get("id") or matched_pick.get("pick_id")
+        return {
+            "linked": True,
+            "pick_id": pick_id,
+            "handover_id": confirmed_bg.get("id") if confirmed_bg else "",
+            "handover_confirmed": bool(confirmed_bg)
+        }
+    return {
+        "linked": False,
+        "pick_id": "",
+        "handover_id": "",
+        "handover_confirmed": False
+    }
+
+
+def _validate_and_enrich_recon_record(rec, existing_records, sku_map, picking_list, approvals_data, exclude_id=None):
+    """Kiểm tra cấu trúc, danh mục SKU, trùng lặp và tách bạch 3 trạng thái độc lập."""
+    platform = _normalize_platform_name(rec.get("platform"))
+    order_code = str(rec.get("order_code", "")).strip().upper()
+    sku = str(rec.get("sku", "")).strip().upper()
+    line_ref = str(rec.get("source_line_id", "")).strip().upper()
+    tx_date_raw = str(rec.get("transaction_date", "")).strip()
+
+    try:
+        qty_pcs = int(float(rec.get("platform_pcs", 0)))
+    except (ValueError, TypeError):
+        qty_pcs = 0
+
+    parsed_dt = _parse_dt_flexible(tx_date_raw) if "_parse_dt_flexible" in globals() else None
+    norm_date = parsed_dt.strftime("%Y-%m-%d") if parsed_dt else tx_date_raw
+
+    errors = []
+    error_code = ""
+
+    if not order_code:
+        errors.append("Thiếu mã đơn hàng nền tảng")
+        error_code = "MISSING_ORDER"
+    elif platform not in ("Shopee", "TikTok Shop", "Lazada"):
+        errors.append("Nền tảng không hợp lệ")
+        error_code = "INVALID_PLATFORM"
+    elif not parsed_dt:
+        errors.append("Sai định dạng ngày giao dịch")
+        error_code = "INVALID_DATE"
+    elif not sku or sku not in sku_map:
+        errors.append(f"SKU '{sku or 'Trống'}' không tồn tại trong danh mục Manager")
+        error_code = "SKU_NOT_FOUND"
+    elif qty_pcs <= 0:
+        errors.append("Số lượng PCS phải > 0")
+        error_code = "INVALID_QTY"
+
+    is_duplicate = False
+    dup_of_id = ""
+    if not errors:
+        for ex in existing_records:
+            if exclude_id and ex.get("record_id") == exclude_id:
+                continue
+            if ex.get("check_status") == "Trùng lặp" and ex.get("ignored_duplicate"):
+                continue
+            same_key = (
+                _normalize_platform_name(ex.get("platform")) == platform
+                and str(ex.get("order_code", "")).strip().upper() == order_code
+                and str(ex.get("sku", "")).strip().upper() == sku
+            )
+            if same_key:
+                ex_line = str(ex.get("source_line_id", "")).strip().upper()
+                if not line_ref or not ex_line or line_ref == ex_line:
+                    is_duplicate = True
+                    dup_of_id = ex.get("record_id", "")
+                    break
+
+    link_info = _find_sanova_link_for_record(order_code, platform, sku, picking_list, approvals_data)
+    prod_name = sku_map[sku]["name"] if sku in sku_map else "Chưa xác định"
+
+    if errors:
+        check_status = "Có lỗi"
+        link_status = "Chờ liên kết"
+        confirm_status = "Chưa xác nhận"
+    elif is_duplicate:
+        check_status = "Trùng lặp"
+        link_status = "Đã liên kết" if link_info["linked"] else "Chờ liên kết"
+        confirm_status = "Chưa xác nhận"
+        error_code = "DUPLICATE"
+        errors.append(f"Trùng bản ghi với {dup_of_id}")
+    else:
+        check_status = "Hợp lệ"
+        link_status = "Đã liên kết" if link_info["linked"] else "Chờ liên kết"
+        confirm_status = rec.get("confirm_status", "Chưa xác nhận")
+
+    rec["platform"] = platform
+    rec["order_code"] = order_code
+    rec["sku"] = sku
+    rec["product_name"] = prod_name
+    rec["platform_pcs"] = qty_pcs
+    rec["transaction_date"] = norm_date
+    rec["check_status"] = check_status
+    rec["link_status"] = link_status
+    rec["confirm_status"] = confirm_status
+    rec["linked_pick_id"] = link_info["pick_id"]
+    rec["linked_handover_id"] = link_info["handover_id"]
+    rec["error_code"] = error_code
+    rec["error_message"] = "; ".join(errors)
+    rec["duplicate_of"] = dup_of_id
+    return rec
+
+
+def _relink_all_recon_records():
+    """
+    Tự động đồng bộ & kiểm tra lại liên kết khi danh mục SKU (Manager) hoặc phiếu lấy hàng (OUT) thay đổi.
+    Lưu lại vào sales_platform_orders.json nếu có bản ghi chuyển trạng thái liên kết hoặc hết lỗi SKU.
+    """
+    records = read_json(RECON_DATA_FILE, [])
+    if not records:
+        return []
+    catalog = _get_active_catalog_skus() if "_get_active_catalog_skus" in globals() else []
+    sku_map = {c["sku"]: c for c in catalog}
+    picking_list = read_json(PICKING_FILE, [])
+    approvals_data = read_json(APPROVALS_FILE, {})
+
+    changed = False
+    for r in records:
+        old_sig = (r.get("check_status"), r.get("link_status"), r.get("linked_pick_id"), r.get("linked_handover_id"))
+        # Nếu trước đó bị lỗi SKU_NOT_FOUND nhưng Manager vừa thêm SKU vào danh mục -> kiểm tra lại
+        if r.get("check_status") == "Có lỗi" and r.get("error_code") == "SKU_NOT_FOUND" and r.get("sku") in sku_map:
+            _validate_and_enrich_recon_record(r, records, sku_map, picking_list, approvals_data, exclude_id=r.get("record_id"))
+        elif r.get("check_status") == "Hợp lệ":
+            lk = _find_sanova_link_for_record(r.get("order_code"), r.get("platform"), r.get("sku"), picking_list, approvals_data)
+            r["link_status"] = "Đã liên kết" if lk["linked"] else "Chờ liên kết"
+            r["linked_pick_id"] = lk["pick_id"]
+            r["linked_handover_id"] = lk["handover_id"]
+        new_sig = (r.get("check_status"), r.get("link_status"), r.get("linked_pick_id"), r.get("linked_handover_id"))
+        if old_sig != new_sig:
+            changed = True
+
+    if changed:
+        write_json(RECON_DATA_FILE, records)
+    return records
+
+
+def _map_csv_row_to_standard(row_dict, default_platform):
+    norm_keys = {str(k).strip().lower(): str(v).strip() for k, v in row_dict.items() if k is not None}
+
+    def pick_col(candidates):
+        for c in candidates:
+            if c in norm_keys and norm_keys[c] != "":
+                return norm_keys[c]
+        return ""
+
+    order_code = pick_col(["mã đơn", "ma don", "order_id", "order id", "mã đơn hàng", "order sn"])
+    sku = pick_col(["sku", "mã sku", "ma sku", "seller sku", "sku phân loại", "product_sku"])
+    qty = pick_col(["số lượng", "so luong", "pcs", "qty", "quantity", "số pcs"])
+    tx_date = pick_col(["ngày giao dịch", "ngay giao dich", "date", "transaction_date", "ngày đặt hàng", "order date"])
+    plat = pick_col(["nền tảng", "nen tang", "platform", "channel"]) or default_platform
+    line_id = pick_col(["mã dòng", "line_id", "item_id", "source_line_id"])
+    note = pick_col(["ghi chú", "ghi chu", "note"])
+
+    return {
+        "raw_source": dict(row_dict),  # Giữ nguyên dữ liệu gốc lúc import
+        "platform": plat,
+        "order_code": order_code,
+        "sku": sku,
+        "platform_pcs": qty,
+        "transaction_date": tx_date or datetime.now().strftime("%Y-%m-%d"),
+        "source_line_id": line_id,
+        "note": note
+    }
+
+
+def _read_uploaded_rows(file_storage):
+    """Đọc được cả tệp .xlsx (Excel) lẫn .csv."""
+    fname = str(file_storage.filename or "").lower()
+    raw_bytes = file_storage.read()
+    if fname.endswith(".xlsx"):
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(raw_bytes), data_only=True)
+            ws = wb.active
+            rows_iter = list(ws.iter_rows(values_only=True))
+            if not rows_iter:
+                return []
+            headers = [str(h or "").strip() for h in rows_iter[0]]
+            out = []
+            for r in rows_iter[1:]:
+                if not any(r):
+                    continue
+                out.append({headers[i]: ("" if r[i] is None else str(r[i]).strip()) for i in range(len(headers))})
+            return out
+        except ImportError:
+            raise ValueError("Máy chủ chưa cài thư viện openpyxl để đọc .xlsx, vui lòng lưu file dưới dạng CSV (UTF-8)!")
+    try:
+        text_content = raw_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text_content = raw_bytes.decode("latin-1", errors="ignore")
+    return list(csv.DictReader(io.StringIO(text_content)))
+
+
+@app.route("/dispatcher/reconciliation-data")
+@dispatcher_required
+def dispatcher_reconciliation_data_page():
+    return render_template(
+        "DISPATCHER/dispatcher_reconciliation_data.html",
+        current_user=session.get("user", {})
+    )
+
+
+@app.route("/api/dispatcher/reconciliation-data", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_recon_data_list():
+    today_date = datetime.now().date()
+    date_range = str(request.args.get("range", "ALL")).strip().upper()
+    from_str = str(request.args.get("from", "")).strip()
+    to_str = str(request.args.get("to", "")).strip()
+    plat_filter = str(request.args.get("platform", "ALL")).strip()
+    batch_filter = str(request.args.get("batch", "ALL")).strip()
+    importer_filter = str(request.args.get("importer", "ALL")).strip()
+
+    d_from = _parse_dt_flexible(from_str).date() if _parse_dt_flexible(from_str) else None
+    d_to = _parse_dt_flexible(to_str).date() if _parse_dt_flexible(to_str) else None
+
+    with _recon_data_lock:
+        enriched_all = _relink_all_recon_records()
+
+    batches = read_json(RECON_BATCHES_FILE, [])
+    catalog = _get_active_catalog_skus() if "_get_active_catalog_skus" in globals() else []
+
+    filtered = []
+    for r in enriched_all:
+        if plat_filter != "ALL" and _normalize_platform_name(r.get("platform")) != plat_filter:
+            continue
+        if batch_filter != "ALL" and r.get("batch_id") != batch_filter:
+            continue
+        if importer_filter != "ALL" and r.get("imported_by") != importer_filter:
+            continue
+
+        dt_obj = _parse_dt_flexible(r.get("transaction_date"))
+        r_date = dt_obj.date() if dt_obj else today_date
+        if date_range == "TODAY" and r_date != today_date:
+            continue
+        elif date_range == "7D" and (today_date - r_date).days > 7:
+            continue
+        elif date_range == "30D" and (today_date - r_date).days > 30:
+            continue
+        elif date_range == "CUSTOM":
+            if d_from and r_date < d_from:
+                continue
+            if d_to and r_date > d_to:
+                continue
+
+        filtered.append(r)
+
+    kpis = {
+        "total": len(filtered),
+        "valid": sum(1 for x in filtered if x.get("check_status") == "Hợp lệ" and x.get("link_status") == "Đã liên kết"),
+        "need_action": sum(1 for x in filtered if x.get("check_status") in ("Có lỗi", "Trùng lặp")),
+        "waiting_link": sum(1 for x in filtered if x.get("check_status") == "Hợp lệ" and x.get("link_status") == "Chờ liên kết")
+    }
+    importers = sorted(list({x.get("imported_by", "") for x in enriched_all if x.get("imported_by")}))
+
+    return jsonify({
+        "records": filtered,
+        "kpis": kpis,
+        "batches": batches,
+        "importers": importers,
+        "skus": catalog,
+        "synced_at": datetime.now().strftime("%H:%M:%S")
+    })
+
+
+@app.route("/api/dispatcher/reconciliation-data/template/<platform_key>", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_recon_template(platform_key):
+    """Tải file mẫu Excel (.xlsx nếu có openpyxl, fallback .csv UTF-8)."""
+    plat_label = _normalize_platform_name(platform_key)
+    today_s = datetime.now().strftime("%Y-%m-%d")
+    headers = ["Mã đơn", "Ngày giao dịch", "Nền tảng", "SKU", "Số lượng", "Mã dòng", "Ghi chú"]
+    sample_rows = [
+        ["DH-0031", today_s, plat_label, "SP0001", 50, "LN-01", "Đơn xuất tiêu chuẩn"],
+        ["DH-0032", today_s, plat_label, "SP0002", 30, "LN-01", ""]
+    ]
+    try:
+        import openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "DuLieuDoiSoat"
+        ws.append(headers)
+        for r in sample_rows:
+            ws.append(r)
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        fname = f"SANOVA_MauDoiSoat_{plat_label.replace(' ', '')}.xlsx"
+        return Response(
+            buf.getvalue(),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={fname}"}
+        )
+    except ImportError:
+        output = io.StringIO()
+        output.write("\ufeff")
+        writer = csv.writer(output)
+        writer.writerow(headers)
+        for r in sample_rows:
+            writer.writerow(r)
+        fname = f"SANOVA_MauDoiSoat_{plat_label.replace(' ', '')}.csv"
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f"attachment; filename={fname}"}
+        )
+
+
+@app.route("/api/dispatcher/reconciliation-data/preview-file", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_recon_preview_file():
+    file = request.files.get("file")
+    default_plat = _normalize_platform_name(request.form.get("platform", "Shopee"))
+    if not file or not file.filename:
+        return jsonify({"error": "Vui lòng chọn tệp Excel (.xlsx) hoặc CSV (.csv) hợp lệ!"}), 400
+
+    try:
+        raw_rows = _read_uploaded_rows(file)
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+
+    existing_records = read_json(RECON_DATA_FILE, [])
+    catalog = _get_active_catalog_skus()
+    sku_map = {c["sku"]: c for c in catalog}
+    picking_list = read_json(PICKING_FILE, [])
+    approvals_data = read_json(APPROVALS_FILE, {})
+
+    preview_rows = []
+    temp_pool = list(existing_records)
+    err_breakdown = {"SKU_NOT_FOUND": 0, "DUPLICATE": 0, "INVALID_QTY": 0, "OTHER": 0}
+
+    for idx, row in enumerate(raw_rows, start=1):
+        mapped = _map_csv_row_to_standard(row, default_plat)
+        mapped["record_id"] = f"PREVIEW-{idx}"
+        checked = _validate_and_enrich_recon_record(mapped, temp_pool, sku_map, picking_list, approvals_data)
+        preview_rows.append(checked)
+        temp_pool.append(checked)
+
+        if checked["check_status"] != "Hợp lệ":
+            ec = checked.get("error_code", "OTHER")
+            err_breakdown[ec if ec in err_breakdown else "OTHER"] += 1
+
+    valid_cnt = sum(1 for x in preview_rows if x["check_status"] == "Hợp lệ")
+    return jsonify({
+        "filename": file.filename,
+        "total_rows": len(preview_rows),
+        "valid_count": valid_cnt,
+        "error_count": len(preview_rows) - valid_cnt,
+        "breakdown": err_breakdown,
+        "rows": preview_rows
+    })
+
+
+@app.route("/api/dispatcher/reconciliation-data/commit-batch", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_recon_commit_batch():
+    dispatcher_name = session.get("user", {}).get("name", "Điều phối viên")
+    body = request.get_json(silent=True) or {}
+    platform = _normalize_platform_name(body.get("platform", "Shopee"))
+    filename = str(body.get("filename", "Nhap_file")).strip()
+    batch_date = str(body.get("batch_date", datetime.now().strftime("%Y-%m-%d"))).strip()
+    save_mode = str(body.get("save_mode", "ALL_WITH_QUEUE")).upper()
+    rows = body.get("rows", [])
+
+    if not rows:
+        return jsonify({"error": "Không có dòng dữ liệu nào để lưu!"}), 400
+
+    with _recon_data_lock:
+        existing_records = read_json(RECON_DATA_FILE, [])
+        batches = read_json(RECON_BATCHES_FILE, [])
+        catalog = _get_active_catalog_skus()
+        sku_map = {c["sku"]: c for c in catalog}
+        picking_list = read_json(PICKING_FILE, [])
+        approvals_data = read_json(APPROVALS_FILE, {})
+
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        batch_id = f"IMP-{datetime.now().strftime('%Y%m%d')}-{str(len(batches) + 1).zfill(3)}"
+
+        saved_count, valid_saved, error_saved = 0, 0, 0
+        for raw_r in rows:
+            rec_id = f"DSR-{datetime.now().strftime('%m%d')}-{uuid.uuid4().hex[:5].upper()}"
+            raw_origin = raw_r.get("raw_source") or {
+                "platform": raw_r.get("platform"),
+                "order_code": raw_r.get("order_code"),
+                "sku": raw_r.get("sku"),
+                "platform_pcs": raw_r.get("platform_pcs"),
+                "transaction_date": raw_r.get("transaction_date")
+            }
+            base_rec = {
+                "record_id": rec_id,
+                "batch_id": batch_id,
+                "raw_source": raw_origin,
+                "platform": raw_r.get("platform") or platform,
+                "order_code": raw_r.get("order_code", ""),
+                "sku": raw_r.get("sku", ""),
+                "platform_pcs": raw_r.get("platform_pcs", 0),
+                "transaction_date": raw_r.get("transaction_date") or batch_date,
+                "source_line_id": raw_r.get("source_line_id", ""),
+                "note": raw_r.get("note", ""),
+                "imported_by": dispatcher_name,
+                "imported_at": now_str,
+                "confirm_status": "Chưa xác nhận",
+                "edit_history": [{
+                    "time": now_str,
+                    "actor": dispatcher_name,
+                    "action": f"Nhập từ đợt {batch_id} ({filename})",
+                    "detail": f"Đơn {raw_r.get('order_code')} · SKU {raw_r.get('sku')} · {raw_r.get('platform_pcs')} PCS"
+                }]
+            }
+            validated = _validate_and_enrich_recon_record(base_rec, existing_records, sku_map, picking_list, approvals_data)
+            if save_mode == "VALID_ONLY" and validated["check_status"] != "Hợp lệ":
+                continue
+            existing_records.insert(0, validated)
+            saved_count += 1
+            if validated["check_status"] == "Hợp lệ":
+                valid_saved += 1
+            else:
+                error_saved += 1
+
+        batches.insert(0, {
+            "batch_id": batch_id,
+            "platform": platform,
+            "filename": filename,
+            "batch_date": batch_date,
+            "imported_by": dispatcher_name,
+            "imported_at": now_str,
+            "total_saved": saved_count,
+            "valid_saved": valid_saved,
+            "error_saved": error_saved
+        })
+        write_json(RECON_DATA_FILE, existing_records)
+        write_json(RECON_BATCHES_FILE, batches)
+
+    if "add_audit_log" in globals():
+        add_audit_log("Nghiệp vụ kho", "Nhập dữ liệu đối soát nền tảng", batch_id, f"{filename}: {valid_saved} hợp lệ, {error_saved} lỗi/trùng")
+
+    return jsonify({"status": "ok", "batch_id": batch_id, "saved_count": saved_count}), 201
+
+
+@app.route("/api/dispatcher/reconciliation-data/manual", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_recon_manual_create():
+    dispatcher_name = session.get("user", {}).get("name", "Điều phối viên")
+    body = request.get_json(silent=True) or {}
+
+    with _recon_data_lock:
+        existing_records = read_json(RECON_DATA_FILE, [])
+        catalog = _get_active_catalog_skus()
+        sku_map = {c["sku"]: c for c in catalog}
+        picking_list = read_json(PICKING_FILE, [])
+        approvals_data = read_json(APPROVALS_FILE, {})
+
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        rec_id = f"DSR-{datetime.now().strftime('%m%d')}-{uuid.uuid4().hex[:5].upper()}"
+
+        new_rec = {
+            "record_id": rec_id,
+            "batch_id": "MANUAL",
+            "raw_source": {
+                "platform": body.get("platform", "Shopee"),
+                "order_code": body.get("order_code", ""),
+                "sku": body.get("sku", ""),
+                "platform_pcs": body.get("platform_pcs", 0),
+                "transaction_date": body.get("transaction_date", "")
+            },
+            "platform": body.get("platform", "Shopee"),
+            "order_code": body.get("order_code", ""),
+            "sku": body.get("sku", ""),
+            "platform_pcs": body.get("platform_pcs", 0),
+            "transaction_date": body.get("transaction_date", datetime.now().strftime("%Y-%m-%d")),
+            "source_line_id": body.get("source_line_id", ""),
+            "note": body.get("note", ""),
+            "imported_by": dispatcher_name,
+            "imported_at": now_str,
+            "confirm_status": "Chưa xác nhận",
+            "edit_history": [{
+                "time": now_str,
+                "actor": dispatcher_name,
+                "action": "Nhập thủ công bản ghi đối soát",
+                "detail": f"Đơn {body.get('order_code')} · SKU {body.get('sku')} · {body.get('platform_pcs')} PCS"
+            }]
+        }
+        validated = _validate_and_enrich_recon_record(new_rec, existing_records, sku_map, picking_list, approvals_data)
+        if validated["check_status"] == "Có lỗi":
+            return jsonify({"error": validated["error_message"]}), 400
+        if validated["check_status"] == "Trùng lặp" and not body.get("force_save"):
+            return jsonify({"error": f"Phát hiện trùng lặp với bản ghi {validated['duplicate_of']}!"}), 409
+
+        existing_records.insert(0, validated)
+        write_json(RECON_DATA_FILE, existing_records)
+
+    return jsonify({"status": "ok", "record": validated}), 201
+
+
+@app.route("/api/dispatcher/reconciliation-data/<record_id>", methods=["PATCH"])
+@dispatcher_required
+def api_dispatcher_recon_update_record(record_id):
+    dispatcher_name = session.get("user", {}).get("name", "Điều phối viên")
+    body = request.get_json(silent=True) or {}
+    action_type = str(body.get("action_type", "EDIT")).upper()
+    reason = str(body.get("reason", "")).strip()
+
+    with _recon_data_lock:
+        records = read_json(RECON_DATA_FILE, [])
+        target = next((r for r in records if r.get("record_id") == record_id), None)
+        if not target:
+            return jsonify({"error": "Không tìm thấy bản ghi dữ liệu đối soát"}), 404
+
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        if action_type == "CONFIRM":
+            if target.get("check_status") != "Hợp lệ":
+                return jsonify({"error": "Chỉ bản ghi đạt trạng thái Hợp lệ mới được xác nhận đưa vào đối soát!"}), 400
+            if target.get("link_status") != "Đã liên kết" and not body.get("allow_unlinked"):
+                return jsonify({"error": "Bản ghi đang Chờ liên kết phiếu SANOVA. Hãy ghép phiếu hoặc xác nhận đưa vào đối soát ngoại lệ!"}), 400
+            target["confirm_status"] = "Đã xác nhận"
+            target.setdefault("edit_history", []).append({
+                "time": now_str,
+                "actor": dispatcher_name,
+                "action": "Xác nhận dữ liệu đưa vào đối soát xuất hàng",
+                "detail": f"Liên kết phiếu: {target.get('linked_pick_id') or 'Chưa có phiếu kho'}"
+            })
+            write_json(RECON_DATA_FILE, records)
+            return jsonify({"status": "ok", "record": target})
+
+        if action_type == "IGNORE_DUP":
+            target["ignored_duplicate"] = True
+            target["confirm_status"] = "Đã loại trừ trùng"
+            target.setdefault("edit_history", []).append({
+                "time": now_str,
+                "actor": dispatcher_name,
+                "action": "Bỏ qua bản ghi trùng lặp",
+                "detail": reason or "Loại trừ bản ghi trùng lặp"
+            })
+            write_json(RECON_DATA_FILE, records)
+            return jsonify({"status": "ok", "record": target})
+
+        if not reason:
+            return jsonify({"error": "Bắt buộc nhập lý do chỉnh sửa dữ liệu để lưu vết lịch sử!"}), 400
+
+        old_snap = f"{target.get('platform')} | {target.get('order_code')} | {target.get('sku')} | {target.get('platform_pcs')} PCS | {target.get('transaction_date')}"
+        for f in ("platform", "order_code", "sku", "platform_pcs", "transaction_date", "note"):
+            if f in body:
+                target[f] = body[f]
+
+        catalog = _get_active_catalog_skus()
+        sku_map = {c["sku"]: c for c in catalog}
+        picking_list = read_json(PICKING_FILE, [])
+        approvals_data = read_json(APPROVALS_FILE, {})
+
+        _validate_and_enrich_recon_record(target, records, sku_map, picking_list, approvals_data, exclude_id=record_id)
+        new_snap = f"{target.get('platform')} | {target.get('order_code')} | {target.get('sku')} | {target.get('platform_pcs')} PCS | {target.get('transaction_date')}"
+
+        target.setdefault("edit_history", []).append({
+            "time": now_str,
+            "actor": dispatcher_name,
+            "action": "Chỉnh sửa dữ liệu nguồn",
+            "detail": f"Trước: [{old_snap}] → Sau: [{new_snap}] · Lý do: {reason}"
+        })
+        write_json(RECON_DATA_FILE, records)
+
+    return jsonify({"status": "ok", "record": target})
+
+#  CHỨC NĂNG ĐỐI SOÁT XUẤT HÀNG (OUTBOUND RECONCILIATION)
+OUTBOUND_RECON_FILE = str(BASE_DIR / "outbound_reconciliations.json")
+_outbound_recon_lock = threading.Lock()
+
+def _compute_order_source_fingerprint(platform, order_code, sku_items, handover_tickets):
+    """Tạo dấu vân tay dữ liệu nguồn để phát hiện nếu dữ liệu nền tảng hoặc bàn giao thay đổi sau khi chốt."""
+    sig_obj = {
+        "platform": platform,
+        "order_code": order_code,
+        "skus": sorted(
+            [(x["sku"], x["platform_pcs"], x["handover_confirmed_pcs"]) for x in sku_items],
+            key=lambda z: z[0]
+        ),
+        "bg_ids": sorted([h.get("id", "") for h in handover_tickets])
+    }
+    return hashlib.md5(json.dumps(sig_obj, sort_keys=True).encode("utf-8")).hexdigest()
+
+def _build_outbound_reconciliation_orders():
+    """
+    Tổng hợp dữ liệu đối soát đa nguồn theo từng Đơn hàng & từng dòng SKU:
+    - Nguồn 1: Dữ liệu nền tảng đã xác nhận từ sales_platform_orders.json
+    - Nguồn 2: Phiếu yêu cầu lấy hàng & giao dịch OUT thực tế từ picking_orders.json
+    - Nguồn 3: Tiến độ đóng gói từ packing_orders.json
+    - Nguồn 4: Kết quả bàn giao ĐÃ ĐƯỢC MANAGER XÁC NHẬN từ approvals_data.json
+    - Nguồn 5: Hồ sơ xử lý chênh lệch & phiên chốt đã lưu trong outbound_reconciliations.json
+    """
+    plat_records = read_json(RECON_DATA_FILE, [])
+    picking_list = read_json(PICKING_FILE, [])
+    packing_list = read_json(PACKING_FILE, [])
+    approvals_data = read_json(APPROVALS_FILE, {})
+    saved_recons = read_json(OUTBOUND_RECON_FILE, {})
+    catalog = _get_active_catalog_skus() if "_get_active_catalog_skus" in globals() else []
+    sku_name_map = {c["sku"]: c["name"] for c in catalog}
+
+    # Chỉ lấy các bản ghi dữ liệu nền tảng đã qua kiểm tra Hợp lệ & Đã xác nhận (không lấy bản ghi trùng bị bỏ qua)
+    confirmed_plat = [
+        r for r in plat_records
+        if r.get("check_status") == "Hợp lệ"
+        and r.get("confirm_status") == "Đã xác nhận"
+        and not r.get("ignored_duplicate")
+    ]
+
+    # Gom theo (platform, order_code)
+    grouped_orders = {}
+    for r in confirmed_plat:
+        plat = _normalize_platform_name(r.get("platform"))
+        ocode = str(r.get("order_code", "")).strip().upper()
+        key = f"{plat}::{ocode}"
+        grp = grouped_orders.setdefault(key, {
+            "recon_key": key,
+            "platform": plat,
+            "order_code": ocode,
+            "transaction_date": r.get("transaction_date", ""),
+            "source_record_ids": [],
+            "sku_platform_map": {}
+        })
+        grp["source_record_ids"].append(r.get("record_id"))
+        s_up = str(r.get("sku", "")).strip().upper()
+        s_entry = grp["sku_platform_map"].setdefault(s_up, {
+            "sku": s_up,
+            "product_name": sku_name_map.get(s_up, r.get("product_name", s_up)),
+            "platform_pcs": 0,
+            "record_ids": []
+        })
+        s_entry["platform_pcs"] += int(r.get("platform_pcs", 0) or 0)
+        s_entry["record_ids"].append(r.get("record_id"))
+
+    # Danh sách phiếu bàn giao đã Manager xác nhận & đang chờ xác nhận
+    approved_handovers = [
+        t for t in approvals_data.get("processed_tickets", [])
+        if t.get("category") == "HANDOVER" and "xác nhận" in str(t.get("status", "")).lower()
+    ]
+    pending_handovers = [
+        t for t in approvals_data.get("pending_tickets", [])
+        if t.get("category") == "HANDOVER"
+    ]
+
+    results = []
+    for key, grp in grouped_orders.items():
+        ocode = grp["order_code"]
+        plat = grp["platform"]
+
+        # Tìm các phiếu OUT liên kết với mã đơn này
+        linked_picks = [
+            o for o in picking_list
+            if str(o.get("order_code") or o.get("order_id") or "").strip().upper() == ocode
+            and o.get("status") not in ("Đã hủy", "Hủy")
+        ]
+        pick_ids = [o.get("id") or o.get("pick_id") for o in linked_picks]
+
+        # Tìm thông tin đóng gói
+        linked_pack = next(
+            (pk for pk in packing_list if str(pk.get("order_code", "")).strip().upper() == ocode),
+            None
+        )
+
+        # Tìm các đợt bàn giao ĐÃ MANAGER XÁC NHẬN và ĐANG CHỜ XÁC NHẬN cho mã đơn này
+        order_approved_bgs = [
+            h for h in approved_handovers
+            if str(h.get("order_or_po", "")).strip().upper() == ocode
+        ]
+        order_pending_bgs = [
+            h for h in pending_handovers
+            if str(h.get("order_or_po", "")).strip().upper() == ocode
+        ]
+
+        # Tính tổng PCS bàn giao đã xác nhận theo từng SKU
+        confirmed_bg_by_sku = {}
+        for bg in order_approved_bgs:
+            for item in bg.get("items", []):
+                i_sku = str(item.get("sku", "")).strip().upper()
+                confirmed_bg_by_sku[i_sku] = confirmed_bg_by_sku.get(i_sku, 0) + int(item.get("qty_actual", item.get("qty_packed", 0)) or 0)
+
+        # Tính OUT thực tế theo từng SKU (chỉ để truy vết nguyên nhân, không thay thế bàn giao)
+        out_by_sku = {}
+        for o in linked_picks:
+            for it in (o.get("items") or [{"sku": o.get("sku", ""), "picked_pcs": o.get("picked_pcs", 0)}]):
+                i_sku = str(it.get("sku", "")).strip().upper()
+                out_by_sku[i_sku] = out_by_sku.get(i_sku, 0) + int(it.get("picked_pcs", 0) or 0)
+
+        has_any_link = len(linked_picks) > 0 or len(order_approved_bgs) > 0 or len(order_pending_bgs) > 0
+        has_confirmed_handover = len(order_approved_bgs) > 0
+        has_pending_handover = len(order_pending_bgs) > 0
+
+        # Đối chiếu từng SKU
+        all_skus_in_order = sorted(list(set(grp["sku_platform_map"].keys()) | set(confirmed_bg_by_sku.keys())))
+        sku_rows = []
+        any_sku_mismatch = False
+        any_sku_short = False
+        any_sku_over = False
+
+        for s_code in all_skus_in_order:
+            plat_obj = grp["sku_platform_map"].get(s_code, {})
+            p_pcs = int(plat_obj.get("platform_pcs", 0) or 0)
+            o_pcs = int(out_by_sku.get(s_code, 0) or 0)
+            bg_pcs = confirmed_bg_by_sku.get(s_code, None)
+
+            if not has_any_link:
+                row_result = "Chưa liên kết"
+                diff_val = None
+            elif not has_confirmed_handover:
+                row_result = "Chưa bàn giao"
+                diff_val = None
+            else:
+                actual_bg_pcs = int(bg_pcs or 0)
+                diff_val = actual_bg_pcs - p_pcs
+                if diff_val == 0:
+                    row_result = "Khớp"
+                elif diff_val < 0:
+                    row_result = f"Thiếu {abs(diff_val)}"
+                    any_sku_mismatch = True
+                    any_sku_short = True
+                else:
+                    row_result = f"Thừa {diff_val}"
+                    any_sku_mismatch = True
+                    any_sku_over = True
+
+            sku_rows.append({
+                "sku": s_code,
+                "product_name": sku_name_map.get(s_code, plat_obj.get("product_name", s_code)),
+                "platform_pcs": p_pcs,
+                "out_pcs": o_pcs,
+                "handover_confirmed_pcs": int(bg_pcs or 0) if has_confirmed_handover else None,
+                "diff_pcs": diff_val,
+                "sku_result": row_result
+            })
+
+        # Kết luận tổng thể toàn đơn (mọi SKU phải khớp thì toàn đơn mới Khớp)
+        if not has_any_link:
+            result_code = "UNLINKED"
+            result_label = "Chưa liên kết"
+        elif not has_confirmed_handover:
+            result_code = "NOT_HANDED_OVER"
+            result_label = "Chưa bàn giao"
+        elif has_pending_handover and any_sku_short:
+            result_code = "PARTIAL_HANDOVER"
+            result_label = "Đang bàn giao một phần"
+        elif any_sku_mismatch:
+            result_code = "MISMATCH"
+            if any_sku_short and any_sku_over:
+                result_label = "Lệch hỗn hợp (Thiếu & Thừa)"
+            elif any_sku_short:
+                result_label = "Thiếu hàng"
+            else:
+                result_label = "Thừa hàng"
+        else:
+            result_code = "MATCHED"
+            result_label = "Khớp"
+
+        total_plat_pcs = sum(x["platform_pcs"] for x in sku_rows)
+        total_bg_pcs = sum(x["handover_confirmed_pcs"] for x in sku_rows) if has_confirmed_handover else None
+        total_diff_pcs = (total_bg_pcs - total_plat_pcs) if (total_bg_pcs is not None) else None
+
+        # Kiểm tra phiên bản đối soát đã lưu & phát hiện thay đổi nguồn
+        saved_state = saved_recons.get(key, {})
+        current_fp = _compute_order_source_fingerprint(plat, ocode, sku_rows, order_approved_bgs)
+        process_status = saved_state.get("process_status", "Chưa xử lý")
+        needs_recheck = False
+
+        if process_status in ("Đã xác nhận", "Đã xác nhận có chênh lệch") and saved_state.get("source_fingerprint"):
+            if saved_state["source_fingerprint"] != current_fp:
+                process_status = "Cần đối soát lại"
+                needs_recheck = True
+
+        sku_summary = (
+            f"{sku_rows[0]['product_name']} ({sku_rows[0]['sku']})"
+            if len(sku_rows) == 1
+            else f"{len(sku_rows)} SKU ({', '.join(x['sku'] for x in sku_rows)})"
+        )
+
+        results.append({
+            "recon_key": key,
+            "order_code": ocode,
+            "platform": plat,
+            "transaction_date": grp["transaction_date"],
+            "pick_ids": pick_ids,
+            "pick_id_display": ", ".join(pick_ids) if pick_ids else "—",
+            "handover_ids": [h.get("id") for h in order_approved_bgs],
+            "sku_summary": sku_summary,
+            "sku_rows": sku_rows,
+            "total_platform_pcs": total_plat_pcs,
+            "total_handover_pcs": total_bg_pcs,
+            "total_diff_pcs": total_diff_pcs,
+            "result_code": result_code,
+            "result_label": result_label,
+            "process_status": process_status,
+            "needs_recheck": needs_recheck,
+            "discrepancy_cause": saved_state.get("discrepancy_cause", ""),
+            "discrepancy_action": saved_state.get("discrepancy_action", ""),
+            "discrepancy_note": saved_state.get("discrepancy_note", ""),
+            "assigned_actor": saved_state.get("assigned_actor", ""),
+            "confirmed_by": saved_state.get("confirmed_by", ""),
+            "confirmed_at": saved_state.get("confirmed_at", ""),
+            "packing_status": linked_pack.get("display_status", "—") if linked_pack else "—",
+            "history": saved_state.get("history", [])
+        })
+
+    return results
+
+
+@app.route("/dispatcher/outbound-reconciliation")
+@dispatcher_required
+def dispatcher_outbound_reconciliation_page():
+    return render_template(
+        "DISPATCHER/dispatcher_outbound_reconciliation.html",
+        current_user=session.get("user", {})
+    )
+
+
+@app.route("/api/dispatcher/outbound-reconciliation", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_outbound_recon_list():
+    today_date = datetime.now().date()
+    date_range = str(request.args.get("range", "ALL")).strip().upper()
+    from_str = str(request.args.get("from", "")).strip()
+    to_str = str(request.args.get("to", "")).strip()
+    plat_filter = str(request.args.get("platform", "ALL")).strip()
+    res_filter = str(request.args.get("result", "ALL")).strip().upper()
+
+    d_from = _parse_dt_flexible(from_str).date() if _parse_dt_flexible(from_str) else None
+    d_to = _parse_dt_flexible(to_str).date() if _parse_dt_flexible(to_str) else None
+
+    all_orders = _build_outbound_reconciliation_orders()
+
+    filtered = []
+    for o in all_orders:
+        if plat_filter != "ALL" and o["platform"] != plat_filter:
+            continue
+        dt_obj = _parse_dt_flexible(o.get("transaction_date"))
+        o_date = dt_obj.date() if dt_obj else today_date
+        if date_range == "TODAY" and o_date != today_date:
+            continue
+        elif date_range == "7D" and (today_date - o_date).days > 7:
+            continue
+        elif date_range == "30D" and (today_date - o_date).days > 30:
+            continue
+        elif date_range == "CUSTOM":
+            if d_from and o_date < d_from:
+                continue
+            if d_to and o_date > d_to:
+                continue
+
+        if res_filter == "MATCHED" and o["result_code"] != "MATCHED":
+            continue
+        elif res_filter == "MISMATCH" and o["result_code"] not in ("MISMATCH", "PARTIAL_HANDOVER"):
+            continue
+        elif res_filter == "MISSING_DATA" and o["result_code"] not in ("NOT_HANDED_OVER", "UNLINKED"):
+            continue
+        elif res_filter == "CONFIRMED" and o["process_status"] not in ("Đã xác nhận", "Đã xác nhận có chênh lệch"):
+            continue
+
+        filtered.append(o)
+
+    # 5 KPI tổng hợp theo thiết kế chốt
+    kpis = {
+        "total": len(filtered),
+        "matched": sum(1 for x in filtered if x["result_code"] == "MATCHED"),
+        "mismatch": sum(1 for x in filtered if x["result_code"] in ("MISMATCH", "PARTIAL_HANDOVER")),
+        "missing_data": sum(1 for x in filtered if x["result_code"] in ("NOT_HANDED_OVER", "UNLINKED")),
+        "confirmed": sum(1 for x in filtered if x["process_status"] in ("Đã xác nhận", "Đã xác nhận có chênh lệch"))
+    }
+
+    return jsonify({
+        "orders": filtered,
+        "kpis": kpis,
+        "synced_at": datetime.now().strftime("%H:%M:%S")
+    })
+
+
+@app.route("/api/dispatcher/outbound-reconciliation/action", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_outbound_recon_action():
+    """
+    Xử lý các thao tác đối soát trên từng đơn hàng:
+    - RECORD_ISSUE: Ghi nhận nguyên nhân chênh lệch & hướng xử lý (không sửa số bàn giao)
+    - SEND_CHECK: Gửi yêu cầu kiểm tra sang Staff hoặc Manager
+    - CONFIRM_MATCHED: Xác nhận hoàn tất đối soát cho đơn Khớp 100%
+    - CONFIRM_WITH_EXPLANATION: Chốt đối soát có giải trình chênh lệch (lưu trạng thái riêng 'Đã xác nhận có chênh lệch')
+    """
+    dispatcher_name = session.get("user", {}).get("name", "Điều phối viên")
+    body = request.get_json(silent=True) or {}
+    recon_key = str(body.get("recon_key", "")).strip()
+    action = str(body.get("action", "")).upper()
+    cause = str(body.get("cause", "")).strip()
+    direction = str(body.get("direction", "")).strip()
+    note = str(body.get("note", "")).strip()
+    target_actor = str(body.get("target_actor", "")).strip()
+
+    all_orders = _build_outbound_reconciliation_orders()
+    order_obj = next((x for x in all_orders if x["recon_key"] == recon_key), None)
+    if not order_obj:
+        return jsonify({"error": "Không tìm thấy đơn hàng trong danh sách đối soát!"}), 404
+
+    with _outbound_recon_lock:
+        saved_recons = read_json(OUTBOUND_RECON_FILE, {})
+        rec = saved_recons.setdefault(recon_key, {
+            "order_code": order_obj["order_code"],
+            "platform": order_obj["platform"],
+            "history": []
+        })
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+        # Tạo dấu vân tay dữ liệu nguồn tại thời điểm đối soát
+        approvals_data = read_json(APPROVALS_FILE, {})
+        approved_bgs = [
+            t for t in approvals_data.get("processed_tickets", [])
+            if t.get("category") == "HANDOVER"
+            and "xác nhận" in str(t.get("status", "")).lower()
+            and str(t.get("order_or_po", "")).strip().upper() == order_obj["order_code"]
+        ]
+        fp = _compute_order_source_fingerprint(order_obj["platform"], order_obj["order_code"], order_obj["sku_rows"], approved_bgs)
+
+        if action == "RECORD_ISSUE":
+            if not cause or not note:
+                return jsonify({"error": "Vui lòng chọn nguyên nhân và nhập nội dung giải trình xử lý!"}), 400
+            rec["discrepancy_cause"] = cause
+            rec["discrepancy_action"] = direction
+            rec["discrepancy_note"] = note
+            rec["process_status"] = "Đang xử lý chênh lệch"
+            rec["history"].insert(0, {
+                "time": now_str,
+                "actor": dispatcher_name,
+                "action": f"Ghi nhận nguyên nhân: {cause}",
+                "detail": f"Hướng xử lý: {direction} · Ghi chú: {note}"
+            })
+
+        elif action == "SEND_CHECK":
+            if not target_actor or not note:
+                return jsonify({"error": "Vui lòng chọn bộ phận tiếp nhận (Staff / Manager) và nhập nội dung kiểm tra!"}), 400
+            rec["assigned_actor"] = target_actor
+            rec["discrepancy_cause"] = cause or rec.get("discrepancy_cause", "")
+            rec["discrepancy_note"] = note
+            rec["process_status"] = f"Chờ {target_actor} kiểm tra"
+            rec["history"].insert(0, {
+                "time": now_str,
+                "actor": dispatcher_name,
+                "action": f"Gửi yêu cầu kiểm tra đến {target_actor}",
+                "detail": note
+            })
+
+            # Nếu gửi Manager kiểm tra -> đẩy thông báo vào approvals_data.json / audit log
+            if "Manager" in target_actor and "add_audit_log" in globals():
+                add_audit_log("Nghiệp vụ kho", f"Điều phối gửi yêu cầu kiểm tra chênh lệch đơn {order_obj['order_code']}", order_obj["order_code"], note)
+
+        elif action == "CONFIRM_MATCHED":
+            if order_obj["result_code"] != "MATCHED":
+                return jsonify({"error": "Chỉ đơn hàng Khớp 100% tất cả các SKU mới được xác nhận ở trạng thái Khớp!"}), 400
+            rec["process_status"] = "Đã xác nhận"
+            rec["confirmed_by"] = dispatcher_name
+            rec["confirmed_at"] = now_str
+            rec["source_fingerprint"] = fp
+            rec["history"].insert(0, {
+                "time": now_str,
+                "actor": dispatcher_name,
+                "action": "Xác nhận hoàn tất đối soát (Khớp)",
+                "detail": f"Khớp {order_obj['total_platform_pcs']} PCS trên toàn bộ {len(order_obj['sku_rows'])} SKU"
+            })
+
+        elif action == "CONFIRM_WITH_EXPLANATION":
+            if order_obj["result_code"] not in ("MISMATCH", "PARTIAL_HANDOVER"):
+                return jsonify({"error": "Đơn hàng không ở trạng thái có chênh lệch!"}), 400
+            if not (cause or rec.get("discrepancy_cause")) or not (note or rec.get("discrepancy_note")):
+                return jsonify({"error": "Bắt buộc phải ghi nhận nguyên nhân và giải trình trước khi chốt chênh lệch!"}), 400
+            rec["discrepancy_cause"] = cause or rec.get("discrepancy_cause")
+            rec["discrepancy_note"] = note or rec.get("discrepancy_note")
+            rec["process_status"] = "Đã xác nhận có chênh lệch"
+            rec["confirmed_by"] = dispatcher_name
+            rec["confirmed_at"] = now_str
+            rec["source_fingerprint"] = fp
+            rec["history"].insert(0, {
+                "time": now_str,
+                "actor": dispatcher_name,
+                "action": "Chốt đối soát có giải trình chênh lệch",
+                "detail": f"Chênh lệch {order_obj['total_diff_pcs']:+d} PCS · Nguyên nhân: {rec['discrepancy_cause']} · Giải trình: {rec['discrepancy_note']}"
+            })
+        else:
+            return jsonify({"error": "Thao tác không hợp lệ!"}), 400
+
+        write_json(OUTBOUND_RECON_FILE, saved_recons)
+
+    if "add_audit_log" in globals():
+        add_audit_log("Nghiệp vụ kho", f"Cập nhật đối soát xuất hàng ({rec['process_status']})", order_obj["order_code"], f"Nền tảng: {order_obj['platform']}")
+
+    return jsonify({"status": "ok"})
+
+#  CHỨC NĂNG BÁO CÁO & LỊCH SỬ (DISPATCHER REPORTS & HISTORY)
+def _build_dispatcher_reports_and_history(
+    date_range="7D",
+    from_str="",
+    to_str="",
+    platform_filter="ALL",
+    staff_filter="ALL",
+    report_type="DISPATCH"
+):
+    now_dt = datetime.now()
+    today_date = now_dt.date()
+    d_from = _parse_dt_flexible(from_str).date() if _parse_dt_flexible(from_str) else None
+    d_to = _parse_dt_flexible(to_str).date() if _parse_dt_flexible(to_str) else None
+
+    def _in_date_range(dt_obj):
+        if not dt_obj:
+            return True
+        target_d = dt_obj.date()
+        if date_range == "TODAY":
+            return target_d == today_date
+        if date_range == "7D":
+            return (today_date - target_d).days <= 7
+        if date_range == "30D":
+            return (today_date - target_d).days <= 30
+        if date_range == "CUSTOM":
+            if d_from and target_d < d_from:
+                return False
+            if d_to and target_d > d_to:
+                return False
+        return True
+
+    picking_list = read_json(PICKING_FILE, [])
+    ret_orders = _load_return_orders() if "_load_return_orders" in globals() else read_json(RETURNS_FILE, [])
+    packing_list = read_json(PACKING_FILE, [])
+    approvals_data = read_json(APPROVALS_FILE, {})
+    recon_data = read_json(RECON_DATA_FILE, [])
+
+    processed_handovers = [
+        t for t in approvals_data.get("processed_tickets", [])
+        if t.get("category") == "HANDOVER"
+    ]
+    approved_bgs = [
+        t for t in processed_handovers
+        if "xác nhận" in str(t.get("status", "")).lower()
+    ]
+    rejected_bgs = [
+        t for t in processed_handovers
+        if "từ chối" in str(t.get("status", "")).lower()
+    ]
+    approved_bg_by_order = {
+        str(t.get("order_or_po", "")).strip().upper(): t for t in approved_bgs
+    }
+
+    # 1. Tổng hợp danh sách phiếu theo kỳ báo cáo (DISTINCT mã phiếu)
+    ticket_rows = []
+    seen_pick_ids = set()
+
+    for o in picking_list:
+        raw_st = o.get("status", "Chờ thực hiện")
+        if raw_st == "Nháp":
+            continue
+        pick_id = str(o.get("id") or o.get("pick_id") or "").strip()
+        if not pick_id or pick_id in seen_pick_ids:
+            continue
+        seen_pick_ids.add(pick_id)
+
+        order_code = str(o.get("order_code") or o.get("order_id") or "").strip().upper()
+        plat = _normalize_platform_name(o.get("platform", "Shopee"))
+        assignee = o.get("assignee", "Chưa phân công")
+        assignee_code = o.get("assignee_code", "")
+        created_dt = _parse_dt_flexible(o.get("created_at")) or now_dt
+        deadline_dt = _parse_dt_flexible(o.get("deadline"))
+
+        bg_obj = approved_bg_by_order.get(order_code)
+        bg_confirmed_dt = _parse_dt_flexible(bg_obj.get("reviewed_at")) if bg_obj else None
+
+        if report_type == "HANDOVER":
+            if not bg_obj or not _in_date_range(bg_confirmed_dt or created_dt):
+                continue
+        else:
+            if not _in_date_range(created_dt):
+                continue
+
+        if platform_filter != "ALL" and plat != platform_filter:
+            continue
+        if staff_filter != "ALL" and staff_filter not in (assignee, assignee_code):
+            continue
+
+        req_pcs = int(o.get("required_pcs", 0) or 0)
+        out_pcs = int(o.get("picked_pcs", 0) or 0)
+        handed_pcs = int(bg_obj.get("total_pcs", req_pcs)) if bg_obj else 0
+
+        is_handed_done = bool(bg_obj)
+        is_out_done = (req_pcs > 0 and out_pcs >= req_pcs) or raw_st in ("Hoàn thành", "Hoàn tất lấy hàng", "Hoàn tất một phần")
+        is_cancelled = raw_st in ("Đã hủy", "Hủy")
+        is_overdue = bool(deadline_dt and now_dt > deadline_dt and not is_handed_done and not is_cancelled)
+
+        if is_cancelled:
+            disp_st = "Đã hủy"
+        elif is_handed_done:
+            disp_st = "Hoàn tất"
+        elif handed_pcs > 0 and handed_pcs < req_pcs:
+            disp_st = "Bàn giao một phần"
+        elif is_out_done:
+            disp_st = "Chờ đóng gói / BG"
+        else:
+            disp_st = "Đang xử lý"
+
+        ticket_rows.append({
+            "pick_id": pick_id,
+            "order_code": order_code,
+            "platform": plat,
+            "assignee": assignee,
+            "assignee_code": assignee_code or assignee,
+            "req_pcs": req_pcs,
+            "out_pcs": out_pcs,
+            "handed_pcs": handed_pcs,
+            "status": disp_st,
+            "is_handed_done": is_handed_done,
+            "is_out_done": is_out_done,
+            "is_overdue": is_overdue,
+            "is_cancelled": is_cancelled,
+            "created_at": o.get("created_at", ""),
+            "deadline": o.get("deadline", "")
+        })
+
+    # 2. Lấy kết quả đối soát từ chức năng Đối soát xuất hàng
+    recon_orders = _build_outbound_reconciliation_orders()
+    filtered_recon = []
+    for r in recon_orders:
+        if platform_filter != "ALL" and r["platform"] != platform_filter:
+            continue
+        r_dt = _parse_dt_flexible(r.get("transaction_date"))
+        if not _in_date_range(r_dt):
+            continue
+        filtered_recon.append(r)
+
+    recon_matched_cnt = sum(1 for x in filtered_recon if x["result_code"] == "MATCHED")
+    recon_mismatch_cnt = sum(1 for x in filtered_recon if x["result_code"] in ("MISMATCH", "PARTIAL_HANDOVER"))
+    recon_waiting_cnt = sum(1 for x in filtered_recon if x["result_code"] in ("NOT_HANDED_OVER", "UNLINKED"))
+
+    kpis = {
+        "total_tickets": len(ticket_rows),
+        "handed_over": sum(1 for t in ticket_rows if t["is_handed_done"]),
+        "in_progress": sum(1 for t in ticket_rows if not t["is_handed_done"] and not t["is_cancelled"]),
+        "overdue": sum(1 for t in ticket_rows if t["is_overdue"]),
+        "recon_matched": recon_matched_cnt,
+        "recon_mismatch": recon_mismatch_cnt
+    }
+
+    platform_stats = []
+    for p_name in ("Shopee", "TikTok Shop", "Lazada"):
+        p_tickets = [t for t in ticket_rows if t["platform"] == p_name]
+        p_recons = [r for r in filtered_recon if r["platform"] == p_name]
+        platform_stats.append({
+            "platform": p_name,
+            "total": len(p_tickets),
+            "handed_over": sum(1 for t in p_tickets if t["is_handed_done"]),
+            "in_progress": sum(1 for t in p_tickets if not t["is_handed_done"] and not t["is_cancelled"]),
+            "overdue": sum(1 for t in p_tickets if t["is_overdue"]),
+            "mismatch": sum(1 for r in p_recons if r["result_code"] in ("MISMATCH", "PARTIAL_HANDOVER"))
+        })
+
+    staff_perf_map = {}
+    for t in ticket_rows:
+        st_name = t["assignee"]
+        if not st_name or st_name == "Chưa phân công":
+            continue
+        entry = staff_perf_map.setdefault(st_name, {
+            "staff_name": st_name,
+            "staff_code": t["assignee_code"],
+            "assigned_count": 0,
+            "out_completed": 0,
+            "on_time": 0,
+            "overdue": 0
+        })
+        entry["assigned_count"] += 1
+        if t["is_out_done"]:
+            entry["out_completed"] += 1
+        if t["is_overdue"]:
+            entry["overdue"] += 1
+        elif t["is_out_done"] or t["is_handed_done"]:
+            entry["on_time"] += 1
+
+    staff_performance = sorted(staff_perf_map.values(), key=lambda x: x["assigned_count"], reverse=True)
+
+    # 3. Tổng hợp Lịch sử hoạt động Append-Only đầy đủ thông tin (SKU, Box, Vị trí, Người thực hiện, Kết quả)
+    history_events = []
+
+    for o in picking_list:
+        p_id = o.get("id") or o.get("pick_id")
+        o_code = o.get("order_code", "")
+        sku_code = str(o.get("sku", "")).upper()
+        plat = _normalize_platform_name(o.get("platform", "Shopee"))
+        c_time = o.get("created_at", now_dt.strftime("%d/%m/%Y %H:%M"))
+
+        for idx, h in enumerate(o.get("history", [])):
+            act = h.get("action", "Thao tác phiếu")
+            act_low = act.lower()
+            if "phân công" in act_low or "nhân viên" in act_low:
+                cat = "ASSIGN"
+            elif "thiếu" in act_low:
+                cat = "SHORTAGE"
+            else:
+                cat = "PICK_REQ"
+
+            history_events.append({
+                "event_id": f"EVT-{p_id}-H{idx + 1}",
+                "time": h.get("time", c_time),
+                "actor": h.get("actor", "Điều phối"),
+                "actor_role": "Điều phối kho",
+                "category": cat,
+                "action_label": act,
+                "target": p_id,
+                "order_code": o_code,
+                "platform": plat,
+                "summary": h.get("detail", ""),
+                "before_val": "—",
+                "after_val": h.get("detail", ""),
+                "reason": o.get("shortage_note") or o.get("note") or "Theo quy trình điều phối",
+                "result": "Thành công",
+                "source_ref": f"Phiếu {p_id} · Đơn {o_code} · SKU {sku_code}",
+                "location_detail": "—"
+            })
+
+        # Giao dịch OUT từng Box, SKU & Vị trí kệ/tầng của Staff
+        for idx, tx in enumerate(o.get("transactions", []), start=1):
+            box_id = tx.get("box_id", "--")
+            slot_raw = tx.get("location_snapshot", "--")
+            loc_path = _resolve_slot_hierarchy(slot_raw)["full_path"] if "_resolve_slot_hierarchy" in globals() else slot_raw
+            qty_p = int(tx.get("picked_pcs", 0) or 0)
+            history_events.append({
+                "event_id": tx.get("tx_id") or f"EVT-{p_id}-OUT{idx}",
+                "time": f"{c_time[:10]} {tx.get('time', '')}".strip(),
+                "actor": tx.get("staff_name", o.get("assignee", "Staff")),
+                "actor_role": "Nhân viên kho",
+                "category": "OUT",
+                "action_label": "OUT – Lấy hàng",
+                "target": p_id,
+                "order_code": o_code,
+                "platform": plat,
+                "summary": f"Lấy {qty_p} PCS ({sku_code}) từ {box_id} · Vị trí {slot_raw}",
+                "before_val": "Tồn khả dụng trên kệ",
+                "after_val": f"-{qty_p} PCS (Còn lại trong Box: {tx.get('remaining_in_box', '--')} PCS)",
+                "reason": f"Thực hiện lấy hàng đơn {o_code}",
+                "result": "Thành công",
+                "source_ref": f"Phiếu {p_id} · SKU {sku_code} · Box {box_id}",
+                "location_detail": f"Box: {box_id} · {loc_path}"
+            })
+
+    # Giao dịch RETURNED trả hàng về kệ
+    for ret in ret_orders:
+        r_id = ret.get("id")
+        r_sku = str(ret.get("sku", "")).upper()
+        for idx, rtx in enumerate(ret.get("transactions", []), start=1):
+            is_dmg = "cách ly" in str(rtx.get("condition", "")).lower()
+            history_events.append({
+                "event_id": f"EVT-{r_id}-{idx}",
+                "time": f"{now_dt.strftime('%d/%m/%Y')} {rtx.get('time', '')}".strip(),
+                "actor": rtx.get("staff_name", ret.get("assignee", "Staff")),
+                "actor_role": "Nhân viên kho",
+                "category": "RETURNED",
+                "action_label": "RETURNED – Trả hàng",
+                "target": r_id,
+                "order_code": ret.get("order_code", ""),
+                "platform": "Shopee",
+                "summary": f"Trả {rtx.get('returned_pcs', 0)} PCS ({r_sku}) về {rtx.get('location_snapshot', '--')} · {rtx.get('condition', '')}",
+                "before_val": f"Nguồn OUT: {ret.get('out_order_id', '--')}",
+                "after_val": f"+{rtx.get('returned_pcs', 0)} PCS ({rtx.get('box_id', '--')})",
+                "reason": ret.get("reason", ""),
+                "result": "Lỗi" if is_dmg else "Thành công",
+                "source_ref": f"Phiếu trả {r_id} · Nguồn {ret.get('out_order_id', '--')}",
+                "location_detail": f"Box: {rtx.get('box_id', '--')} · {rtx.get('location_snapshot', '--')}"
+            })
+
+    # Đóng gói hoàn tất
+    for pk in packing_list:
+        if pk.get("packing_status") == "COMPLETED":
+            total_pk = sum(int(x.get("pcs_equiv", x.get("qty", 0))) for p in pk.get("packages", []) for x in p.get("items", []))
+            pkg_codes = ", ".join(p.get("package_code", "") for p in pk.get("packages", []))
+            history_events.append({
+                "event_id": f"EVT-{pk.get('id')}-PACK",
+                "time": now_dt.strftime("%d/%m/%Y %H:%M"),
+                "actor": pk.get("assignee", "Staff"),
+                "actor_role": "Nhân viên kho",
+                "category": "PACKING",
+                "action_label": "Đóng gói hoàn tất",
+                "target": pk.get("order_code", ""),
+                "order_code": pk.get("order_code", ""),
+                "platform": _normalize_platform_name(pk.get("platform", "Shopee")),
+                "summary": f"Đóng gói {total_pk} PCS ({len(pk.get('packages', []))} kiện: {pkg_codes})",
+                "before_val": "Chờ đóng gói",
+                "after_val": f"{len(pk.get('packages', []))} kiện hoàn tất",
+                "reason": "Hoàn tất đóng gói đơn hàng",
+                "result": "Thành công",
+                "source_ref": f"Phiếu đóng gói {pk.get('id')} · Đơn {pk.get('order_code')}",
+                "location_detail": pkg_codes or "Bàn đóng gói"
+            })
+
+    # Bàn giao: Manager xác nhận HOẶC Manager từ chối xác nhận
+    for bg in approved_bgs:
+        history_events.append({
+            "event_id": f"EVT-{bg.get('id')}-OK",
+            "time": bg.get("reviewed_at", ""),
+            "actor": bg.get("reviewed_by", "Manager"),
+            "actor_role": "Manager",
+            "category": "HANDOVER",
+            "action_label": "Xác nhận bàn giao",
+            "target": bg.get("order_or_po", ""),
+            "order_code": bg.get("order_or_po", ""),
+            "platform": _normalize_platform_name(bg.get("partner", "Shopee")),
+            "summary": f"Xác nhận bàn giao {bg.get('total_pcs', 0)} PCS ({bg.get('id')}) cho {bg.get('receiver', '--')}",
+            "before_val": "Chờ Manager xác nhận",
+            "after_val": f"Đã xác nhận bàn giao ({bg.get('total_pcs', 0)} PCS)",
+            "reason": f"Người giao: {bg.get('sender', '--')}",
+            "result": "Thành công",
+            "source_ref": f"Phiếu bàn giao {bg.get('id')}",
+            "location_detail": f"Đơn vị nhận: {bg.get('receiver', '--')}"
+        })
+
+    for rj in rejected_bgs:
+        history_events.append({
+            "event_id": f"EVT-{rj.get('id')}-REJ",
+            "time": rj.get("reviewed_at", ""),
+            "actor": rj.get("reviewed_by", "Manager"),
+            "actor_role": "Manager",
+            "category": "HANDOVER",
+            "action_label": "Từ chối bàn giao",
+            "target": rj.get("order_or_po", ""),
+            "order_code": rj.get("order_or_po", ""),
+            "platform": _normalize_platform_name(rj.get("partner", "Shopee")),
+            "summary": f"Từ chối xác nhận {rj.get('id')}: {rj.get('reject_reason', 'Số lượng/chứng từ chưa khớp')}",
+            "before_val": "Chờ Manager xác nhận",
+            "after_val": "Đã từ chối · Trả lại Staff bổ sung",
+            "reason": rj.get("reject_reason", "Chưa đạt điều kiện xác nhận bàn giao"),
+            "result": "Từ chối",
+            "source_ref": f"Phiếu bàn giao {rj.get('id')}",
+            "location_detail": f"Người lập phiếu: {rj.get('sender', '--')}"
+        })
+
+    # Dữ liệu đối soát (Hợp lệ / Lỗi / Trùng lặp)
+    for rec in recon_data:
+        for idx, eh in enumerate(rec.get("edit_history", [])):
+            is_err = rec.get("check_status") in ("Có lỗi", "Trùng lặp")
+            history_events.append({
+                "event_id": f"EVT-{rec.get('record_id')}-{idx}",
+                "time": eh.get("time", ""),
+                "actor": eh.get("actor", "Điều phối"),
+                "actor_role": "Điều phối",
+                "category": "RECON_DATA",
+                "action_label": eh.get("action", "Dữ liệu đối soát"),
+                "target": rec.get("order_code", ""),
+                "order_code": rec.get("order_code", ""),
+                "platform": rec.get("platform", "Shopee"),
+                "summary": eh.get("detail", ""),
+                "before_val": "Dữ liệu gốc nền tảng",
+                "after_val": f"{rec.get('check_status')} · {rec.get('confirm_status')}",
+                "reason": rec.get("error_message") or eh.get("detail", ""),
+                "result": "Lỗi" if is_err else "Thành công",
+                "source_ref": f"Bản ghi {rec.get('record_id')} (Đợt {rec.get('batch_id')})",
+                "location_detail": "—"
+            })
+
+    # Đối soát xuất hàng (Ghi nhận lệch, Gửi kiểm tra, Xác nhận đối soát)
+    for r_ord in recon_orders:
+        for idx, rh in enumerate(r_ord.get("history", [])):
+            history_events.append({
+                "event_id": f"EVT-RC-{r_ord['order_code']}-{idx}",
+                "time": rh.get("time", ""),
+                "actor": rh.get("actor", "Điều phối"),
+                "actor_role": "Điều phối",
+                "category": "RECON_OUT",
+                "action_label": rh.get("action", "Đối soát xuất hàng"),
+                "target": r_ord["order_code"],
+                "order_code": r_ord["order_code"],
+                "platform": r_ord["platform"],
+                "summary": rh.get("detail", ""),
+                "before_val": f"PCS nền tảng: {r_ord['total_platform_pcs']}",
+                "after_val": f"PCS bàn giao: {r_ord['total_handover_pcs'] if r_ord['total_handover_pcs'] is not None else '—'} ({r_ord['result_label']})",
+                "reason": r_ord.get("discrepancy_note") or rh.get("detail", ""),
+                "result": "Thành công",
+                "source_ref": f"Đối soát xuất hàng · Đơn {r_ord['order_code']}",
+                "location_detail": "—"
+            })
+
+    history_actors = sorted(list({ev["actor"] for ev in history_events if ev.get("actor")}))
+
+    return {
+        "synced_at": now_dt.strftime("%H:%M:%S"),
+        "kpis": kpis,
+        "platform_stats": platform_stats,
+        "recon_summary": {
+            "total": len(filtered_recon),
+            "matched": recon_matched_cnt,
+            "waiting": recon_waiting_cnt,
+            "mismatch": recon_mismatch_cnt
+        },
+        "staff_performance": staff_performance,
+        "ticket_rows": ticket_rows,
+        "history_events": history_events,
+        "history_actors": history_actors
+    }
+
+
+@app.route("/dispatcher/reports")
+@dispatcher_required
+def dispatcher_reports_page():
+    return render_template(
+        "DISPATCHER/dispatcher_reports.html",
+        current_user=session.get("user", {})
+    )
+
+
+@app.route("/api/dispatcher/reports", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_reports():
+    try:
+        payload = _build_dispatcher_reports_and_history(
+            date_range=request.args.get("range", "7D"),
+            from_str=request.args.get("from", ""),
+            to_str=request.args.get("to", ""),
+            platform_filter=request.args.get("platform", "ALL"),
+            staff_filter=request.args.get("staff", "ALL"),
+            report_type=request.args.get("report_type", "DISPATCH")
+        )
+        return jsonify(payload)
+    except Exception as exc:
+        app.logger.exception("Lỗi API /api/dispatcher/reports")
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/dispatcher/reports/export", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_reports_export():
+    """Xuất Excel (.csv UTF-8 BOM) cho 3 loại: Báo cáo điều phối, Báo cáo đối soát, Lịch sử hoạt động."""
+    export_kind = str(request.args.get("kind", "DISPATCH")).upper()  # 'DISPATCH' | 'RECON' | 'HISTORY'
+    data = _build_dispatcher_reports_and_history(
+        date_range=request.args.get("range", "7D"),
+        from_str=request.args.get("from", ""),
+        to_str=request.args.get("to", ""),
+        platform_filter=request.args.get("platform", "ALL"),
+        staff_filter=request.args.get("staff", "ALL"),
+        report_type=request.args.get("report_type", "DISPATCH")
+    )
+
+    output = io.StringIO()
+    output.write("\ufeff")
+    writer = csv.writer(output)
+    now_stamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    if export_kind == "RECON":
+        writer.writerow(["SANOVA - BÁO CÁO ĐỐI SOÁT XUẤT HÀNG", f"Xuất lúc: {now_stamp}"])
+        writer.writerow(["Mã đơn", "Nền tảng", "Ngày giao dịch", "Phiếu OUT", "Sản phẩm", "PCS nguồn", "PCS bàn giao", "Chênh lệch", "Kết quả", "Trạng thái xử lý"])
+        recon_orders = _build_outbound_reconciliation_orders()
+        for r in recon_orders:
+            writer.writerow([
+                r["order_code"], r["platform"], r["transaction_date"], r["pick_id_display"],
+                r["sku_summary"], r["total_platform_pcs"],
+                r["total_handover_pcs"] if r["total_handover_pcs"] is not None else "",
+                r["total_diff_pcs"] if r["total_diff_pcs"] is not None else "",
+                r["result_label"], r["process_status"]
+            ])
+        fname = f"SANOVA_BaoCaoDoiSoat_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+
+    elif export_kind == "HISTORY":
+        writer.writerow(["SANOVA - LỊCH SỬ HOẠT ĐỘNG ĐIỀU PHỐI KHO", f"Xuất lúc: {now_stamp}"])
+        writer.writerow(["Mã sự kiện", "Thời gian", "Người thực hiện", "Vai trò", "Hoạt động", "Đối tượng", "Nền tảng", "Nội dung chi tiết", "Kết quả"])
+        for ev in data["history_events"]:
+            writer.writerow([
+                ev["event_id"], ev["time"], ev["actor"], ev["actor_role"],
+                ev["action_label"], ev["target"], ev["platform"], ev["summary"], ev["result"]
+            ])
+        fname = f"SANOVA_LichSuDieuPhoi_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+
+    else:
+        writer.writerow(["SANOVA - BÁO CÁO HOẠT ĐỘNG ĐIỀU PHỐI KHO", f"Xuất lúc: {now_stamp}"])
+        writer.writerow(["Mã phiếu", "Mã đơn", "Nền tảng", "Nhân viên", "Số PCS yêu cầu", "Số PCS OUT", "Số PCS bàn giao", "Hạn hoàn thành", "Trạng thái"])
+        for t in data["ticket_rows"]:
+            writer.writerow([
+                t["pick_id"], t["order_code"], t["platform"], t["assignee"],
+                t["req_pcs"], t["out_pcs"], t["handed_pcs"], t["deadline"], t["status"]
+            ])
+        fname = f"SANOVA_BaoCaoDieuPhoi_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename={fname}"}
+    )
+
+# IV.7. CHỨC NĂNG TÀI KHOẢN CÁ NHÂN (DISPATCHER PROFILE)
+from werkzeug.utils import secure_filename
+
+@app.route("/dispatcher/profile", methods=["GET"])
+@dispatcher_required
+def dispatcher_profile_page():
+    return render_template(
+        "DISPATCHER/dispatcher_profile.html",
+        current_user=session.get("user", {})
+    )
+
+
+@app.route("/api/dispatcher/profile", methods=["GET"])
+@dispatcher_required
+def api_dispatcher_profile_get():
+    """
+    Lấy trực tiếp 100% thông tin tài khoản của Điều phối viên đang đăng nhập từ users.json,
+    kết hợp chính sách bảo mật từ system_settings.json và nhật ký hoạt động cá nhân từ audit_logs.json.
+    """
+    sess_user = session.get("user", {})
+    username = sess_user.get("username")
+
+    users = load_users()
+    user_record = users.get(username)
+    if not user_record:
+        return jsonify({"error": "Không tìm thấy hồ sơ tài khoản trong hệ thống"}), 404
+
+    sys_cfg = load_system_settings() if "load_system_settings" in globals() else {}
+    pwd_cfg = sys_cfg.get("password", {})
+    min_len = pwd_cfg.get("min_length", 8)
+    reqs = [f"Tối thiểu {min_len} ký tự"]
+    if pwd_cfg.get("require_uppercase"):
+        reqs.append("có chữ in hoa")
+    if pwd_cfg.get("require_number"):
+        reqs.append("có chữ số")
+    if pwd_cfg.get("require_special"):
+        reqs.append("có ký tự đặc biệt")
+
+    all_logs = load_logs() if "load_logs" in globals() else []
+    full_name = user_record.get("name", "")
+    personal_logs = []
+    login_history = []
+
+    for lg in all_logs:
+        by_str = str(lg.get("by", ""))
+        actor_str = str(lg.get("actor", ""))
+        target_str = str(lg.get("target", ""))
+        if (username and username in by_str) or (full_name and full_name in (by_str, actor_str)) or (target_str == username):
+            act = lg.get("action", "")
+            is_login = ("đăng nhập" in act.lower()) or ("đăng xuất" in act.lower())
+            t_str = lg.get("timestamp") or f"{lg.get('date', '')} {lg.get('time', '')}".strip()
+            personal_logs.append({
+                "time": t_str,
+                "category": lg.get("category", "Nghiệp vụ kho"),
+                "action": act,
+                "target": target_str,
+                "result": lg.get("result", lg.get("status", "Thành công"))
+            })
+            if is_login:
+                login_history.append({
+                    "time": t_str,
+                    "device": lg.get("device", "Web Browser · SANOVA Internal"),
+                    "ip": lg.get("ip", "127.0.0.1"),
+                    "result": lg.get("result", "Thành công"),
+                    "success": lg.get("result", "Thành công") == "Thành công"
+                })
+
+    return jsonify({
+        "profile": {
+            "staff_code": user_record.get("staff_code", "DP0001"),
+            "name": full_name,
+            "username": username,
+            "email": user_record.get("email", ""),
+            "phone": user_record.get("phone", ""),
+            "role": user_record.get("role", "Điều phối / Kế toán kho"),
+            "scope": user_record.get("scope", "Kho chính - SANOVA"),
+            "status": user_record.get("status", "Hoạt động"),
+            "note": user_record.get("note", ""),
+            "avatar_url": user_record.get("avatar_url", ""),
+            "created_at": user_record.get("created_at", ""),
+            "last_login": user_record.get("last_login", ""),
+            "last_password_changed": user_record.get("last_password_changed", "Chưa đổi"),
+            "noti_prefs": user_record.get("noti_prefs", {
+                "shortage": True,
+                "delay": True,
+                "discrepancy": True
+            })
+        },
+        "password_policy_text": f"Chính sách mật khẩu hệ thống: {', '.join(reqs)}.",
+        "activity_logs": personal_logs[:20],
+        "login_history": login_history[:10]
+    })
+
+
+@app.route("/api/dispatcher/profile", methods=["PATCH"])
+@dispatcher_required
+def api_dispatcher_profile_update():
+    """Chỉ cho phép cập nhật Email, Số điện thoại và Ghi chú cá nhân; chặn tuyệt đối sửa vai trò / mã NV / kho."""
+    sess_user = session.get("user", {})
+    username = sess_user.get("username")
+    body = request.get_json(silent=True) or {}
+
+    email = str(body.get("email", "")).strip()
+    phone = str(body.get("phone", "")).strip()
+    note = str(body.get("note", "")).strip()[:255]
+
+    if not email or "@" not in email:
+        return jsonify({"error": "Địa chỉ email liên hệ không hợp lệ!"}), 400
+    if not phone:
+        return jsonify({"error": "Số điện thoại liên hệ không được để trống!"}), 400
+
+    users = load_users()
+    if username not in users:
+        return jsonify({"error": "Tài khoản không tồn tại!"}), 404
+
+    target = users[username]
+    old_summary = f"{target.get('email', '')} · {target.get('phone', '')}"
+    target["email"] = email
+    target["phone"] = phone
+    target["note"] = note
+    save_users(users)
+
+    session["user"]["email"] = email
+    session.modified = True
+
+    if "add_audit_log" in globals():
+        add_audit_log(
+            category="Tài khoản",
+            action="Điều phối cập nhật thông tin liên hệ cá nhân",
+            target=username,
+            changes=[{"field": "Liên hệ", "before": old_summary, "after": f"{email} · {phone}"}]
+        )
+
+    return jsonify({"status": "ok", "message": "Đã lưu thay đổi thông tin liên hệ!"})
+
+
+@app.route("/api/dispatcher/profile/avatar", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_profile_avatar():
+    file = request.files.get("avatar")
+    if not file or not file.filename:
+        return jsonify({"error": "Vui lòng chọn tệp ảnh hợp lệ!"}), 400
+
+    ext = os.path.splitext(secure_filename(file.filename))[1].lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".webp"):
+        return jsonify({"error": "Chỉ hỗ trợ ảnh định dạng PNG, JPG, JPEG hoặc WEBP!"}), 400
+
+    username = session["user"].get("username", "dispatcher")
+    avatar_dir = os.path.join(app.static_folder, "uploads", "avatars")
+    os.makedirs(avatar_dir, exist_ok=True)
+
+    fname = f"{username}_avatar{ext}"
+    file.save(os.path.join(avatar_dir, fname))
+    avatar_url = f"/static/uploads/avatars/{fname}?v={int(datetime.now().timestamp())}"
+
+    users = load_users()
+    if username in users:
+        users[username]["avatar_url"] = avatar_url
+        save_users(users)
+
+    return jsonify({"status": "ok", "avatar_url": avatar_url})
+
+
+@app.route("/api/dispatcher/profile/notifications", methods=["PUT"])
+@dispatcher_required
+def api_dispatcher_profile_notifications():
+    body = request.get_json(silent=True) or {}
+    username = session["user"].get("username")
+    users = load_users()
+    if username in users:
+        users[username]["noti_prefs"] = {
+            "shortage": bool(body.get("shortage", True)),
+            "delay": bool(body.get("delay", True)),
+            "discrepancy": bool(body.get("discrepancy", True))
+        }
+        save_users(users)
+    return jsonify({"status": "ok", "message": "Đã lưu tùy chọn thông báo cá nhân!"})
+
+
+@app.route("/api/dispatcher/profile/change-password", methods=["POST"])
+@dispatcher_required
+def api_dispatcher_profile_change_password():
+    fail_cnt = session.get("disp_pwd_fails", 0)
+    if fail_cnt >= 5:
+        return jsonify({"error": "Bạn đã nhập sai mật khẩu hiện tại quá 5 lần. Vui lòng đăng nhập lại!"}), 429
+
+    username = session["user"].get("username")
+    users = load_users()
+    if username not in users:
+        return jsonify({"error": "Tài khoản không tồn tại!"}), 404
+
+    body = request.get_json(silent=True) or {}
+    cur_pwd = body.get("current_password", "")
+    new_pwd = body.get("new_password", "")
+    cfm_pwd = body.get("confirm_password", "")
+
+    if not verify_password(users[username].get("password"), cur_pwd):
+        session["disp_pwd_fails"] = fail_cnt + 1
+        return jsonify({"error": "Mật khẩu hiện tại không chính xác!"}), 400
+
+    if new_pwd != cfm_pwd:
+        return jsonify({"error": "Mật khẩu xác nhận không khớp!"}), 400
+    if cur_pwd == new_pwd:
+        return jsonify({"error": "Mật khẩu mới phải khác mật khẩu hiện tại!"}), 400
+
+    sys_cfg = load_system_settings() if "load_system_settings" in globals() else {}
+    pwd_cfg = sys_cfg.get("password", {})
+    min_len = pwd_cfg.get("min_length", 8)
+    if len(new_pwd) < min_len:
+        return jsonify({"error": f"Mật khẩu mới phải có tối thiểu {min_len} ký tự theo chính sách hệ thống!"}), 400
+    if pwd_cfg.get("require_uppercase") and not any(c.isupper() for c in new_pwd):
+        return jsonify({"error": "Mật khẩu mới phải chứa ít nhất 1 chữ in hoa (A-Z)!"}), 400
+    if pwd_cfg.get("require_number") and not any(c.isdigit() for c in new_pwd):
+        return jsonify({"error": "Mật khẩu mới phải chứa ít nhất 1 chữ số (0-9)!"}), 400
+    if pwd_cfg.get("require_special") and new_pwd.isalnum():
+        return jsonify({"error": "Mật khẩu mới phải chứa ít nhất 1 ký tự đặc biệt!"}), 400
+
+    session["disp_pwd_fails"] = 0
+    now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+    users[username]["password"] = hash_password(new_pwd)
+    users[username]["last_password_changed"] = now_str
+    save_users(users)
+
+    if "add_audit_log" in globals():
+        add_audit_log(category="Bảo mật", action="Điều phối đổi mật khẩu cá nhân", target=username, result="Thành công")
+
+    return jsonify({"status": "ok", "message": "Đổi mật khẩu thành công!"})
+
+
 # ==========================================================
 # 14. KHỞI CHẠY ỨNG DỤNG FLASK
 

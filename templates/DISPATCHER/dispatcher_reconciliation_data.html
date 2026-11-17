@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dữ liệu đối soát · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #086f68;
+            --brand-teal: #086f68;
+            --brand-green: #057a55;
+            --mint-label: #34d399;
+            --mint-text: #a7f3d0;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        body {
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+        }
+
+        /* SIDEBAR CỐ ĐỊNH */
+        .sidebar {
+            width: 248px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ecfdf5;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 90;
+            user-select: none;
+        }
+        .brand-header { display: flex; align-items: center; gap: 11px; padding: 0 10px 22px; }
+        .brand-name { font-size: 21px; font-weight: 800; letter-spacing: 1.1px; color: #ffffff; }
+        .nav-category { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--mint-label); padding: 0 12px 12px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+        .nav-link {
+            display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+            color: var(--mint-text); text-decoration: none; border-radius: 10px;
+            font-size: 13.5px; font-weight: 600; transition: all 0.16s ease;
+        }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .logout-link:hover { background-color: rgba(220, 38, 38, 0.22); color: #fca5a5; }
+
+        /* MAIN WRAPPER & TOPBAR */
+        .main-wrapper { flex: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .top-navbar {
+            height: 54px; background: #ffffff; border-bottom: 1px solid var(--border);
+            padding: 0 28px; display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0; position: sticky; top: 0; z-index: 50;
+        }
+        .sync-badge {
+            display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5;
+            border: 1px solid #a7f3d0; color: #065f46; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700;
+        }
+        .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; }
+        .user-chip { display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 700; }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #334155; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+
+        .content-body { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 16px; }
+        .page-header-row { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+        .page-title { font-size: 25px; font-weight: 800; color: #0f172a; }
+        .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 2px; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            height: 38px; padding: 0 16px; border-radius: 9px; font-size: 13px; font-weight: 700;
+            cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
+        }
+        .btn-primary { background: #057a55; color: #ffffff; }
+        .btn-primary:hover { background: #046c4e; }
+        .btn-dark { background: #0f172a; color: #ffffff; }
+        .btn-dark:hover { background: #1e293b; }
+        .btn-outline { background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; }
+        .btn-outline:hover { background: #f8fafc; }
+
+        /* 4 THẺ KPI */
+        .kpi-4-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        @media (max-width: 1024px) { .kpi-4-row { grid-template-columns: repeat(2, 1fr); } }
+
+        .kpi-tile {
+            background: #ffffff; border: 1px solid var(--border); border-radius: 13px;
+            padding: 15px 18px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .kpi-ico { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+        .kpi-num { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+        .kpi-lbl { font-size: 12.5px; font-weight: 600; color: #475569; }
+
+        /* MAIN CARD & TABS */
+        .card-box { background: #ffffff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+        .tabs-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+        .main-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tab-pill {
+            padding: 8px 15px; border-radius: 999px; font-size: 13px; font-weight: 700;
+            border: 1px solid var(--border); background: #ffffff; color: #334155; cursor: pointer;
+        }
+        .tab-pill.active { background: #057a55; color: #ffffff; border-color: #057a55; }
+
+        .filter-row { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 14px; align-items: center; }
+        .ctrl {
+            height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 9px;
+            font-size: 13px; font-weight: 500; background: #ffffff; color: #0f172a; outline: none;
+        }
+        .ctrl:focus { border-color: var(--brand-teal); }
+
+        /* TABLE */
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .data-table th {
+            background: #f8fafc; color: #475569; font-size: 12px; font-weight: 700;
+            padding: 11px 12px; border-bottom: 1.5px solid var(--border); white-space: nowrap;
+        }
+        .data-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
+        .data-table tr:hover td { background: #f8fafc; }
+
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+        .bg-green  { background: #dcfce7; color: #15803d; }
+        .bg-amber  { background: #fef3c7; color: #b45309; }
+        .bg-red    { background: #fee2e2; color: #b91c1c; }
+        .bg-blue   { background: #e0f2fe; color: #0369a1; }
+        .bg-gray   { background: #f1f5f9; color: #475569; }
+
+        .icon-btn {
+            width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0;
+            background: #ffffff; color: #475569; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .icon-btn:hover { background: #ecfdf5; border-color: #a7f3d0; color: #057a55; }
+
+        /* DRAWER NHẬP EXCEL/CSV BÊN PHẢI */
+        .drawer-backdrop {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+            display: none; justify-content: flex-end; z-index: 200;
+        }
+        .drawer-backdrop.open { display: flex; }
+        .drawer-panel {
+            width: 100%; max-width: 560px; height: 100vh; background: #ffffff;
+            display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(15, 23, 42, 0.16);
+        }
+        .drawer-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .drawer-body { flex: 1; overflow-y: auto; padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+        .drawer-foot { padding: 14px 22px; border-top: 1px solid var(--border); background: #f8fafc; display: flex; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+
+        .sec-box { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: #ffffff; }
+        .sec-title { font-size: 13.5px; font-weight: 800; color: #0f172a; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .lbl { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+
+        .dropzone {
+            border: 1.5px dashed #94a3b8; border-radius: 11px; padding: 18px; text-align: center;
+            background: #f8fafc; cursor: pointer; transition: border-color 0.15s;
+        }
+        .dropzone:hover { border-color: #057a55; background: #f0fdf4; }
+
+        .preview-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+        .pv-cell { border: 1px solid var(--border); border-radius: 9px; padding: 9px; text-align: center; background: #f8fafc; }
+        .pv-cell span { display: block; font-size: 11px; color: #64748b; font-weight: 600; }
+        .pv-cell strong { display: block; font-size: 18px; font-weight: 800; margin-top: 2px; }
+
+        /* MODAL */
+        .modal-backdrop {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+            display: none; align-items: center; justify-content: center; z-index: 250; padding: 16px;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal-card {
+            background: #ffffff; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto;
+            border-radius: 16px; padding: 22px 24px; box-shadow: 0 20px 35px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    
+    <aside class="sidebar">
+        <div>
+            <div class="brand-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">ĐIỀU PHỐI KHO</div>
+
+            <ul class="nav-list">
+                <li>
+                    <a href="/dispatcher" class="nav-link {% if request.path == '/dispatcher' %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Tổng quan</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/picking-requests" class="nav-link {% if request.path.startswith('/dispatcher/picking-requests') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M9 12h6"></path><path d="M9 16h6"></path></svg>
+                        <span>Yêu cầu lấy hàng</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/order-tracking" class="nav-link {% if request.path.startswith('/dispatcher/order-tracking') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 7 2 2 4-4"></path><path d="m3 17 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+                        <span>Theo dõi xử lý đơn</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/reconciliation-data" class="nav-link {% if request.path.startswith('/dispatcher/reconciliation-data') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+                        <span>Dữ liệu đối soát</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/outbound-reconciliation" class="nav-link {% if request.path.startswith('/dispatcher/outbound-reconciliation') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>
+                        <span>Đối soát xuất hàng</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/reports" class="nav-link {% if request.path.startswith('/dispatcher/reports') %}active{% endif %}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        <span>Báo cáo &amp; lịch sử</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="/dispatcher/profile" class="nav-link {% if request.path.startswith('/dispatcher/profile') %}active{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>Tài khoản cá nhân</span>
+            </a>
+            <a href="/logout" class="nav-link logout-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span>Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <div class="top-navbar">
+            <span class="sync-badge"><span class="sync-dot"></span> Đồng bộ lúc <span id="syncClock">--:--:--</span></span>
+            <div class="user-chip">
+                <div class="user-avatar">ĐP</div>
+                <span>{{ session.get('user', {}).get('name', 'Điều phối viên') }}</span>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <!-- HEADER & HAI NÚT NHẬP DỮ LIỆU -->
+            <div class="page-header-row">
+                <div>
+                    <h1 class="page-title">Dữ liệu đối soát</h1>
+                    <p class="page-subtitle">Nhập, kiểm tra và chuẩn hóa dữ liệu đơn hàng từ các nền tảng bán hàng làm đầu vào đối soát</p>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-outline" onclick="openManualModal()">+ Nhập thủ công</button>
+                    <button class="btn btn-dark" onclick="openImportDrawer()">⬆ Nhập Excel/CSV</button>
+                </div>
+            </div>
+
+            <!-- 4 THẺ KPI -->
+            <section class="kpi-4-row">
+                <div class="kpi-tile">
+                    <div class="kpi-ico" style="background:#f1f5f9; color:#334155;">🗄️</div>
+                    <div class="kpi-num" id="kpiTotal">0</div>
+                    <div class="kpi-lbl">Tổng bản ghi</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="kpi-ico" style="background:#dcfce7; color:#15803d;">✅</div>
+                    <div class="kpi-num" id="kpiValid">0</div>
+                    <div class="kpi-lbl">Hợp lệ &amp; đã liên kết</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="kpi-ico" style="background:#fee2e2; color:#b91c1c;">⚠️</div>
+                    <div class="kpi-num" id="kpiNeedAction">0</div>
+                    <div class="kpi-lbl">Cần xử lý (Lỗi / Trùng)</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="kpi-ico" style="background:#e0f2fe; color:#0369a1;">🔗</div>
+                    <div class="kpi-num" id="kpiWaitingLink">0</div>
+                    <div class="kpi-lbl">Chờ liên kết phiếu</div>
+                </div>
+            </section>
+
+            <!-- BẢNG DỮ LIỆU ĐỐI SOÁT -->
+            <section class="card-box">
+                <div class="tabs-row">
+                    <div class="main-tabs">
+                        <button class="tab-pill active" data-tab="ALL" onclick="switchTab('ALL', this)">Tất cả (<span id="tbAll">0</span>)</button>
+                        <button class="tab-pill" data-tab="VALID" onclick="switchTab('VALID', this)">Dữ liệu hợp lệ (<span id="tbValid">0</span>)</button>
+                        <button class="tab-pill" data-tab="ERROR" onclick="switchTab('ERROR', this)">Dữ liệu lỗi &amp; trùng (<span id="tbError">0</span>)</button>
+                    </div>
+                    <a href="/dispatcher/outbound-reconciliation" class="btn btn-primary" style="height:34px; font-size:12.5px;">Sang Đối soát xuất hàng &rarr;</a>
+                </div>
+
+                <div class="filter-row">
+                    <input type="text" class="ctrl" id="fltKw" style="flex:1; min-width:210px;" placeholder="Tìm mã bản ghi, mã đơn, SKU, sản phẩm..." oninput="renderReconTable()">
+                    <select class="ctrl" id="fltPlatform" onchange="loadReconData()">
+                        <option value="ALL">Tất cả nền tảng</option>
+                        <option value="Shopee">Shopee</option>
+                        <option value="TikTok Shop">TikTok Shop</option>
+                        <option value="Lazada">Lazada</option>
+                    </select>
+                    <select class="ctrl" id="fltDateRange" onchange="loadReconData()">
+                        <option value="ALL">Tất cả ngày</option>
+                        <option value="TODAY">Hôm nay</option>
+                        <option value="7D">7 ngày gần nhất</option>
+                        <option value="30D">30 ngày gần nhất</option>
+                    </select>
+                    <select class="ctrl" id="fltBatch" onchange="loadReconData()">
+                        <option value="ALL">Tất cả đợt nhập</option>
+                    </select>
+                    <select class="ctrl" id="fltErrorType" style="display:none;" onchange="renderReconTable()">
+                        <option value="ALL">Tất cả loại lỗi</option>
+                        <option value="SKU_NOT_FOUND">SKU không tồn tại</option>
+                        <option value="DUPLICATE">Trùng lặp bản ghi</option>
+                        <option value="INVALID_QTY">Số PCS không hợp lệ</option>
+                        <option value="MISSING_ORDER">Thiếu mã đơn</option>
+                    </select>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Mã bản ghi / Đợt</th>
+                                <th>Ngày giao dịch</th>
+                                <th>Mã đơn / Nền tảng</th>
+                                <th>SKU &amp; Tên sản phẩm</th>
+                                <th>PCS nền tảng</th>
+                                <th>Phiếu SANOVA</th>
+                                <th>Trạng thái kiểm tra</th>
+                                <th>Xác nhận</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reconTableBody">
+                            <tr><td colspan="9" style="text-align:center; color:#64748b;">Đang tải dữ liệu đối soát...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- DRAWER BÊN PHẢI: NHẬP EXCEL/CSV 4 PHẦN -->
+    <div class="drawer-backdrop" id="importDrawer" onclick="closeImportDrawer()">
+        <div class="drawer-panel" onclick="event.stopPropagation()">
+            <div class="drawer-head">
+                <div>
+                    <h2 style="font-size:18px; font-weight:800;">Nhập dữ liệu từ Excel / CSV</h2>
+                    <span style="font-size:12px; color:#64748b;">Chuẩn hóa dữ liệu nền tảng · Không làm thay đổi tồn kho</span>
+                </div>
+                <button class="btn btn-outline" style="height:32px; padding:0 10px;" onclick="closeImportDrawer()">✕</button>
+            </div>
+
+            <div class="drawer-body">
+                <!-- Phần 1: Thông tin đợt nhập -->
+                <div class="sec-box">
+                    <div class="sec-title">Phần 1. Thông tin đợt nhập</div>
+                    <div class="form-grid-2" style="margin-bottom:10px;">
+                        <div>
+                            <label class="lbl">Nền tảng bán hàng *</label>
+                            <select class="ctrl" id="impPlatform" style="width:100%;">
+                                <option value="Shopee">Shopee</option>
+                                <option value="TikTok Shop">TikTok Shop</option>
+                                <option value="Lazada">Lazada</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="lbl">Ngày dữ liệu *</label>
+                            <input type="date" class="ctrl" id="impDate" style="width:100%;">
+                        </div>
+                    </div>
+                    <div style="font-size:12px; color:#475569; background:#f8fafc; padding:8px 10px; border-radius:8px;">
+                        Loại dữ liệu: <strong>Xuất hàng / Bàn giao theo nền tảng</strong> · Người nhập: <strong>{{ session.get('user', {}).get('name', 'Điều phối viên') }}</strong>
+                    </div>
+                </div>
+
+                <!-- Phần 2: Tải file & Tải file mẫu -->
+                <div class="sec-box">
+                    <div class="sec-title">
+                        <span>Phần 2. Tải tệp dữ liệu (.csv / .xlsx)</span>
+                        <button type="button" class="btn btn-outline" style="height:28px; font-size:11.5px; padding:0 10px;" onclick="downloadSampleTemplate()">⬇ Tải file mẫu</button>
+                    </div>
+                    <label class="dropzone" style="display:block;">
+                        <input type="file" id="impFileInput" accept=".csv,.xlsx,.xls" style="display:none;" onchange="onFileSelected()">
+                        <div style="font-weight:700; color:#0f172a; font-size:13.5px;" id="selectedFileLabel">Nhấn để chọn tệp dữ liệu từ máy tính</div>
+                        <div style="font-size:12px; color:#64748b; margin-top:4px;">Hỗ trợ định dạng CSV chuẩn UTF-8 từ Shopee, TikTok Shop, Lazada</div>
+                    </label>
+                </div>
+
+                <!-- Phần 3: Kết quả kiểm tra trước khi lưu -->
+                <div class="sec-box" id="previewResultBox" style="display:none;">
+                    <div class="sec-title">Phần 3. Kết quả kiểm tra trước khi lưu</div>
+                    <div class="preview-3">
+                        <div class="pv-cell"><span>Tổng dòng</span><strong id="pvTotal">0</strong></div>
+                        <div class="pv-cell" style="background:#ecfdf5;"><span style="color:#065f46;">Hợp lệ</span><strong style="color:#057a55;" id="pvValid">0</strong></div>
+                        <div class="pv-cell" style="background:#fef2f2;"><span style="color:#991b1b;">Lỗi / Trùng</span><strong style="color:#dc2626;" id="pvError">0</strong></div>
+                    </div>
+                    <div id="pvBreakdownList" style="font-size:12px; color:#475569; margin-bottom:10px;"></div>
+                    <div style="max-height:180px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px;">
+                        <table class="data-table">
+                            <thead><tr><th>Mã đơn</th><th>SKU</th><th>PCS</th><th>Kết quả kiểm tra</th></tr></thead>
+                            <tbody id="pvRowsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phần 4: Xác nhận nhập -->
+            <div class="drawer-foot">
+                <button type="button" class="btn btn-outline" onclick="closeImportDrawer()">Hủy</button>
+                <button type="button" class="btn btn-outline" onclick="previewUploadedFile()">Kiểm tra dữ liệu</button>
+                <button type="button" class="btn btn-outline" id="btnDownloadErrRows" style="display:none; color:#dc2626;" onclick="downloadPreviewErrors()">⬇ Tải danh sách lỗi</button>
+                <button type="button" class="btn btn-primary" id="btnSaveBatch" style="display:none;" onclick="commitImportedBatch()">Lưu dữ liệu đợt nhập</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NHẬP DỮ LIỆU THỦ CÔNG -->
+    <div class="modal-backdrop" id="manualModal" onclick="closeModal('manualModal')">
+        <div class="modal-card" style="max-width:500px;" onclick="event.stopPropagation()">
+            <h3 style="font-size:18px; font-weight:800; margin-bottom:4px;">Nhập dữ liệu đối soát thủ công</h3>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:14px;">Tên sản phẩm tự động đồng bộ từ danh mục Manager</p>
+            <div class="form-grid-2" style="margin-bottom:12px;">
+                <div>
+                    <label class="lbl">Nền tảng *</label>
+                    <select class="ctrl" id="manPlatform" style="width:100%;">
+                        <option value="Shopee">Shopee</option>
+                        <option value="TikTok Shop">TikTok Shop</option>
+                        <option value="Lazada">Lazada</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="lbl">Ngày giao dịch *</label>
+                    <input type="date" class="ctrl" id="manDate" style="width:100%;">
+                </div>
+            </div>
+            <div class="form-grid-2" style="margin-bottom:12px;">
+                <div>
+                    <label class="lbl">Mã đơn nền tảng *</label>
+                    <input type="text" class="ctrl" id="manOrderCode" style="width:100%;" placeholder="VD: DH-0035">
+                </div>
+                <div>
+                    <label class="lbl">Số PCS nền tảng *</label>
+                    <input type="number" min="1" class="ctrl" id="manQty" style="width:100%;" placeholder="Nhập số PCS">
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label class="lbl">Sản phẩm (SKU từ danh mục Manager) *</label>
+                <select class="ctrl" id="manSku" style="width:100%;"></select>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label class="lbl">Ghi chú</label>
+                <input type="text" class="ctrl" id="manNote" style="width:100%;" placeholder="Ghi chú nguồn dữ liệu (nếu có)">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn btn-outline" onclick="closeModal('manualModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="submitManualRecord()">Lưu bản ghi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CHI TIẾT & XỬ LÝ LỖI BẢN GHI -->
+    <div class="drawer-backdrop" id="recordDrawer" onclick="closeRecordDrawer()">
+        <div class="drawer-panel" onclick="event.stopPropagation()" id="recordDrawerBody"></div>
+    </div>
+
+    <script>
+        let allRecords = [];
+        let catalogSkus = [];
+        let currentTab = 'ALL';
+        let lastPreviewData = null;
+
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+        function switchTab(tabKey, btnEl) {
+            currentTab = tabKey;
+            document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+            document.getElementById('fltErrorType').style.display = (tabKey === 'ERROR') ? 'inline-block' : 'none';
+            renderReconTable();
+        }
+
+        async function loadReconData() {
+            const qs = new URLSearchParams({
+                platform: document.getElementById('fltPlatform').value,
+                range: document.getElementById('fltDateRange').value,
+                batch: document.getElementById('fltBatch').value
+            });
+
+            try {
+                const res = await fetch(`/api/dispatcher/reconciliation-data?${qs.toString()}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                document.getElementById('syncClock').textContent = data.synced_at;
+                allRecords = data.records || [];
+                catalogSkus = data.skus || [];
+
+                const k = data.kpis || {};
+                document.getElementById('kpiTotal').textContent = k.total || 0;
+                document.getElementById('kpiValid').textContent = k.valid || 0;
+                document.getElementById('kpiNeedAction').textContent = k.need_action || 0;
+                document.getElementById('kpiWaitingLink').textContent = k.waiting_link || 0;
+
+                document.getElementById('tbAll').textContent = k.total || 0;
+                document.getElementById('tbValid').textContent = (k.valid || 0) + (k.waiting_link || 0);
+                document.getElementById('tbError').textContent = k.need_action || 0;
+
+                const fltBatch = document.getElementById('fltBatch');
+                const curB = fltBatch.value;
+                fltBatch.innerHTML = `<option value="ALL">Tất cả đợt nhập</option>` +
+                    (data.batches || []).map(b => `<option value="${b.batch_id}">${b.batch_id} (${b.platform})</option>`).join('');
+                fltBatch.value = curB || 'ALL';
+
+                renderReconTable();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderCheckBadge(r) {
+            if (r.check_status === 'Trùng lặp') return `<span class="badge bg-amber">Trùng lặp</span>`;
+            if (r.check_status === 'Có lỗi') return `<span class="badge bg-red">${r.error_code === 'SKU_NOT_FOUND' ? 'Lỗi SKU' : 'Có lỗi'}</span>`;
+            if (r.link_status === 'Chờ liên kết') return `<span class="badge bg-gray">Chờ liên kết</span>`;
+            return `<span class="badge bg-green">Hợp lệ</span>`;
+        }
+
+        function renderReconTable() {
+            const kw = document.getElementById('fltKw').value.trim().toLowerCase();
+            const errType = document.getElementById('fltErrorType').value;
+
+            const filtered = allRecords.filter(r => {
+                if (currentTab === 'VALID' && r.check_status !== 'Hợp lệ') return false;
+                if (currentTab === 'ERROR' && !['Có lỗi', 'Trùng lặp'].includes(r.check_status)) return false;
+                if (currentTab === 'ERROR' && errType !== 'ALL' && r.error_code !== errType) return false;
+
+                if (kw && !(`${r.record_id} ${r.order_code} ${r.sku} ${r.product_name} ${r.linked_pick_id}`.toLowerCase().includes(kw))) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('reconTableBody');
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#64748b; padding:24px;">Không có bản ghi dữ liệu đối soát nào khớp điều kiện lọc.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(r => `
+                <tr>
+                    <td><strong>${r.record_id}</strong><br><small style="color:#64748b;">${r.batch_id || 'MANUAL'}</small></td>
+                    <td style="color:#475569;">${r.transaction_date}</td>
+                    <td><strong>${r.order_code}</strong><br><small style="color:#086f68; font-weight:600;">${r.platform}</small></td>
+                    <td><strong>${r.sku}</strong><br><small style="color:#64748b;">${r.product_name}</small></td>
+                    <td><strong>${r.platform_pcs} PCS</strong></td>
+                    <td>${r.linked_pick_id ? `<span class="badge bg-blue">${r.linked_pick_id}</span>` : '<span style="color:#94a3b8; font-size:12px;">Chưa ghép phiếu</span>'}</td>
+                    <td>
+                        ${renderCheckBadge(r)}
+                        ${r.error_message ? `<div style="font-size:11px; color:#dc2626; margin-top:3px;">${r.error_message}</div>` : ''}
+                    </td>
+                    <td>
+                        ${r.confirm_status === 'Đã xác nhận'
+                            ? '<span class="badge bg-green">Đã xác nhận</span>'
+                            : `<span style="font-size:12px; color:#64748b;">${r.confirm_status}</span>`}
+                    </td>
+                    <td>
+                        <button type="button" class="icon-btn" title="Xem chi tiết & Xử lý bản ghi" onclick="openRecordModal('${r.record_id}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        /* ================= DRAWER NHẬP EXCEL/CSV ================= */
+        function openImportDrawer() {
+            document.getElementById('impDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('impFileInput').value = '';
+            document.getElementById('selectedFileLabel').textContent = 'Nhấn để chọn tệp dữ liệu từ máy tính';
+            document.getElementById('previewResultBox').style.display = 'none';
+            document.getElementById('btnDownloadErrRows').style.display = 'none';
+            document.getElementById('btnSaveBatch').style.display = 'none';
+            lastPreviewData = null;
+            document.getElementById('importDrawer').classList.add('open');
+        }
+
+        function closeImportDrawer() { document.getElementById('importDrawer').classList.remove('open'); }
+
+        function downloadSampleTemplate() {
+            const plat = document.getElementById('impPlatform').value;
+            window.location.href = `/api/dispatcher/reconciliation-data/template/${encodeURIComponent(plat)}`;
+        }
+
+        function onFileSelected() {
+            const f = document.getElementById('impFileInput').files[0];
+            if (f) document.getElementById('selectedFileLabel').textContent = `📄 ${f.name} (${Math.max(1, Math.round(f.size / 1024))} KB)`;
+        }
+
+        async function previewUploadedFile() {
+            const f = document.getElementById('impFileInput').files[0];
+            if (!f) { alert('Vui lòng chọn tệp CSV/Excel trước khi kiểm tra!'); return; }
+
+            const fd = new FormData();
+            fd.append('file', f);
+            fd.append('platform', document.getElementById('impPlatform').value);
+
+            const res = await fetch('/api/dispatcher/reconciliation-data/preview-file', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (!res.ok) { alert(data.error || 'Lỗi đọc tệp'); return; }
+
+            lastPreviewData = data;
+            document.getElementById('previewResultBox').style.display = 'block';
+            document.getElementById('pvTotal').textContent = data.total_rows;
+            document.getElementById('pvValid').textContent = data.valid_count;
+            document.getElementById('pvError').textContent = data.error_count;
+
+            const bd = data.breakdown || {};
+            document.getElementById('pvBreakdownList').innerHTML =
+                `Chi tiết lỗi: SKU không tồn tại: <strong>${bd.SKU_NOT_FOUND || 0}</strong> · Trùng lặp: <strong>${bd.DUPLICATE || 0}</strong> · Số lượng/Định dạng: <strong>${(bd.INVALID_QTY || 0) + (bd.OTHER || 0)}</strong>`;
+
+            document.getElementById('pvRowsBody').innerHTML = (data.rows || []).slice(0, 30).map(r => `
+                <tr>
+                    <td><strong>${r.order_code || '--'}</strong></td>
+                    <td>${r.sku || '--'}</td>
+                    <td>${r.platform_pcs}</td>
+                    <td>${renderCheckBadge(r)}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('btnDownloadErrRows').style.display = data.error_count > 0 ? 'inline-flex' : 'none';
+            document.getElementById('btnSaveBatch').style.display = data.total_rows > 0 ? 'inline-flex' : 'none';
+        }
+
+        function downloadPreviewErrors() {
+            if (!lastPreviewData) return;
+            const errRows = (lastPreviewData.rows || []).filter(r => r.check_status !== 'Hợp lệ');
+            let csv = '\uFEFFMã đơn,Ngày giao dịch,Nền tảng,SKU,Số lượng,Lỗi phát hiện\n';
+            errRows.forEach(r => {
+                csv += `"${r.order_code}","${r.transaction_date}","${r.platform}","${r.sku}",${r.platform_pcs},"${r.error_message}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `SANOVA_DongLoi_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+        }
+
+        async function commitImportedBatch() {
+            if (!lastPreviewData) return;
+            const res = await fetch('/api/dispatcher/reconciliation-data/commit-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    platform: document.getElementById('impPlatform').value,
+                    filename: lastPreviewData.filename,
+                    batch_date: document.getElementById('impDate').value,
+                    save_mode: 'ALL_WITH_QUEUE',
+                    rows: lastPreviewData.rows
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(data.error || 'Lỗi lưu đợt nhập'); return; }
+            closeImportDrawer();
+            loadReconData();
+        }
+
+        /* ================= NHẬP THỦ CÔNG ================= */
+        function openManualModal() {
+            document.getElementById('manDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('manOrderCode').value = '';
+            document.getElementById('manQty').value = '';
+            document.getElementById('manNote').value = '';
+            document.getElementById('manSku').innerHTML = catalogSkus.map(s =>
+                `<option value="${s.sku}">${s.sku} – ${s.name}</option>`
+            ).join('');
+            document.getElementById('manualModal').classList.add('open');
+        }
+
+        async function submitManualRecord() {
+            const payload = {
+                platform: document.getElementById('manPlatform').value,
+                transaction_date: document.getElementById('manDate').value,
+                order_code: document.getElementById('manOrderCode').value.trim(),
+                sku: document.getElementById('manSku').value,
+                platform_pcs: document.getElementById('manQty').value,
+                note: document.getElementById('manNote').value.trim()
+            };
+            const res = await fetch('/api/dispatcher/reconciliation-data/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(data.error || 'Lỗi lưu bản ghi'); return; }
+            closeModal('manualModal');
+            loadReconData();
+        }
+        function closeRecordDrawer() {
+            document.getElementById('recordDrawer').classList.remove('open');
+        }
+        /* ================= CHI TIẾT & XỬ LÝ LỖI BẢN GHI ================= */
+        function openRecordModal(recordId) {
+    const r = allRecords.find(x => x.record_id === recordId);
+    if (!r) return;
+
+    const raw = r.raw_source || {};
+    const histHtml = (r.edit_history || []).map(h => `
+        <div style="padding:8px 10px; background:#f8fafc; border-left:3px solid #086f68; border-radius:6px; font-size:12px;">
+            <div style="display:flex; justify-content:space-between;">
+                <strong>${h.action}</strong>
+                <span style="color:#64748b;">${h.time}</span>
+            </div>
+            <div style="color:#475569; margin-top:2px;">${h.detail} · <strong style="color:#086f68;">${h.actor}</strong></div>
+        </div>
+    `).join('');
+
+    const canConfirm = r.check_status === 'Hợp lệ' && r.confirm_status !== 'Đã xác nhận';
+
+    document.getElementById('recordDrawerBody').innerHTML = `
+        <div class="drawer-head">
+            <div>
+                <h2 style="font-size:18px; font-weight:800;">Chi tiết bản ghi ${r.record_id}</h2>
+                <span style="font-size:12px; color:#64748b;">Đợt nhập: <strong>${r.batch_id}</strong> · Người nhập: <strong>${r.imported_by}</strong> (${r.imported_at || ''})</span>
+            </div>
+            <button class="btn btn-outline" style="height:32px; padding:0 10px;" onclick="closeRecordDrawer()">✕</button>
+        </div>
+
+        <div class="drawer-body">
+            <!-- 3 TRẠNG THÁI ĐỘC LẬP -->
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; font-size:12px;">
+                <div class="sec-box" style="padding:10px;">
+                    <span style="color:#64748b; display:block;">1. Kiểm tra dữ liệu</span>
+                    <div style="margin-top:4px;">${renderCheckBadge(r)}</div>
+                </div>
+                <div class="sec-box" style="padding:10px;">
+                    <span style="color:#64748b; display:block;">2. Liên kết SANOVA</span>
+                    <strong style="display:block; margin-top:4px; color:#0369a1;">${r.link_status} ${r.linked_pick_id ? `(${r.linked_pick_id})` : ''}</strong>
+                </div>
+                <div class="sec-box" style="padding:10px;">
+                    <span style="color:#64748b; display:block;">3. Xác nhận đối soát</span>
+                    <strong style="display:block; margin-top:4px; color:#057a55;">${r.confirm_status}</strong>
+                </div>
+            </div>
+
+            <!-- SO SÁNH DỮ LIỆU GỐC VS DỮ LIỆU CHUẨN HÓA -->
+            <div class="sec-box" style="background:#f8fafc;">
+                <div class="sec-title">Dữ liệu gốc từ nguồn nhập (Chỉ đọc)</div>
+                <div style="font-size:12px; color:#334155; line-height:1.6;">
+                    ${Object.keys(raw).length ? Object.entries(raw).map(([k, v]) => `<span style="display:inline-block; margin-right:12px;"><strong>${k}:</strong> ${v || '—'}</span>`).join('') : 'Không có dữ liệu thô'}
+                </div>
+            </div>
+
+            <!-- CHỈNH SỬA DỮ LIỆU CHUẨN HÓA (CHỈ SỬA DỮ LIỆU NỀN TẢNG, KHÔNG SỬA SỐ OUT/BÀN GIAO) -->
+            <div class="sec-box">
+                <div class="sec-title">Dữ liệu chuẩn hóa SANOVA (Cho phép sửa lỗi nguồn)</div>
+                <div class="form-grid-2" style="margin-bottom:10px;">
+                    <div>
+                        <label class="lbl">Nền tảng</label>
+                        <select class="ctrl" id="edPlatform" style="width:100%;">
+                            <option value="Shopee" ${r.platform === 'Shopee' ? 'selected' : ''}>Shopee</option>
+                            <option value="TikTok Shop" ${r.platform === 'TikTok Shop' ? 'selected' : ''}>TikTok Shop</option>
+                            <option value="Lazada" ${r.platform === 'Lazada' ? 'selected' : ''}>Lazada</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="lbl">Ngày giao dịch</label>
+                        <input type="date" class="ctrl" id="edDate" style="width:100%;" value="${r.transaction_date}">
+                    </div>
+                </div>
+                <div class="form-grid-2" style="margin-bottom:10px;">
+                    <div>
+                        <label class="lbl">Mã đơn nền tảng</label>
+                        <input type="text" class="ctrl" id="edOrderCode" style="width:100%;" value="${r.order_code}">
+                    </div>
+                    <div>
+                        <label class="lbl">Số PCS nền tảng</label>
+                        <input type="number" min="1" class="ctrl" id="edQty" style="width:100%;" value="${r.platform_pcs}">
+                    </div>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label class="lbl">Mã SKU (Danh mục Manager: ${r.product_name})</label>
+                    <input type="text" class="ctrl" id="edSku" style="width:100%;" value="${r.sku}">
+                </div>
+                <div>
+                    <label class="lbl">Lý do chỉnh sửa / xử lý lỗi *</label>
+                    <input type="text" class="ctrl" id="edReason" style="width:100%;" placeholder="Bắt buộc nhập lý do khi lưu thay đổi...">
+                </div>
+            </div>
+
+            <!-- LỊCH SỬ CHỈNH SỬA -->
+            <div class="sec-box">
+                <div class="sec-title">Lịch sử nhập &amp; chỉnh sửa bản ghi</div>
+                <div style="display:flex; flex-direction:column; gap:6px;">${histHtml}</div>
+            </div>
+        </div>
+
+        <div class="drawer-foot">
+            <button type="button" class="btn btn-outline" onclick="closeRecordDrawer()">Đóng</button>
+            ${r.check_status === 'Trùng lặp' ? `<button type="button" class="btn btn-outline" style="color:#d97706;" onclick="saveRecordAction('${r.record_id}', 'IGNORE_DUP')">Bỏ qua trùng lặp</button>` : ''}
+            <button type="button" class="btn btn-outline" onclick="saveRecordAction('${r.record_id}', 'EDIT')">Lưu chỉnh sửa</button>
+            ${canConfirm ? `<button type="button" class="btn btn-primary" onclick="saveRecordAction('${r.record_id}', 'CONFIRM', ${r.link_status !== 'Đã liên kết'})">✓ Xác nhận đưa vào đối soát</button>` : ''}
+        </div>
+    `;
+    document.getElementById('recordDrawer').classList.add('open');
+}
+
+        async function saveRecordAction(recordId, actionType, isUnlinked = false) {
+    if (actionType === 'CONFIRM' && isUnlinked) {
+        if (!confirm('Bản ghi này chưa tìm thấy phiếu lấy hàng/bàn giao tương ứng trong kho. Bạn vẫn muốn xác nhận đưa vào đối soát để phát hiện chênh lệch chứ?')) {
+            return;
+        }
+    }
+    const payload = {
+        action_type: actionType,
+        allow_unlinked: isUnlinked,
+        platform: document.getElementById('edPlatform').value,
+        transaction_date: document.getElementById('edDate').value,
+        order_code: document.getElementById('edOrderCode').value.trim(),
+        platform_pcs: document.getElementById('edQty').value,
+        sku: document.getElementById('edSku').value.trim(),
+        reason: document.getElementById('edReason').value.trim()
+    };
+    const res = await fetch(`/api/dispatcher/reconciliation-data/${recordId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || 'Thao tác thất bại'); return; }
+    closeRecordDrawer();
+    loadReconData();
+}
+
+        loadReconData();
+    </script>
+</body>
+</html>

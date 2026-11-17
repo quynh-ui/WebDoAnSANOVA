@@ -5,7 +5,7 @@
     "email": "duc.long@sanova.vn",
     "role": "Quản trị viên",
     "status": "Hoạt động",
-    "last_login": "14/11/2026 · 22:35",
+    "last_login": "16/11/2026 · 20:13",
     "scope": "Kho chính - SANOVA"
   },
   "nguyen.van.a": {
@@ -38,6 +38,18 @@
     "status": "Hoạt động",
     "last_login": "16/11/2026 · 17:47",
     "created_at": "12/11/2026 · 23:16",
+    "created_by": "Phạm Đức Long"
+  },
+  "staffD": {
+    "staff_code": "NV001010",
+    "name": "Nguyên Văn D",
+    "email": "nguyen.van.d05@sanova.vn",
+    "role": "Điều phối / Kế toán kho",
+    "scope": "Kho chính - SANOVA",
+    "password": "scrypt:32768:8:1$Gy7Ps8BnRjybk14x$f84f1422a319a4caf6b52df6f304748e849095607532f7b893e2c26c882bd355ef08fe080db3a65928a6462eaedb792d9804e93e0520144771c4155d4e0351b0",
+    "status": "Hoạt động",
+    "last_login": "17/11/2026 · 11:19",
+    "created_at": "16/11/2026 · 20:14",
     "created_by": "Phạm Đức Long"
   }
 }
