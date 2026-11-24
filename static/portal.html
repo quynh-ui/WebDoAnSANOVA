@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/js/sanova_xlsx_export.js"></script>
     <style>
         :root {
             --brand-green: #064e3b;
@@ -80,7 +81,10 @@
         </div>
 
         <div class="card" id="dispatcherCard" style="display:none;">
-            <h2 style="font-size:17px;font-weight:800;margin-bottom:6px;">Thông báo Điều phối / Kế toán kho (D1)</h2>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+                <h2 style="font-size:17px;font-weight:800;">Thông báo Điều phối / Kế toán kho (D1)</h2>
+                <button class="btn-primary" onclick="exportDispatcherNotisXlsx()">⬇ Xuất Excel (.xlsx)</button>
+            </div>
             <p style="font-size:13px;">Dữ liệu được tải trực tiếp từ Cloudflare D1 (<code>/api/dispatcher/notifications</code>).</p>
             <div class="noti-list" id="notiList"><p>Đang tải...</p></div>
         </div>
@@ -131,6 +135,8 @@
             }
         }
 
+        let cachedDispatcherNotis = [];
+
         async function loadDispatcherNotis() {
             const card = document.getElementById('dispatcherCard');
             const list = document.getElementById('notiList');
@@ -139,6 +145,7 @@
                 const res = await fetch('/api/dispatcher/notifications', { headers: authHeaders() });
                 const data = await res.json();
                 const items = data.notifications || [];
+                cachedDispatcherNotis = items;
                 if (!items.length) {
                     list.innerHTML = '<p>Chưa có thông báo điều phối nào trong D1.</p>';
                     return;
@@ -152,6 +159,20 @@
             } catch (e) {
                 list.innerHTML = '<p>Không tải được danh sách thông báo.</p>';
             }
+        }
+
+        async function exportDispatcherNotisXlsx() {
+            const rows = cachedDispatcherNotis.map((n, idx) => ({
+                'STT': idx + 1,
+                'Tiêu đề': n.title || '',
+                'Nội dung': n.message || '',
+                'Thời gian': n.created_at || '',
+                'Trạng thái': n.is_read ? 'Đã đọc' : 'Chưa đọc',
+            }));
+            await SanovaXlsxExport.exportWorkbook({
+                filename: `SANOVA_Thong_Bao_Dieu_Phoi_${SanovaXlsxExport.formatStamp()}.xlsx`,
+                sheets: [{ name: 'Thong_bao_dieu_phoi', rows }],
+            });
         }
 
         function escapeHtml(s) {

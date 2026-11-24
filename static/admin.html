@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/js/sanova_xlsx_export.js"></script>
     <style>
         :root {
             --brand-green: #064e3b;
@@ -258,7 +259,10 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">Danh sách tài khoản người dùng</div>
-                    <button class="btn btn-primary" onclick="openCreateUserModal()">+ Tạo tài khoản mới</button>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn" onclick="exportUsersXlsx()">⬇ Xuất Excel (.xlsx)</button>
+                        <button class="btn btn-primary" onclick="openCreateUserModal()">+ Tạo tài khoản mới</button>
+                    </div>
                 </div>
                 <div class="toolbar">
                     <input class="input" id="userSearch" placeholder="Tìm mã NV, họ tên, username, email..." style="min-width:260px;" onkeydown="if(event.key==='Enter')loadUsers(1)">
@@ -299,7 +303,10 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">Quản lý vai trò &amp; ma trận phân quyền</div>
-                    <button class="btn btn-primary" onclick="openCreateRoleModal()">+ Thêm vai trò mới</button>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn" onclick="exportRolesXlsx()">⬇ Xuất Excel (.xlsx)</button>
+                        <button class="btn btn-primary" onclick="openCreateRoleModal()">+ Thêm vai trò mới</button>
+                    </div>
                 </div>
                 <div class="roles-layout">
                     <div id="rolesListCol"></div>
@@ -337,7 +344,10 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">Nhật ký kiểm toán hệ thống (Audit Logs)</div>
-                    <a class="btn btn-primary" href="/admin/logs/export" target="_blank">⬇ Xuất CSV</a>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="exportLogsXlsx()">⬇ Xuất Excel (.xlsx)</button>
+                        <a class="btn" href="/admin/logs/export" target="_blank">CSV</a>
+                    </div>
                 </div>
                 <div class="toolbar">
                     <input class="input" id="logQ" placeholder="Tìm hành động, đối tượng, mã log..." style="min-width:220px;" onkeydown="if(event.key==='Enter')loadLogs(1)">
@@ -417,7 +427,7 @@
                 </div>
                 <div class="table-wrap">
                     <table>
-                        <thead><tr><th>Mã Snapshot</th><th>Tệp</th><th>Thời gian tạo</th><th>Loại</th><th>Người thực hiện</th></tr></thead>
+                        <thead><tr><th>Mã Snapshot</th><th>Tệp</th><th>Thời gian tạo</th><th>Loại</th><th>Người thực hiện</th><th>Xuất file</th></tr></thead>
                         <tbody id="backupHistoryBody"></tbody>
                     </table>
                 </div>
@@ -569,7 +579,7 @@
             dashboard: ['Tổng quan hệ thống', 'Theo dõi nhanh tình trạng tài khoản, bảo mật và nhật ký trên Cloudflare D1'],
             users: ['Quản lý người dùng', 'Tạo mới, chỉnh sửa, khóa/mở khóa và đặt lại mật khẩu tài khoản'],
             roles: ['Vai trò & Phân quyền', 'Cấu hình ma trận quyền hạn theo từng chức năng hệ thống'],
-            logs: ['Nhật ký hệ thống', 'Tra cứu lịch sử thao tác quản trị và xuất báo cáo CSV'],
+            logs: ['Nhật ký hệ thống', 'Tra cứu lịch sử thao tác quản trị và xuất báo cáo Excel (.xlsx)'],
             settings: ['Cấu hình & Sao lưu', 'Thiết lập chính sách bảo mật, mật khẩu và tạo bản sao lưu D1'],
             notifications: ['Thông báo quản trị', 'Cảnh báo bảo mật và tài khoản cần xử lý'],
             profile: ['Hồ sơ cá nhân', 'Cập nhật thông tin tài khoản và đổi mật khẩu quản trị viên'],
@@ -985,7 +995,8 @@
                     <td>${escapeHtml(h.created_at)}</td>
                     <td><span class="badge badge-green">${escapeHtml(h.type)}</span></td>
                     <td>${escapeHtml(h.by)}</td>
-                </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Chưa có bản sao lưu nào.</td></tr>';
+                    <td><button class="btn btn-sm" onclick="exportBackupXlsx('${escapeHtml(h.id)}')">⬇ Tải .xlsx</button></td>
+                </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Chưa có bản sao lưu nào.</td></tr>';
             } catch (e) { showToast(e.message, 'error'); }
         }
 
@@ -1017,6 +1028,207 @@
                 const res = await apiFetch('/admin/api/settings/backup/create', { method: 'POST' });
                 showToast(res.message);
                 loadSettings();
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        /* XUẤT FILE EXCEL (.XLSX) BẰNG SHEETJS TỪ DỮ LIỆU D1 */
+        async function exportUsersXlsx() {
+            try {
+                showToast('Đang tổng hợp dữ liệu người dùng từ D1...');
+                const params = new URLSearchParams({
+                    q: document.getElementById('userSearch').value.trim(),
+                    role: document.getElementById('userRoleFilter').value,
+                    status: document.getElementById('userStatusFilter').value,
+                });
+                const d = await apiFetch('/admin/api/users/export-data?' + params.toString());
+                const items = d.items || [];
+                const st = d.stats || {};
+                const userRows = items.map((u, idx) => ({
+                    'STT': idx + 1,
+                    'Mã NV': u.staff_code || '',
+                    'Họ và tên': u.name || '',
+                    'Tên đăng nhập': u.username || '',
+                    'Email': u.email || '',
+                    'Vai trò': u.role || '',
+                    'Phạm vi kho': u.scope || 'Kho chính - SANOVA',
+                    'Trạng thái': u.status || '',
+                    'Đăng nhập gần nhất': u.last_login || 'Chưa có',
+                    'Ngày tạo': u.created_at || '',
+                    'Người tạo': u.created_by || '',
+                }));
+                const summaryRows = [
+                    { 'Chỉ tiêu': 'Thời gian xuất', 'Giá trị': d.exported_at || '' },
+                    { 'Chỉ tiêu': 'Tổng tài khoản toàn hệ thống', 'Giá trị': Number(st.total || 0) },
+                    { 'Chỉ tiêu': 'Số tài khoản khớp bộ lọc', 'Giá trị': Number(st.filtered || items.length) },
+                    { 'Chỉ tiêu': 'Đang hoạt động', 'Giá trị': Number(st.active || 0) },
+                    { 'Chỉ tiêu': 'Tạm khóa', 'Giá trị': Number(st.locked || 0) },
+                    { 'Chỉ tiêu': 'Chờ kích hoạt', 'Giá trị': Number(st.pending || 0) },
+                ];
+                const fname = await SanovaXlsxExport.exportWorkbook({
+                    filename: `SANOVA_Nguoi_Dung_${SanovaXlsxExport.formatStamp()}.xlsx`,
+                    sheets: [
+                        { name: 'Danh_sach_tai_khoan', rows: userRows },
+                        { name: 'Thong_ke', rows: summaryRows, colWidths: [32, 26] },
+                    ],
+                });
+                showToast(`Đã xuất file ${fname} (${items.length} tài khoản).`);
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function exportRolesXlsx() {
+            try {
+                showToast('Đang xuất ma trận phân quyền (.xlsx)...');
+                const d = await apiFetch('/admin/api/roles');
+                const roles = d.roles || {};
+                const modules = d.modules || [];
+                const actions = d.actions || [];
+                const counts = d.role_user_counts || {};
+
+                const roleRows = Object.entries(roles).map(([code, r], idx) => ({
+                    'STT': idx + 1,
+                    'Mã vai trò': code,
+                    'Tên vai trò': r.name || r.role_name || code,
+                    'Mô tả': r.desc || r.description || '',
+                    'Loại': r.is_system ? 'Hệ thống' : 'Tùy chỉnh',
+                    'Trạng thái': r.status || 'Hoạt động',
+                    'Số tài khoản': Number(counts[code] || 0),
+                }));
+
+                const matrixRows = [];
+                Object.entries(roles).forEach(([code, r]) => {
+                    const perms = r.permissions || {};
+                    modules.forEach((m) => {
+                        const row = {
+                            'Mã vai trò': code,
+                            'Tên vai trò': r.name || code,
+                            'Chức năng': m.name,
+                        };
+                        const mp = perms[m.id] || {};
+                        actions.forEach(([aid, alabel]) => {
+                            row[alabel] = mp[aid] ? 'Có' : 'Không';
+                        });
+                        matrixRows.push(row);
+                    });
+                });
+
+                const fname = await SanovaXlsxExport.exportWorkbook({
+                    filename: `SANOVA_Phan_Quyen_${SanovaXlsxExport.formatStamp()}.xlsx`,
+                    sheets: [
+                        { name: 'Danh_sach_vai_tro', rows: roleRows },
+                        { name: 'Ma_tran_phan_quyen', rows: matrixRows },
+                    ],
+                });
+                showToast(`Đã xuất file ${fname}.`);
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function exportLogsXlsx() {
+            try {
+                showToast('Đang tải nhật ký hệ thống từ D1...');
+                const params = new URLSearchParams({
+                    q: document.getElementById('logQ').value.trim(),
+                    from: document.getElementById('logFrom').value,
+                    to: document.getElementById('logTo').value,
+                    category: document.getElementById('logCategory').value,
+                    result: document.getElementById('logResult').value,
+                });
+                const d = await apiFetch('/admin/api/logs/export-data?' + params.toString());
+                const items = d.items || [];
+                const k = d.kpi || {};
+                const f = d.filters || {};
+
+                const summaryRows = [
+                    { 'Chỉ tiêu': 'Thời gian xuất', 'Giá trị': d.exported_at || '' },
+                    { 'Chỉ tiêu': 'Từ khóa lọc', 'Giá trị': f.q || 'Không có' },
+                    { 'Chỉ tiêu': 'Khoảng ngày', 'Giá trị': `${f.from || '...'} → ${f.to || '...'}` },
+                    { 'Chỉ tiêu': 'Nhóm hoạt động', 'Giá trị': f.category || 'ALL' },
+                    { 'Chỉ tiêu': 'Kết quả lọc', 'Giá trị': f.result || 'ALL' },
+                    { 'Chỉ tiêu': 'Tổng sự kiện toàn hệ thống', 'Giá trị': Number(k.total || 0) },
+                    { 'Chỉ tiêu': 'Số sự kiện xuất ra', 'Giá trị': Number(k.filtered || items.length) },
+                    { 'Chỉ tiêu': 'Thành công (theo bộ lọc)', 'Giá trị': Number(k.success || 0) },
+                    { 'Chỉ tiêu': 'Thất bại / Cảnh báo (theo bộ lọc)', 'Giá trị': Number(k.failed_warn || 0) },
+                ];
+
+                const logRows = items.map((l, idx) => ({
+                    'STT': idx + 1,
+                    'Mã sự kiện': l.id || '',
+                    'Thời gian': l.timestamp || '',
+                    'Người thực hiện': l.by || l.actor || '',
+                    'Nhóm hoạt động': l.category || '',
+                    'Hành động': l.action || '',
+                    'Đối tượng': l.target || '',
+                    'Kết quả': l.result || l.status || '',
+                    'Ghi chú': l.reason || '',
+                }));
+
+                const fname = await SanovaXlsxExport.exportWorkbook({
+                    filename: `SANOVA_Nhat_Ky_He_Thong_${SanovaXlsxExport.formatStamp()}.xlsx`,
+                    sheets: [
+                        { name: 'Tong_hop', rows: summaryRows, colWidths: [34, 30] },
+                        { name: 'Nhat_ky_he_thong', rows: logRows },
+                    ],
+                });
+                showToast(`Đã xuất file ${fname} (${items.length} sự kiện).`);
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        async function exportBackupXlsx(snapId) {
+            try {
+                showToast(`Đang tải snapshot ${snapId} từ D1...`);
+                const d = await apiFetch('/admin/api/settings/backup/download?id=' + encodeURIComponent(snapId));
+                const snap = d.snapshot || {};
+
+                const userRows = Object.entries(snap.users || {}).map(([uname, u], idx) => ({
+                    'STT': idx + 1,
+                    'Mã NV': u.staff_code || '',
+                    'Họ tên': u.name || '',
+                    'Username': uname,
+                    'Email': u.email || '',
+                    'Vai trò': u.role || '',
+                    'Phạm vi kho': u.scope || '',
+                    'Trạng thái': u.status || '',
+                    'Đăng nhập gần nhất': u.last_login || '',
+                }));
+
+                const roleRows = Object.entries(snap.roles || {}).map(([code, r], idx) => ({
+                    'STT': idx + 1,
+                    'Mã vai trò': code,
+                    'Tên vai trò': r.name || r.role_name || code,
+                    'Mô tả': r.desc || r.description || '',
+                    'Trạng thái': r.status || '',
+                }));
+
+                const logRows = (snap.audit_logs || []).map((l, idx) => ({
+                    'STT': idx + 1,
+                    'Mã sự kiện': l.id || '',
+                    'Thời gian': l.timestamp || '',
+                    'Người thực hiện': l.by || l.actor || '',
+                    'Nhóm': l.category || '',
+                    'Hành động': l.action || '',
+                    'Đối tượng': l.target || '',
+                    'Kết quả': l.result || l.status || '',
+                }));
+
+                const settingRows = [];
+                Object.entries(snap.system_settings || {}).forEach(([grp, vals]) => {
+                    if (vals && typeof vals === 'object') {
+                        Object.entries(vals).forEach(([k, v]) => {
+                            if (k === 'history') return;
+                            settingRows.push({ 'Nhóm': grp, 'Tham số': k, 'Giá trị': String(v) });
+                        });
+                    }
+                });
+
+                const fname = await SanovaXlsxExport.exportWorkbook({
+                    filename: `SANOVA_Backup_${snapId}.xlsx`,
+                    sheets: [
+                        { name: 'Tai_khoan', rows: userRows },
+                        { name: 'Vai_tro', rows: roleRows },
+                        { name: 'Nhat_ky', rows: logRows },
+                        { name: 'Cau_hinh', rows: settingRows },
+                    ],
+                });
+                showToast(`Đã tải file sao lưu ${fname}.`);
             } catch (e) { showToast(e.message, 'error'); }
         }
 

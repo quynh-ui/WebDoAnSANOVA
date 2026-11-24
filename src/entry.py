@@ -737,6 +737,44 @@ class Default(WorkerEntrypoint):
                 }
             )
 
+        if path == "/admin/api/users/export-data" and method == "GET":
+            _, _, err = await require_admin(self.env, request)
+            if err:
+                return err
+            users = await db_get_json(self.env, "users", {})
+            q = (qs.get("q", [""])[0] or "").strip().lower()
+            role_f = qs.get("role", ["ALL"])[0]
+            status_f = qs.get("status", ["ALL"])[0]
+            items = []
+            for uname, u in users.items():
+                if q and not any(
+                    q in str(u.get(k, "") if k != "username" else uname).lower()
+                    for k in ("staff_code", "name", "username", "email")
+                ):
+                    continue
+                if role_f != "ALL" and u.get("role") != role_f:
+                    continue
+                if status_f != "ALL" and u.get("status") != status_f:
+                    continue
+                safe_u = {k: v for k, v in u.items() if k != "password"}
+                safe_u["username"] = uname
+                items.append(safe_u)
+            return json_response(
+                {
+                    "success": True,
+                    "exported_at": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M:%S UTC"),
+                    "filters": {"q": q, "role": role_f, "status": status_f},
+                    "stats": {
+                        "total": len(users),
+                        "filtered": len(items),
+                        "active": sum(1 for u in users.values() if u.get("status") == "Hoạt động"),
+                        "locked": sum(1 for u in users.values() if u.get("status") == "Tạm khóa"),
+                        "pending": sum(1 for u in users.values() if u.get("status") == "Chờ kích hoạt"),
+                    },
+                    "items": items,
+                }
+            )
+
         if path == "/admin/api/users/create" and method == "POST":
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
@@ -1098,6 +1136,60 @@ class Default(WorkerEntrypoint):
                 }
             )
 
+        if path == "/admin/api/logs/export-data" and method == "GET":
+            _, _, err = await require_admin(self.env, request)
+            if err:
+                return err
+            all_logs = await db_get_json(self.env, "audit_logs", [])
+            q = (qs.get("q", [""])[0] or "").strip().lower()
+            date_from = (qs.get("from", [""])[0] or "").strip()
+            date_to = (qs.get("to", [""])[0] or "").strip()
+            category = qs.get("category", ["ALL"])[0]
+            actor = qs.get("actor", ["ALL"])[0]
+            result_f = qs.get("result", ["ALL"])[0]
+            filtered = []
+            for l in all_logs:
+                res_val = l.get("result") or l.get("status") or "Thành công"
+                if q and not any(q in str(l.get(k, "")).lower() for k in ("actor", "by", "action", "target", "id")):
+                    continue
+                if category != "ALL" and l.get("category") != category:
+                    continue
+                if actor != "ALL" and l.get("actor") != actor:
+                    continue
+                if result_f != "ALL" and res_val != result_f:
+                    continue
+                ld = l.get("date", "")
+                if date_from and ld < date_from:
+                    continue
+                if date_to and ld > date_to:
+                    continue
+                filtered.append({**l, "result": res_val})
+            today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            return json_response(
+                {
+                    "success": True,
+                    "exported_at": datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M:%S UTC"),
+                    "filters": {
+                        "q": q,
+                        "from": date_from,
+                        "to": date_to,
+                        "category": category,
+                        "actor": actor,
+                        "result": result_f,
+                    },
+                    "kpi": {
+                        "total": len(all_logs),
+                        "filtered": len(filtered),
+                        "today": sum(1 for l in all_logs if l.get("date") == today_str),
+                        "success": sum(1 for l in filtered if l.get("result") == "Thành công"),
+                        "failed_warn": sum(
+                            1 for l in filtered if l.get("result") in ("Thất bại", "Cảnh báo", "Bị từ chối")
+                        ),
+                    },
+                    "items": filtered,
+                }
+            )
+
         if path == "/admin/logs/export" and method == "GET":
             _, _, err = await require_admin(self.env, request)
             if err:
@@ -1201,6 +1293,35 @@ class Default(WorkerEntrypoint):
                 snap_id,
             )
             return json_response({"success": True, "message": "Đã tạo bản sao lưu thành công.", "record": rec})
+
+        if path == "/admin/api/settings/backup/download" and method == "GET":
+            _, _, err = await require_admin(self.env, request)
+            if err:
+                return err
+            snap_id = (qs.get("id", [""])[0] or "").strip()
+            if not snap_id:
+                return json_response({"success": False, "message": "Thiếu mã bản sao lưu (id)."}, 400)
+            snapshot = await db_get_json(self.env, f"backup_{snap_id}", None)
+            if not isinstance(snapshot, dict):
+                return json_response({"success": False, "message": f"Không tìm thấy bản sao lưu '{snap_id}'."}, 404)
+            raw_users = snapshot.get("users") if isinstance(snapshot.get("users"), dict) else {}
+            safe_users = {
+                uname: {k: v for k, v in udata.items() if k != "password"}
+                for uname, udata in raw_users.items()
+                if isinstance(udata, dict)
+            }
+            return json_response(
+                {
+                    "success": True,
+                    "id": snap_id,
+                    "snapshot": {
+                        "users": safe_users,
+                        "roles": snapshot.get("roles", {}),
+                        "audit_logs": snapshot.get("audit_logs", []),
+                        "system_settings": snapshot.get("system_settings", {}),
+                    },
+                }
+            )
 
         # 7. Hồ sơ cá nhân Admin (chỉ sửa họ tên, email, đổi mật khẩu của chính mình)
         if path == "/admin/api/profile" and method == "GET":
