@@ -2,7 +2,6 @@ import json
 from urllib.parse import urlparse
 from js import Response
 from pyodide.ffi import to_js
-from workers import WorkerEntrypoint if False else object
 
 
 async def db_get_json(env, store_key, default):
