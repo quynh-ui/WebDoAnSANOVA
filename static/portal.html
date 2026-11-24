@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cổng làm việc · SANOVA WMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-green: #064e3b;
+            --brand-teal: #086f68;
+            --bg-page: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: var(--bg-page); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        .topbar {
+            background: #04382a; color: #fff; padding: 16px 28px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; letter-spacing: 1.5px; }
+        .top-right { display: flex; align-items: center; gap: 14px; font-size: 13.5px; }
+        .btn-logout {
+            background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;
+        }
+        .btn-logout:hover { background: rgba(239,68,68,0.85); border-color: transparent; }
+        .container { max-width: 960px; width: 100%; margin: 32px auto; padding: 0 20px; }
+        .card {
+            background: #fff; border: 1px solid var(--border); border-radius: 16px;
+            padding: 26px 28px; box-shadow: 0 4px 16px rgba(15,23,42,0.04); margin-bottom: 20px;
+        }
+        .badge {
+            display: inline-block; background: #ecfdf5; color: var(--brand-green);
+            font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; margin-bottom: 10px;
+        }
+        h1 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+        p { color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+        .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 18px; }
+        .meta-item { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+        .meta-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+        .meta-val { font-size: 14.5px; font-weight: 700; color: var(--text-main); }
+        .noti-list { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+        .noti-item { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: #fafafa; }
+        .noti-item strong { font-size: 14px; display: block; margin-bottom: 3px; }
+        .noti-item span { font-size: 12.5px; color: var(--text-muted); }
+        .actions { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .btn-primary {
+            background: var(--brand-green); color: #fff; text-decoration: none;
+            padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 13.5px; border: none; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">SANOVA WMS</div>
+        <div class="top-right">
+            <span id="topUser">Đang tải...</span>
+            <button class="btn-logout" onclick="logout()">Đăng xuất</button>
+        </div>
+    </header>
+    <main class="container">
+        <div class="card">
+            <span class="badge" id="roleBadge">Phân hệ SANOVA</span>
+            <h1 id="pageTitle">Chào mừng đến với SANOVA WMS</h1>
+            <p id="pageDesc">Tài khoản của bạn đã đăng nhập thành công trên hệ thống Cloudflare Workers &amp; D1.</p>
+            <div class="meta-grid">
+                <div class="meta-item"><div class="meta-label">Họ và tên</div><div class="meta-val" id="uName">—</div></div>
+                <div class="meta-item"><div class="meta-label">Tên đăng nhập</div><div class="meta-val" id="uUsername">—</div></div>
+                <div class="meta-item"><div class="meta-label">Vai trò</div><div class="meta-val" id="uRole">—</div></div>
+                <div class="meta-item"><div class="meta-label">Phạm vi kho</div><div class="meta-val" id="uScope">—</div></div>
+            </div>
+            <div class="actions" id="adminLinkBox" style="display:none;">
+                <a class="btn-primary" href="/admin">Mở phân hệ Quản trị (Admin)</a>
+            </div>
+        </div>
+
+        <div class="card" id="dispatcherCard" style="display:none;">
+            <h2 style="font-size:17px;font-weight:800;margin-bottom:6px;">Thông báo Điều phối / Kế toán kho (D1)</h2>
+            <p style="font-size:13px;">Dữ liệu được tải trực tiếp từ Cloudflare D1 (<code>/api/dispatcher/notifications</code>).</p>
+            <div class="noti-list" id="notiList"><p>Đang tải...</p></div>
+        </div>
+    </main>
+
+    <script>
+        function authHeaders() {
+            const t = localStorage.getItem('sanova_token');
+            return t ? { 'Authorization': 'Bearer ' + t } : {};
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() });
+            } catch (_) {}
+            localStorage.removeItem('sanova_token');
+            localStorage.removeItem('sanova_user');
+            window.location.href = '/login';
+        }
+
+        async function init() {
+            const res = await fetch('/api/auth/me', { headers: authHeaders() });
+            if (!res.ok) {
+                window.location.href = '/login';
+                return;
+            }
+            const data = await res.json();
+            const u = data.user || {};
+            document.getElementById('topUser').textContent = (u.name || u.username) + ' · ' + (u.role || '');
+            document.getElementById('uName').textContent = u.name || '—';
+            document.getElementById('uUsername').textContent = u.username || '—';
+            document.getElementById('uRole').textContent = u.role || '—';
+            document.getElementById('uScope').textContent = u.scope || 'Kho chính - SANOVA';
+            document.getElementById('roleBadge').textContent = u.role || 'SANOVA';
+
+            const path = window.location.pathname;
+            if (path.startsWith('/warehouse/manager')) {
+                document.getElementById('pageTitle').textContent = 'Phân hệ Quản lý kho (Manager)';
+            } else if (path.startsWith('/dispatcher')) {
+                document.getElementById('pageTitle').textContent = 'Phân hệ Điều phối / Kế toán kho';
+                loadDispatcherNotis();
+            } else {
+                document.getElementById('pageTitle').textContent = 'Phân hệ Nhân viên kho (Staff)';
+            }
+
+            if ((u.role || '').includes('Quản trị viên')) {
+                document.getElementById('adminLinkBox').style.display = 'flex';
+            }
+        }
+
+        async function loadDispatcherNotis() {
+            const card = document.getElementById('dispatcherCard');
+            const list = document.getElementById('notiList');
+            card.style.display = 'block';
+            try {
+                const res = await fetch('/api/dispatcher/notifications', { headers: authHeaders() });
+                const data = await res.json();
+                const items = data.notifications || [];
+                if (!items.length) {
+                    list.innerHTML = '<p>Chưa có thông báo điều phối nào trong D1.</p>';
+                    return;
+                }
+                list.innerHTML = items.slice(0, 10).map(n => `
+                    <div class="noti-item">
+                        <strong>${escapeHtml(n.title || 'Thông báo')}</strong>
+                        <span>${escapeHtml(n.message || '')}</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                list.innerHTML = '<p>Không tải được danh sách thông báo.</p>';
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        init();
+    </script>
+</body>
+</html>

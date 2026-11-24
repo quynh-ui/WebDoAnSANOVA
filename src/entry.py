@@ -171,6 +171,51 @@ SEVERITY_LABELS = {
     "info": "Thông tin hệ thống",
 }
 
+DEFAULT_INITIAL_USERS = {
+    "admin": {
+        "staff_code": "ADM001",
+        "password": "Admin21102005@",
+        "name": "Phạm Đức Long",
+        "email": "duc.long@sanova.vn",
+        "role": "Quản trị viên",
+        "status": "Hoạt động",
+        "last_login": "Chưa có",
+        "scope": "Kho chính - SANOVA",
+    }
+}
+
+_DB_BOOTSTRAPPED = False
+
+
+async def ensure_db_ready(env):
+    global _DB_BOOTSTRAPPED
+    if _DB_BOOTSTRAPPED:
+        return
+    await env.DATABASE.prepare(
+        "CREATE TABLE IF NOT EXISTS json_store (store_key TEXT PRIMARY KEY, payload TEXT)"
+    ).run()
+    existing_users = await db_get_json(env, "users", {})
+    if not isinstance(existing_users, dict) or not existing_users:
+        await db_set_json(env, "users", deepcopy(DEFAULT_INITIAL_USERS))
+    _DB_BOOTSTRAPPED = True
+
+
+async def read_json_body(request):
+    try:
+        raw = await request.text()
+        if not raw:
+            return {}
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
+
+
+async def serve_asset_html(env, request, asset_path):
+    parsed = urlparse(request.url)
+    asset_url = f"{parsed.scheme}://{parsed.netloc}{asset_path}"
+    return await env.ASSETS.fetch(asset_url)
+
 
 async def db_get_json(env, store_key, default):
     row = (
@@ -205,11 +250,14 @@ async def db_set_json(env, store_key, value):
     ).bind(store_key, serialized).run()
 
 
-def json_response(data, status=200):
+def json_response(data, status=200, extra_headers=None):
+    headers = {"Content-Type": "application/json; charset=utf-8"}
+    if extra_headers:
+        headers.update(extra_headers)
     return Response(
         json.dumps(data, ensure_ascii=False),
         status=status,
-        headers={"Content-Type": "application/json; charset=utf-8"},
+        headers=headers,
     )
 
 
@@ -248,6 +296,29 @@ def verify_stored_password(stored_password, input_password):
                 260_000,
             ).hex()
             return hmac.compare_digest(digest, expected_hex)
+        return False
+    if raw.startswith("scrypt:"):
+        parts = raw.split("$", 2)
+        if len(parts) == 3 and hasattr(hashlib, "scrypt"):
+            try:
+                method_parts = parts[0].split(":")
+                n_val = int(method_parts[1])
+                r_val = int(method_parts[2])
+                p_val = int(method_parts[3])
+                salt, expected_hex = parts[1], parts[2]
+                dklen = len(bytes.fromhex(expected_hex))
+                digest = hashlib.scrypt(
+                    input_password.encode("utf-8"),
+                    salt=salt.encode("utf-8"),
+                    n=n_val,
+                    r=r_val,
+                    p=p_val,
+                    maxmem=64 * 1024 * 1024,
+                    dklen=dklen,
+                ).hex()
+                return hmac.compare_digest(digest, expected_hex)
+            except Exception:
+                return False
         return False
     return hmac.compare_digest(raw, str(input_password))
 
@@ -414,12 +485,60 @@ class Default(WorkerEntrypoint):
         method = str(request.method).upper()
         qs = parse_qs(parsed.query)
 
-        # 1. Đăng nhập & Đăng xuất
+        # 0. Giao diện web HTML phục vụ từ Cloudflare Assets
+        if method == "GET":
+            if path in ("/", "/welcome"):
+                return await serve_asset_html(self.env, request, "/index.html")
+            if path == "/login":
+                return await serve_asset_html(self.env, request, "/login.html")
+            if path in (
+                "/admin",
+                "/admin/users",
+                "/admin/roles",
+                "/admin/logs",
+                "/admin/settings",
+                "/admin/profile",
+                "/admin/notifications",
+            ):
+                return await serve_asset_html(self.env, request, "/admin.html")
+            if path in ("/warehouse/manager", "/staff/dashboard", "/dispatcher"):
+                return await serve_asset_html(self.env, request, "/portal.html")
+            if path == "/logout":
+                return Response(
+                    "",
+                    status=302,
+                    headers={
+                        "Location": "/login",
+                        "Set-Cookie": "sanova_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
+                    },
+                )
+
+        await ensure_db_ready(self.env)
+
+        # 1. Đăng nhập, Kiểm tra phiên & Đăng xuất
+        if path == "/api/auth/me" and method == "GET":
+            username, user = await get_authenticated_user(self.env, request)
+            if not user:
+                return json_response(
+                    {"success": False, "message": "Chưa đăng nhập hoặc phiên hết hạn."},
+                    status=401,
+                )
+            return json_response(
+                {
+                    "success": True,
+                    "redirect_to": _role_redirect_path(user.get("role")),
+                    "user": {
+                        "username": username,
+                        "name": user.get("name", ""),
+                        "email": user.get("email", ""),
+                        "role": user.get("role", ""),
+                        "scope": user.get("scope", "Kho chính - SANOVA"),
+                    },
+                }
+            )
+
         if path == "/api/auth/login" and method == "POST":
-            try:
-                body = await request.json()
-            except Exception:
-                body = {}
+            body = await read_json_body(request)
             login_input = str(body.get("username", "")).strip()
             password = str(body.get("password", ""))
             users = await db_get_json(self.env, "users", {})
@@ -495,7 +614,10 @@ class Default(WorkerEntrypoint):
                         "role": matched_user.get("role", ""),
                         "scope": matched_user.get("scope", "Kho chính - SANOVA"),
                     },
-                }
+                },
+                extra_headers={
+                    "Set-Cookie": f"sanova_session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400"
+                },
             )
 
         if path == "/api/auth/logout" and method == "POST":
@@ -514,7 +636,12 @@ class Default(WorkerEntrypoint):
                     "Đăng xuất hệ thống",
                     username,
                 )
-            return json_response({"success": True})
+            return json_response(
+                {"success": True},
+                extra_headers={
+                    "Set-Cookie": "sanova_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+                },
+            )
 
         # 2. Dashboard Admin
         if path == "/admin/api/dashboard" and method == "GET":
@@ -614,7 +741,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             staff_code = str(data.get("staff_code", "")).strip().upper()
             name = str(data.get("name", "")).strip()
             raw_email = str(data.get("email", "")).strip()
@@ -683,7 +810,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             username = str(data.get("username", "")).strip()
             users = await db_get_json(self.env, "users", {})
             if username not in users:
@@ -717,7 +844,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             username = str(data.get("username", "")).strip()
             users = await db_get_json(self.env, "users", {})
             if username not in users:
@@ -744,7 +871,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             username = str(data.get("username", "")).strip()
             new_pwd = str(data.get("new_password", ""))
             users = await db_get_json(self.env, "users", {})
@@ -789,7 +916,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             role_code = str(data.get("role_code", "")).strip().upper()
             role_name = str(data.get("name", "")).strip()
             desc = str(data.get("desc", "")).strip()
@@ -842,7 +969,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             role_code = str(data.get("role_code") or data.get("role_id") or "").strip()
             roles_data = await db_get_json(self.env, "roles", INITIAL_ROLES)
             if role_code not in roles_data:
@@ -866,7 +993,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             role_code = str(data.get("role_code") or data.get("role_id") or "").strip()
             roles_data = await db_get_json(self.env, "roles", INITIAL_ROLES)
             if role_code not in INITIAL_ROLES:
@@ -888,7 +1015,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             role_code = str(data.get("role_code", "")).strip()
             target_status = str(data.get("target_status", "Ngừng sử dụng")).strip()
             roles_data = await db_get_json(self.env, "roles", INITIAL_ROLES)
@@ -1016,7 +1143,7 @@ class Default(WorkerEntrypoint):
             actor_uname, actor_user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             group = data.get("group")
             new_vals = data.get("values", {})
             if group not in DEFAULT_SYSTEM_SETTINGS:
@@ -1089,7 +1216,7 @@ class Default(WorkerEntrypoint):
             uname, user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             name = str(data.get("name", "")).strip()
             raw_email = str(data.get("email", "")).strip()
             if not name or not raw_email:
@@ -1118,7 +1245,7 @@ class Default(WorkerEntrypoint):
             uname, user, err = await require_admin(self.env, request)
             if err:
                 return err
-            data = await request.json()
+            data = await read_json_body(request)
             cur_pwd = str(data.get("current_password", ""))
             new_pwd = str(data.get("new_password", ""))
             cfm_pwd = str(data.get("confirm_password", ""))
