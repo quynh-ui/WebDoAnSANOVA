@@ -1,6 +1,8 @@
 import json
 from urllib.parse import urlparse
-from workers import Response, WorkerEntrypoint
+from js import Response
+from pyodide.ffi import to_js
+from workers import WorkerEntrypoint if False else object
 
 
 async def db_get_json(env, store_key, default):
@@ -11,55 +13,84 @@ async def db_get_json(env, store_key, default):
         .bind(store_key)
         .first()
     )
-    if not row or not getattr(row, "payload", None):
+    if not row:
+        return default
+    payload = getattr(row, "payload", None)
+    if payload is None and hasattr(row, "to_py"):
+        py_row = row.to_py()
+        payload = py_row.get("payload") if isinstance(py_row, dict) else None
+    if not payload:
         return default
     try:
-        return json.loads(row.payload)
+        return json.loads(payload)
     except Exception:
         return default
 
 
 async def db_set_json(env, store_key, data):
     raw = json.dumps(data, ensure_ascii=False)
-    await env.DATABASE.prepare(
-        """
-        INSERT INTO json_store (store_key, payload, updated_at)
-        VALUES (?, ?, datetime('now'))
-        ON CONFLICT(store_key) DO UPDATE SET
-            payload = excluded.payload,
-            updated_at = datetime('now')
-        """
-    ).bind(store_key, raw).run()
-
-
-def json_response(data, status=200):
-    return Response(
-        json.dumps(data, ensure_ascii=False),
-        status=status,
-        headers={"Content-Type": "application/json; charset=utf-8"},
+    await (
+        env.DATABASE.prepare(
+            """
+            INSERT INTO json_store (store_key, payload, updated_at)
+            VALUES (?, ?, datetime('now'))
+            ON CONFLICT(store_key) DO UPDATE SET
+                payload = excluded.payload,
+                updated_at = datetime('now')
+            """
+        )
+        .bind(store_key, raw)
+        .run()
     )
 
 
-class Default(WorkerEntrypoint):
-    async def fetch(self, request):
+def json_response(data, status=200):
+    headers = to_js({"Content-Type": "application/json; charset=utf-8"})
+    return Response.new(
+        json.dumps(data, ensure_ascii=False),
+        to_js({"status": status, "headers": headers}),
+    )
+
+
+def text_response(text, status=200):
+    headers = to_js({"Content-Type": "text/plain; charset=utf-8"})
+    return Response.new(
+        text,
+        to_js({"status": status, "headers": headers}),
+    )
+
+
+class Default:
+    async def fetch(self, request, env=None, ctx=None):
+        active_env = env or getattr(self, "env", None)
         path = urlparse(request.url).path
-        method = request.method.upper()
+        method = str(request.method).upper()
 
         if path == "/api/dispatcher/notifications" and method == "GET":
-            notis = await db_get_json(self.env, "dispatcher_notifications", [])
+            notis = await db_get_json(active_env, "dispatcher_notifications", [])
+            unread = len([n for n in notis if not n.get("is_read")])
             return json_response(
                 {
                     "success": True,
-                    "unread_count": len([n for n in notis if not n.get("is_read")]),
+                    "unread_count": unread,
                     "notifications": notis,
                 }
             )
 
         if path == "/api/health" and method == "GET":
-            tables = await self.env.DATABASE.prepare(
+            res = await active_env.DATABASE.prepare(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             ).all()
-            table_names = [r.name for r in (tables.results or [])]
+            raw_results = getattr(res, "results", None)
+            if raw_results is not None and hasattr(raw_results, "to_py"):
+                rows = raw_results.to_py()
+            else:
+                rows = list(raw_results or [])
+            table_names = [
+                (r.get("name") if isinstance(r, dict) else getattr(r, "name", None))
+                for r in rows
+            ]
+            table_names = [t for t in table_names if t]
             return json_response(
                 {
                     "success": True,
@@ -68,8 +99,4 @@ class Default(WorkerEntrypoint):
                 }
             )
 
-        return Response(
-            "SANOVA Worker is running on Cloudflare D1.",
-            status=200,
-            headers={"Content-Type": "text/plain; charset=utf-8"},
-        )
+        return text_response("SANOVA Worker is running on Cloudflare D1.")
