@@ -1,0 +1,13 @@
+name = "webdoansanova"
+main = "src/entry.py"
+compatibility_date = "2026-11-24"
+compatibility_flags = ["python_workers"]
+
+[assets]
+directory = "./static"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DATABASE"
+database_name = "sanova-db"
+database_id = "c1fd55cd-3dee-4b94-95a0-a11662c700ec"
