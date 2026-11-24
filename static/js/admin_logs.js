@@ -208,7 +208,7 @@ function populateActorDropdown(actors) {
         actors.map(a => `<option value="${a}" ${a === currentVal ? 'selected' : ''}>${a}</option>`).join("");
 }
 
-function handleExportExcel() {
+async function handleExportExcel() {
     const q = document.getElementById("searchInput").value.trim();
     const dateFrom = document.getElementById("dateFrom").value;
     const dateTo = document.getElementById("dateTo").value;
@@ -216,8 +216,69 @@ function handleExportExcel() {
     const actor = document.getElementById("actorFilter").value;
     const result = document.getElementById("resultFilter").value;
 
-    const url = `/admin/logs/export?q=${encodeURIComponent(q)}&from=${dateFrom}&to=${dateTo}&category=${encodeURIComponent(category)}&actor=${encodeURIComponent(actor)}&result=${encodeURIComponent(result)}`;
-    window.location.href = url;
+    const btn = document.getElementById("btnExportExcel");
+    if (btn) btn.disabled = true;
+
+    try {
+        const params = new URLSearchParams({
+            q,
+            from: dateFrom,
+            to: dateTo,
+            category,
+            actor,
+            result,
+        });
+        const res = await fetch("/admin/api/logs/export-data?" + params.toString());
+        const d = await res.json();
+        if (!res.ok || !d.success) {
+            throw new Error(d.message || "Không tải được dữ liệu nhật ký.");
+        }
+        const items = d.items || [];
+        const k = d.kpi || {};
+        const f = d.filters || {};
+
+        const summaryRows = [
+            { "Chỉ tiêu": "Thời gian xuất", "Giá trị": d.exported_at || "" },
+            { "Chỉ tiêu": "Từ khóa lọc", "Giá trị": f.q || "Không có" },
+            { "Chỉ tiêu": "Khoảng ngày", "Giá trị": `${f.from || "..."} → ${f.to || "..."}` },
+            { "Chỉ tiêu": "Nhóm hoạt động", "Giá trị": f.category || "ALL" },
+            { "Chỉ tiêu": "Người thực hiện", "Giá trị": f.actor || "ALL" },
+            { "Chỉ tiêu": "Kết quả lọc", "Giá trị": f.result || "ALL" },
+            { "Chỉ tiêu": "Tổng sự kiện toàn hệ thống", "Giá trị": Number(k.total || 0) },
+            { "Chỉ tiêu": "Số sự kiện xuất ra", "Giá trị": Number(k.filtered || items.length) },
+            { "Chỉ tiêu": "Thành công (theo bộ lọc)", "Giá trị": Number(k.success || 0) },
+            { "Chỉ tiêu": "Thất bại / Cảnh báo (theo bộ lọc)", "Giá trị": Number(k.failed_warn || 0) },
+        ];
+
+        const logRows = items.map((l, idx) => ({
+            "STT": idx + 1,
+            "Mã sự kiện": l.id || "",
+            "Thời gian": l.timestamp || `${l.date || ""} ${l.time || ""}`.trim(),
+            "Người thực hiện": l.by || l.actor || "",
+            "Nhóm hoạt động": l.category || "",
+            "Hành động": l.action || "",
+            "Đối tượng": l.target || "",
+            "Kết quả": l.result || l.status || "",
+            "Địa chỉ IP": l.ip || "",
+            "Ghi chú": l.reason || "",
+        }));
+
+        if (window.SanovaXlsxExport) {
+            await window.SanovaXlsxExport.exportWorkbook({
+                filename: `SANOVA_Nhat_Ky_He_Thong_${window.SanovaXlsxExport.formatStamp()}.xlsx`,
+                sheets: [
+                    { name: "Tong_hop", rows: summaryRows, colWidths: [34, 30] },
+                    { name: "Nhat_ky_he_thong", rows: logRows },
+                ],
+            });
+        } else {
+            window.location.href = `/admin/logs/export?${params.toString()}`;
+        }
+    } catch (err) {
+        alert(err.message || "Lỗi khi xuất file Excel.");
+    } finally {
+        if (btn) btn.disabled = false;
+    }
 }
 
 function formatDate(isoStr) {
