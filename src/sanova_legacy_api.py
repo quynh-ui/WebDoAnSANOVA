@@ -269,12 +269,10 @@ def validate_password(password):
 def verify_password(stored_password, input_password):
     if not stored_password:
         return False
-    if stored_password.startswith(("scrypt:", "pbkdf2:")):
-        try:
-            return check_password_hash(stored_password, input_password)
-        except ValueError:
-            return False
-    return secrets.compare_digest(stored_password, input_password)
+    try:
+        return check_password_hash(stored_password, input_password)
+    except Exception:
+        return False
 
 def hash_password(password):
     return generate_password_hash(password)
@@ -285,7 +283,7 @@ def protect_requests():
         session["_csrf_token"] = secrets.token_hex(32)
 
     if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-        if request.path in ("/login", "/") or request.path.startswith(("/warehouse/api/", "/manager/api/", "/admin/api/", "/api/staff/")):
+        if request.path in ("/login", "/") or request.path.startswith(("/warehouse/api/", "/manager/api/", "/admin/api/", "/api/staff/", "/api/dispatcher/")):
             return
 
         supplied_token = (
@@ -346,8 +344,8 @@ def warehouse_manager_required(f):
     @wraps(f)
     @login_required
     def decorated(*args, **kwargs):
-        role = session["user"].get("role", "")
-        if not any(k in role for k in ("Quản lý kho", "Quản trị viên")):
+        role = str(session["user"].get("role", "")).lower()
+        if not any(k in role for k in ("quản lý kho", "quản lý", "manager", "quản trị viên", "admin")):
             abort(403)
         return f(*args, **kwargs)
     return decorated
@@ -1339,13 +1337,15 @@ def load_logs():
             return []
 
 # Thay thế hàm add_audit_log ở Phần 10 bằng phiên bản tương thích ngược cả status và result:
-def add_audit_log(category, action, target, changes=None, result=None, status=None, reason=""):
+def add_audit_log(category, action, target="", changes=None, result=None, status=None, reason="", actor=None, detail=None, **extra):
     final_status = result or status or "Thành công"
     now = datetime.now()
     log_id = f"LOG-{now.strftime('%Y%m%d')}-{secrets.token_hex(4).upper()}"
     
-    actor_name = session.get("user", {}).get("name", "Hệ thống")
+    actor_name = actor or session.get("user", {}).get("name", "Hệ thống")
     actor_username = session.get("user", {}).get("username", "system")
+    if detail and not reason:
+        reason = str(detail)
     
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1")
     if "," in ip:
@@ -4750,14 +4750,26 @@ from flask_d1_shim import check_password_hash, generate_password_hash
 def manager_profile_page():
     return render_template('MANAGER/manager_profile.html')
 
+def _find_user_entry(users, username):
+    if isinstance(users, dict):
+        u = users.get(username)
+        if isinstance(u, dict):
+            return u
+        for k, v in users.items():
+            if isinstance(v, dict) and (v.get('username') == username or k == username):
+                return v
+    elif isinstance(users, list):
+        return next((u for u in users if isinstance(u, dict) and u.get('username') == username), None)
+    return None
+
 @app.route('/manager/api/profile', methods=['GET'])
 @warehouse_manager_required
 def api_get_manager_profile():
     sess_user = session.get('user', {})
     username = sess_user.get('username')
 
-    users = read_json('users.json', [])
-    user_obj = next((u for u in users if u.get('username') == username), None)
+    users = read_json('users.json', {})
+    user_obj = _find_user_entry(users, username)
 
     if not user_obj:
         user_obj = {
@@ -4774,7 +4786,7 @@ def api_get_manager_profile():
 
     # Trích xuất nhật ký hoạt động cá nhân của chính Manager đang đăng nhập từ audit_logs.json
     logs = read_json('audit_logs.json', [])
-    my_name = user_obj.get('full_name') or sess_user.get('name', '')
+    my_name = user_obj.get('full_name') or user_obj.get('name') or sess_user.get('name', '')
     my_logs = []
     login_history = []
 
@@ -4807,14 +4819,14 @@ def api_get_manager_profile():
 
     return jsonify({
         'profile': {
-            'staff_code': user_obj.get('staff_code', 'NV-MGR-01'),
-            'full_name': user_obj.get('full_name') or sess_user.get('name', 'Nguyễn Minh Nam'),
-            'username': user_obj.get('username', 'manager'),
+            'staff_code': user_obj.get('staff_code') or user_obj.get('code') or 'NV-MGR-01',
+            'full_name': user_obj.get('full_name') or user_obj.get('name') or sess_user.get('name', 'Nguyễn Minh Nam'),
+            'username': user_obj.get('username') or username or 'manager',
             'email': user_obj.get('email', 'nam.nguyen@sanova.vn'),
             'phone': user_obj.get('phone', '0912 345 678'),
-            'role_label': 'Manager',
+            'role_label': user_obj.get('role_label') or user_obj.get('role') or 'Manager',
             'department': user_obj.get('department', 'Quản lý kho'),
-            'warehouse_scope': user_obj.get('warehouse_scope', 'Kho chính (KHO-01)'),
+            'warehouse_scope': user_obj.get('warehouse_scope') or user_obj.get('scope') or 'Kho chính (KHO-01)',
             'status': user_obj.get('status', 'Đang hoạt động'),
             'note': user_obj.get('note', ''),
             'avatar_url': user_obj.get('avatar_url', ''),
@@ -4841,10 +4853,10 @@ def api_update_manager_profile():
 
     sess_user = session.get('user', {})
     username = sess_user.get('username')
-    users = read_json('users.json', [])
-    user_obj = next((u for u in users if u.get('username') == username), None)
+    users = read_json('users.json', {})
+    user_obj = _find_user_entry(users, username)
 
-    if user_obj:
+    if user_obj is not None:
         old_info = f"{user_obj.get('email', '')} · {user_obj.get('phone', '')}"
         user_obj['email'] = email
         user_obj['phone'] = phone
@@ -4878,14 +4890,10 @@ def api_upload_manager_avatar():
     avatar_url = file.to_data_uri()
 
     users = read_json('users.json', {})
-    if isinstance(users, dict) and username in users:
-        users[username]['avatar_url'] = avatar_url
+    user_obj = _find_user_entry(users, username)
+    if user_obj is not None:
+        user_obj['avatar_url'] = avatar_url
         write_json('users.json', users)
-    elif isinstance(users, list):
-        user_obj = next((u for u in users if u.get('username') == username), None)
-        if user_obj:
-            user_obj['avatar_url'] = avatar_url
-            write_json('users.json', users)
 
     add_audit_log(category='TÀI KHOẢN', action='Cập nhật ảnh đại diện cá nhân', target=username)
     return jsonify({'message': 'Đã cập nhật ảnh đại diện.', 'avatar_url': avatar_url})
@@ -4896,10 +4904,10 @@ def api_update_manager_noti_prefs():
     data = request.get_json(silent=True) or {}
     sess_user = session.get('user', {})
     username = sess_user.get('username')
-    users = read_json('users.json', [])
-    user_obj = next((u for u in users if u.get('username') == username), None)
+    users = read_json('users.json', {})
+    user_obj = _find_user_entry(users, username)
 
-    if user_obj:
+    if user_obj is not None:
         user_obj['noti_prefs'] = {
             'tasks': bool(data.get('tasks', True)),
             'alerts': bool(data.get('alerts', True)),
@@ -4931,16 +4939,19 @@ def api_manager_change_password():
 
     sess_user = session.get('user', {})
     username = sess_user.get('username')
-    users = read_json('users.json', [])
-    user_obj = next((u for u in users if u.get('username') == username), None)
+    users = read_json('users.json', {})
+    user_obj = _find_user_entry(users, username)
 
-    if not user_obj or not check_password_hash(user_obj.get('password_hash', ''), cur_pwd):
+    stored_pw = (user_obj.get('password') or user_obj.get('password_hash') or '') if user_obj else ''
+    if not user_obj or not check_password_hash(stored_pw, cur_pwd):
         session['pwd_change_fails'] = fail_count + 1
         return jsonify({'error': 'Mật khẩu hiện tại không chính xác.'}), 400
 
     session['pwd_change_fails'] = 0
     now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
-    user_obj['password_hash'] = generate_password_hash(new_pwd)
+    new_hash = generate_password_hash(new_pwd)
+    user_obj['password'] = new_hash
+    user_obj['password_hash'] = new_hash
     user_obj['last_password_changed'] = now_str
     write_json('users.json', users)
 
@@ -4967,7 +4978,7 @@ def staff_required(f):
                 return jsonify({'error': 'Phiên đăng nhập đã hết hạn', 'redirect': '/login'}), 401
             return redirect(url_for('login'))
         role = str(user.get('role', '')).upper()
-        if 'NHÂN VIÊN' not in role and 'STAFF' not in role and 'ADMIN' not in role:
+        if not any(k in role for k in ('NHÂN VIÊN', 'STAFF', 'ADMIN', 'QUẢN TRỊ')):
             return jsonify({'error': 'Tài khoản không thuộc phân hệ Nhân viên kho'}), 403
         return f(*args, **kwargs)
     return decorated
@@ -8911,8 +8922,8 @@ def dispatcher_required(f):
     @wraps(f)
     @login_required
     def decorated(*args, **kwargs):
-        role = session["user"].get("role", "")
-        if not any(k in role for k in ("Điều phối", "Kế toán", "Quản trị viên")):
+        role = str(session["user"].get("role", "")).lower()
+        if not any(k in role for k in ("điều phối", "kế toán", "dispatcher", "quản trị viên", "admin")):
             abort(403)
         return f(*args, **kwargs)
     return decorated

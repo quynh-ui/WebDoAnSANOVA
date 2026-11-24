@@ -486,9 +486,13 @@ class Flask:
         if "GET" in allowed:
             allowed.add("HEAD")
         regex = _compile_rule(rule)
+        # Werkzeug-like specificity: static routes first (param_count=0), then more static segments
+        param_count = len(re.findall(r"<[^>]+>", rule))
+        int_params = set(re.findall(r"<int:([a-zA-Z_][a-zA-Z0-9_]*)>", rule))
+        static_len = len(re.sub(r"<[^>]+>", "", rule))
 
         def decorator(fn):
-            self._routes.append((rule, regex, allowed, fn))
+            self._routes.append((param_count, -static_len, rule, regex, allowed, int_params, fn))
             return fn
 
         return decorator
@@ -519,16 +523,24 @@ class Flask:
         method_up = str(method or "GET").upper()
         matched_fn = None
         matched_kwargs = {}
+        best_rank = None
         path_matched_other_method = False
 
-        for _rule, regex, allowed, fn in self._routes:
+        for param_count, neg_static_len, _rule, regex, allowed, int_params, fn in self._routes:
             m = regex.match(path)
             if m:
                 if method_up in allowed:
-                    matched_fn = fn
-                    matched_kwargs = m.groupdict()
-                    break
-                path_matched_other_method = True
+                    rank = (param_count, neg_static_len)
+                    if best_rank is None or rank < best_rank:
+                        best_rank = rank
+                        matched_fn = fn
+                        kw = m.groupdict()
+                        for k in int_params:
+                            if k in kw and str(kw[k]).isdigit():
+                                kw[k] = int(kw[k])
+                        matched_kwargs = kw
+                else:
+                    path_matched_other_method = True
 
         if not matched_fn:
             if path_matched_other_method:
