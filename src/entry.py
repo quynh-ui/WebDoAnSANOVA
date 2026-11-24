@@ -59,43 +59,41 @@ def text_response(text, status=200):
     )
 
 
-class Default:
-    async def fetch(self, request, env=None, ctx=None):
-        active_env = env or getattr(self, "env", None)
-        path = urlparse(request.url).path
-        method = str(request.method).upper()
+async def fetch(request, env, ctx=None):
+    path = urlparse(request.url).path
+    method = str(request.method).upper()
 
-        if path == "/api/dispatcher/notifications" and method == "GET":
-            notis = await db_get_json(active_env, "dispatcher_notifications", [])
-            unread = len([n for n in notis if not n.get("is_read")])
-            return json_response(
-                {
-                    "success": True,
-                    "unread_count": unread,
-                    "notifications": notis,
-                }
-            )
+    if path == "/api/dispatcher/notifications" and method == "GET":
+        notis = await db_get_json(env, "dispatcher_notifications", [])
+        unread = len([n for n in notis if not n.get("is_read")])
+        return json_response(
+            {
+                "success": True,
+                "unread_count": unread,
+                "notifications": notis,
+            }
+        )
 
-        if path == "/api/health" and method == "GET":
-            res = await active_env.DATABASE.prepare(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).all()
-            raw_results = getattr(res, "results", None)
-            if raw_results is not None and hasattr(raw_results, "to_py"):
-                rows = raw_results.to_py()
-            else:
-                rows = list(raw_results or [])
-            table_names = [
-                (r.get("name") if isinstance(r, dict) else getattr(r, "name", None))
-                for r in rows
-            ]
-            table_names = [t for t in table_names if t]
-            return json_response(
-                {
-                    "success": True,
-                    "service": "webdoansanova",
-                    "d1_tables": table_names,
-                }
-            )
+    if path == "/api/health" and method == "GET":
+        res = await env.DATABASE.prepare(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).all()
+        raw_results = getattr(res, "results", None)
+        if raw_results is not None and hasattr(raw_results, "to_py"):
+            rows = raw_results.to_py()
+        else:
+            rows = list(raw_results or [])
+        table_names = [
+            (r.get("name") if isinstance(r, dict) else getattr(r, "name", None))
+            for r in rows
+        ]
+        table_names = [t for t in table_names if t]
+        return json_response(
+            {
+                "success": True,
+                "service": "webdoansanova",
+                "d1_tables": table_names,
+            }
+        )
 
-        return text_response("SANOVA Worker is running on Cloudflare D1.")
+    return text_response("SANOVA Worker is running on Cloudflare D1.")
