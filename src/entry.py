@@ -26,23 +26,6 @@ async def db_get_json(env, store_key, default):
         return default
 
 
-async def db_set_json(env, store_key, data):
-    raw = json.dumps(data, ensure_ascii=False)
-    await (
-        env.DATABASE.prepare(
-            """
-            INSERT INTO json_store (store_key, payload, updated_at)
-            VALUES (?, ?, datetime('now'))
-            ON CONFLICT(store_key) DO UPDATE SET
-                payload = excluded.payload,
-                updated_at = datetime('now')
-            """
-        )
-        .bind(store_key, raw)
-        .run()
-    )
-
-
 def json_response(data, status=200):
     headers = to_js({"Content-Type": "application/json; charset=utf-8"})
     return Response.new(
@@ -59,7 +42,7 @@ def text_response(text, status=200):
     )
 
 
-async def fetch(request, env, ctx=None):
+async def _handle_request(request, env):
     path = urlparse(request.url).path
     method = str(request.method).upper()
 
@@ -97,3 +80,12 @@ async def fetch(request, env, ctx=None):
         )
 
     return text_response("SANOVA Worker is running on Cloudflare D1.")
+
+
+class Default:
+    async def fetch(self, request, env=None, ctx=None):
+        return await _handle_request(request, env or getattr(self, "env", None))
+
+
+async def fetch(request, env=None, ctx=None):
+    return await _handle_request(request, env)
