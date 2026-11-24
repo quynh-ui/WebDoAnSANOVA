@@ -12096,10 +12096,23 @@ def api_dispatcher_profile_change_password():
 
     return jsonify({"status": "ok", "message": "Đổi mật khẩu thành công!"})
 
+@app.route("/api/dispatcher/notifications", methods=["GET"])
+def api_dispatcher_notifications():
+    if "user" not in session:
+        return jsonify({"success": False, "message": "Chưa đăng nhập"}), 401
+
+    return jsonify({
+        "success": True,
+        "unread_count": 0,
+        "notifications": []
+    })
 
 # ==========================================================
 # 14. KHỞI CHẠY ỨNG DỤNG FLASK
-
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
+    
 if __name__ == "__main__":
     app.run(
         debug=True,
