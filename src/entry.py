@@ -1,7 +1,6 @@
 import json
 from urllib.parse import urlparse
-from js import Response
-from pyodide.ffi import to_js
+from workers import Response, WorkerEntrypoint
 
 
 async def db_get_json(env, store_key, default):
@@ -27,65 +26,57 @@ async def db_get_json(env, store_key, default):
 
 
 def json_response(data, status=200):
-    headers = to_js({"Content-Type": "application/json; charset=utf-8"})
-    return Response.new(
+    return Response(
         json.dumps(data, ensure_ascii=False),
-        to_js({"status": status, "headers": headers}),
+        status=status,
+        headers={"Content-Type": "application/json; charset=utf-8"},
     )
 
 
 def text_response(text, status=200):
-    headers = to_js({"Content-Type": "text/plain; charset=utf-8"})
-    return Response.new(
+    return Response(
         text,
-        to_js({"status": status, "headers": headers}),
+        status=status,
+        headers={"Content-Type": "text/plain; charset=utf-8"},
     )
 
 
-async def _handle_request(request, env):
-    path = urlparse(request.url).path
-    method = str(request.method).upper()
+class Default(WorkerEntrypoint):
+    async def fetch(self, request):
+        path = urlparse(request.url).path
+        method = str(request.method).upper()
 
-    if path == "/api/dispatcher/notifications" and method == "GET":
-        notis = await db_get_json(env, "dispatcher_notifications", [])
-        unread = len([n for n in notis if not n.get("is_read")])
-        return json_response(
-            {
-                "success": True,
-                "unread_count": unread,
-                "notifications": notis,
-            }
-        )
+        if path == "/api/dispatcher/notifications" and method == "GET":
+            notis = await db_get_json(self.env, "dispatcher_notifications", [])
+            unread = len([n for n in notis if not n.get("is_read")])
+            return json_response(
+                {
+                    "success": True,
+                    "unread_count": unread,
+                    "notifications": notis,
+                }
+            )
 
-    if path == "/api/health" and method == "GET":
-        res = await env.DATABASE.prepare(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).all()
-        raw_results = getattr(res, "results", None)
-        if raw_results is not None and hasattr(raw_results, "to_py"):
-            rows = raw_results.to_py()
-        else:
-            rows = list(raw_results or [])
-        table_names = [
-            (r.get("name") if isinstance(r, dict) else getattr(r, "name", None))
-            for r in rows
-        ]
-        table_names = [t for t in table_names if t]
-        return json_response(
-            {
-                "success": True,
-                "service": "webdoansanova",
-                "d1_tables": table_names,
-            }
-        )
+        if path == "/api/health" and method == "GET":
+            res = await self.env.DATABASE.prepare(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).all()
+            raw_results = getattr(res, "results", None)
+            if raw_results is not None and hasattr(raw_results, "to_py"):
+                rows = raw_results.to_py()
+            else:
+                rows = list(raw_results or [])
+            table_names = [
+                (r.get("name") if isinstance(r, dict) else getattr(r, "name", None))
+                for r in rows
+            ]
+            table_names = [t for t in table_names if t]
+            return json_response(
+                {
+                    "success": True,
+                    "service": "webdoansanova",
+                    "d1_tables": table_names,
+                }
+            )
 
-    return text_response("SANOVA Worker is running on Cloudflare D1.")
-
-
-class Default:
-    async def fetch(self, request, env=None, ctx=None):
-        return await _handle_request(request, env or getattr(self, "env", None))
-
-
-async def fetch(request, env=None, ctx=None):
-    return await _handle_request(request, env)
+        return text_response("SANOVA Worker is running on Cloudflare D1.")
