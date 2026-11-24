@@ -614,7 +614,7 @@ def _role_redirect_path(role_name):
     if "Quản trị viên" in r:
         return "/admin"
     if "Quản lý kho" in r:
-        return "/warehouse/manager"
+        return "/manager"
     if "Điều phối" in r or "Kế toán" in r:
         return "/dispatcher"
     return "/staff/dashboard"
@@ -657,7 +657,8 @@ def _list_role_users(users_dict, role_code, role_obj):
     return matched
 
 
-ADMIN_PAGE_MAP = {
+PAGE_ASSET_MAP = {
+    # Admin (7 trang)
     "/admin": "/admin/admin_dashboard.html",
     "/admin/users": "/admin/admin_users.html",
     "/admin/roles": "/admin/admin_roles.html",
@@ -665,7 +666,139 @@ ADMIN_PAGE_MAP = {
     "/admin/settings": "/admin/admin_settings.html",
     "/admin/profile": "/admin/admin_profile.html",
     "/admin/notifications": "/admin/admin_notifications.html",
+    # Manager (9 trang)
+    "/manager": "/manager/manager_dashboard.html",
+    "/warehouse/manager": "/manager/manager_dashboard.html",
+    "/manager/products": "/manager/manager_products.html",
+    "/manager/warehouse-config": "/manager/manager_warehouse_config.html",
+    "/manager/inventory": "/manager/manager_inventory.html",
+    "/manager/approvals": "/manager/manager_approvals.html",
+    "/manager/stocktake": "/manager/manager_stocktake.html",
+    "/manager/daily-closing": "/manager/manager_daily_closing.html",
+    "/manager/reports": "/manager/manager_reports.html",
+    "/manager/profile": "/manager/manager_profile.html",
+    # Staff (9 trang)
+    "/staff/dashboard": "/staff/staff_dashboard.html",
+    "/staff/inbound": "/staff/staff_inbound.html",
+    "/staff/scan": "/staff/staff_scan.html",
+    "/staff/picking-returns": "/staff/staff_picking_returns.html",
+    "/staff/prepacking": "/staff/staff_prepacking.html",
+    "/staff/packing-handover": "/staff/staff_packing_handover.html",
+    "/staff/stocktake": "/staff/staff_stocktake.html",
+    "/staff/history": "/staff/staff_history.html",
+    "/staff/profile": "/staff/staff_profile.html",
+    # Dispatcher (7 trang)
+    "/dispatcher": "/dispatcher/dispatcher_dashboard.html",
+    "/dispatcher/picking-requests": "/dispatcher/dispatcher_picking_requests.html",
+    "/dispatcher/order-tracking": "/dispatcher/dispatcher_order_tracking.html",
+    "/dispatcher/reconciliation-data": "/dispatcher/dispatcher_reconciliation_data.html",
+    "/dispatcher/outbound-reconciliation": "/dispatcher/dispatcher_outbound_reconciliation.html",
+    "/dispatcher/reports": "/dispatcher/dispatcher_reports.html",
+    "/dispatcher/profile": "/dispatcher/dispatcher_profile.html",
 }
+
+LEGACY_API_PREFIXES = (
+    "/manager/api/",
+    "/warehouse/api/",
+    "/api/staff/",
+    "/api/dispatcher/",
+    "/staff/box-info/",
+    "/q/",
+)
+
+_LEGACY_MODULE = None
+
+
+def _get_legacy_module():
+    global _LEGACY_MODULE
+    if _LEGACY_MODULE is None:
+        import sanova_legacy_api
+        _LEGACY_MODULE = sanova_legacy_api
+    return _LEGACY_MODULE
+
+
+def _extract_warehouse_id(scope_str):
+    m = re.search(r"\b(KHO-[A-Z0-9]+)\b", str(scope_str or "").upper())
+    return m.group(1) if m else "KHO-01"
+
+
+async def dispatch_legacy_api(env, request, path, method):
+    import flask_d1_shim as shim
+
+    # 1. Tải toàn bộ bảng json_store từ D1 vào VFS trong 1 truy vấn
+    res = await env.DATABASE.prepare("SELECT store_key, payload FROM json_store").all()
+    raw_results = getattr(res, "results", None)
+    if raw_results is not None and hasattr(raw_results, "to_py"):
+        rows = raw_results.to_py()
+    else:
+        rows = list(raw_results or [])
+    vfs_map = {}
+    for row in rows:
+        k = row.get("store_key") if isinstance(row, dict) else getattr(row, "store_key", None)
+        p = row.get("payload") if isinstance(row, dict) else getattr(row, "payload", None)
+        if k and p is not None:
+            try:
+                vfs_map[k] = json.loads(p)
+            except Exception:
+                pass
+    shim.vfs_begin(vfs_map)
+
+    # 2. Đọc headers và raw body bytes (hỗ trợ cả JSON, form và upload file multipart)
+    headers_dict = {}
+    for hk in (
+        "Content-Type",
+        "Authorization",
+        "Cookie",
+        "User-Agent",
+        "X-Forwarded-For",
+        "CF-Connecting-IP",
+        "X-CSRF-Token",
+        "Accept",
+    ):
+        hv = request.headers.get(hk)
+        if hv is not None:
+            headers_dict[hk] = str(hv)
+
+    raw_bytes = b""
+    if method in ("POST", "PUT", "PATCH", "DELETE"):
+        try:
+            buf = await request.arrayBuffer()
+            if buf is not None:
+                raw_bytes = bytes(buf.to_py())
+        except Exception:
+            try:
+                txt = await request.text()
+                raw_bytes = (txt or "").encode("utf-8")
+            except Exception:
+                raw_bytes = b""
+
+    shim.request.load_from_worker(str(request.url), method, headers_dict, raw_bytes)
+
+    # 3. Đồng bộ phiên đăng nhập từ D1 sang shim.session
+    shim.session.clear()
+    username, user = await get_authenticated_user(env, request)
+    if username and user:
+        safe_u = {k: v for k, v in user.items() if k != "password"}
+        safe_u["username"] = username
+        safe_u.setdefault("warehouse_id", _extract_warehouse_id(safe_u.get("scope")))
+        shim.session["user"] = safe_u
+
+    # 4. Thực thi route gốc trong sanova_legacy_api
+    legacy = _get_legacy_module()
+    resp_obj = legacy.app.dispatch(path, method)
+    if resp_obj is None:
+        return json_response({"success": False, "message": f"API endpoint not found: {path}"}, 404)
+
+    # 5. Ghi các key bị thay đổi về Cloudflare D1
+    dirty = shim.vfs_get_dirty_items()
+    for dk, dv in dirty.items():
+        await db_set_json(env, dk, dv)
+
+    return Response(
+        resp_obj.body,
+        status=resp_obj.status_code,
+        headers=dict(resp_obj.headers),
+    )
 
 
 class Default(WorkerEntrypoint):
@@ -681,10 +814,10 @@ class Default(WorkerEntrypoint):
                 return await serve_asset_html(self.env, request, "/index.html")
             if path == "/login":
                 return await serve_asset_html(self.env, request, "/login.html")
-            if path in ADMIN_PAGE_MAP:
-                return await serve_asset_html(self.env, request, ADMIN_PAGE_MAP[path])
-            if path in ("/warehouse/manager", "/staff/dashboard", "/dispatcher"):
-                return await serve_asset_html(self.env, request, "/portal.html")
+            if path in PAGE_ASSET_MAP:
+                return await serve_asset_html(self.env, request, PAGE_ASSET_MAP[path])
+            if path == "/favicon.ico":
+                return Response("", status=204)
             if path == "/logout":
                 return Response(
                     "",
@@ -1844,7 +1977,7 @@ class Default(WorkerEntrypoint):
             await db_set_json(self.env, "admin_notifications", notis)
             return json_response({"success": True})
 
-        # 9. Các route hiện có của Worker
+        # 9. Thông báo Điều phối & Bridge toàn bộ API Manager / Staff / Dispatcher sang D1
         if path == "/api/dispatcher/notifications" and method == "GET":
             notis = await db_get_json(self.env, "dispatcher_notifications", [])
             unread = len([n for n in notis if not n.get("is_read")])
@@ -1855,6 +1988,16 @@ class Default(WorkerEntrypoint):
                     "notifications": notis,
                 }
             )
+
+        if path == "/api/dispatcher/notifications/read" and method == "POST":
+            data = await read_json_body(request)
+            noti_id = data.get("id")
+            notis = await db_get_json(self.env, "dispatcher_notifications", [])
+            for n in notis:
+                if not noti_id or str(n.get("id")) == str(noti_id):
+                    n["is_read"] = True
+            await db_set_json(self.env, "dispatcher_notifications", notis)
+            return json_response({"success": True})
 
         if path == "/api/health" and method == "GET":
             res = await self.env.DATABASE.prepare(
@@ -1877,5 +2020,8 @@ class Default(WorkerEntrypoint):
                     "d1_tables": table_names,
                 }
             )
+
+        if any(path.startswith(pfx) for pfx in LEGACY_API_PREFIXES):
+            return await dispatch_legacy_api(self.env, request, path, method)
 
         return text_response("SANOVA Worker is running on Cloudflare D1.")

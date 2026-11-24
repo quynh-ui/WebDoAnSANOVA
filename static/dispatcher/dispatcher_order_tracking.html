@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theo dõi xử lý đơn · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #086f68;
+            --brand-teal: #086f68;
+            --brand-green: #057a55;
+            --mint-label: #34d399;
+            --mint-text: #a7f3d0;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        body {
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+        }
+
+        /* SIDEBAR CỐ ĐỊNH */
+        .sidebar {
+            width: 248px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ecfdf5;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 90;
+            user-select: none;
+        }
+        .brand-header { display: flex; align-items: center; gap: 11px; padding: 0 10px 22px; }
+        .brand-name { font-size: 21px; font-weight: 800; letter-spacing: 1.1px; color: #ffffff; }
+        .nav-category { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--mint-label); padding: 0 12px 12px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+        .nav-link {
+            display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+            color: var(--mint-text); text-decoration: none; border-radius: 10px;
+            font-size: 13.5px; font-weight: 600; transition: all 0.16s ease;
+        }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .logout-link:hover { background-color: rgba(220, 38, 38, 0.22); color: #fca5a5; }
+
+        /* MAIN WRAPPER & TOPBAR */
+        .main-wrapper { flex: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .top-navbar {
+            height: 54px; background: #ffffff; border-bottom: 1px solid var(--border);
+            padding: 0 28px; display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0; position: sticky; top: 0; z-index: 50;
+        }
+        .sync-badge {
+            display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5;
+            border: 1px solid #a7f3d0; color: #065f46; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700;
+        }
+        .sync-badge.offline { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+        .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; }
+        .sync-badge.offline .sync-dot { background: #dc2626; }
+        .user-chip { display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 700; }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #334155; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+
+        .content-body { padding: 20px 28px 36px; display: flex; flex-direction: column; gap: 16px; }
+        .page-header-row { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+        .page-title { font-size: 25px; font-weight: 800; color: #0f172a; }
+        .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 2px; }
+
+        /* 7 THẺ KPI */
+        .kpi-7-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+        @media (max-width: 1380px) { .kpi-7-row { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 820px)  { .kpi-7-row { grid-template-columns: repeat(2, 1fr); } }
+
+        .kpi-tile {
+            background: #ffffff; border: 1px solid var(--border); border-radius: 13px;
+            padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 6px;
+            cursor: pointer; transition: all 0.15s ease;
+        }
+        .kpi-tile:hover { border-color: #086f68; transform: translateY(-1px); }
+        .kpi-ico { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+        .kpi-val { font-size: 23px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+        .kpi-lbl { font-size: 12px; font-weight: 600; color: #475569; }
+
+        /* WORKSPACE 60% / 40% */
+        .tracking-workspace { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+        .tracking-workspace.has-drawer { grid-template-columns: 1.5fr 1fr; }
+        @media (max-width: 1240px) { .tracking-workspace.has-drawer { grid-template-columns: 1fr; } }
+
+        .card-box { background: #ffffff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+
+        /* STAGE TABS */
+        .stage-tabs { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+        .st-tab {
+            padding: 7px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 700;
+            border: 1px solid var(--border); background: #ffffff; color: #334155; cursor: pointer;
+        }
+        .st-tab:hover { background: #f1f5f9; }
+        .st-tab.active { background: #057a55; color: #ffffff; border-color: #057a55; }
+
+        .filter-row { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 14px; align-items: center; }
+        .ctrl {
+            height: 36px; padding: 0 11px; border: 1px solid #cbd5e1; border-radius: 9px;
+            font-size: 12.5px; font-weight: 500; background: #ffffff; color: #0f172a; outline: none;
+        }
+        .ctrl:focus { border-color: var(--brand-teal); }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            height: 36px; padding: 0 14px; border-radius: 9px; font-size: 12.5px; font-weight: 700;
+            cursor: pointer; border: none; text-decoration: none;
+        }
+        .btn-outline { background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; }
+        .btn-outline:hover { background: #f8fafc; }
+        .btn-warn-soft { background: #fffbeb; border: 1px solid #fde68a; color: #b45309; }
+
+        /* DATA TABLE */
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .data-table th {
+            background: #f8fafc; color: #475569; font-size: 12px; font-weight: 700;
+            padding: 10px 10px; border-bottom: 1.5px solid var(--border); white-space: nowrap;
+        }
+        .data-table td { padding: 11px 10px; border-bottom: 1px solid #f1f5f9; font-size: 12.5px; vertical-align: middle; }
+        .data-table tr { cursor: pointer; }
+        .data-table tr:hover td { background: #f8fafc; }
+        .data-table tr.selected-row td { background: #ecfdf5; }
+
+        .mini-prog { display: flex; align-items: center; gap: 7px; }
+        .mini-track { width: 64px; height: 7px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+        .mini-fill { height: 100%; background: #059669; border-radius: 999px; }
+
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+        .bg-purple { background: #f3e8ff; color: #7e22ce; }
+        .bg-blue   { background: #e0f2fe; color: #0369a1; }
+        .bg-amber  { background: #fef3c7; color: #b45309; }
+        .bg-green  { background: #dcfce7; color: #15803d; }
+        .bg-red    { background: #fee2e2; color: #b91c1c; }
+        .bg-gray   { background: #f1f5f9; color: #475569; }
+
+        .icon-eye {
+            width: 30px; height: 30px; border-radius: 8px; border: 1px solid #e2e8f0; background: #ffffff;
+            color: #475569; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .icon-eye:hover { background: #ecfdf5; color: #057a55; border-color: #a7f3d0; }
+
+        /* RIGHT DETAIL DRAWER: GHIM HEADER & TABS + CUỘN RIÊNG PHẦN NỘI DUNG + GHIM FOOTER */
+        .detail-drawer {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            position: sticky;
+            top: 70px;
+            height: calc(100vh - 96px);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+        .detail-drawer.open { display: flex; }
+
+        .drawer-fixed-top {
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid var(--border);
+            background: #ffffff;
+            flex-shrink: 0;
+        }
+
+        .d-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+        .d-tab {
+            padding: 6px 10px; border-radius: 7px; font-size: 11.5px; font-weight: 700;
+            border: 1px solid #e2e8f0; background: #ffffff; color: #475569; cursor: pointer;
+        }
+        .d-tab.active { background: #057a55; color: #ffffff; border-color: #057a55; }
+
+        .drawer-scroll-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .drawer-fixed-bottom {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            background: #f8fafc;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .d-box { border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; background: #ffffff; }
+        .d-box-title { font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+        .kv-row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px dashed #f1f5f9; gap: 10px; }
+        .kv-row:last-child { border-bottom: none; }
+        .kv-row span { color: #64748b; flex-shrink: 0; }
+        .kv-row strong { text-align: right; }
+
+        .stat-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .stat-cell { border: 1px solid var(--border); border-radius: 9px; padding: 9px 10px; background: #f8fafc; }
+        .stat-cell span { display: block; font-size: 11px; color: #64748b; font-weight: 600; }
+        .stat-cell strong { display: block; font-size: 16px; font-weight: 800; margin-top: 2px; }
+
+        .out-prog-card {
+            border: 1px solid #bbf7d0; background: #f0fdf4; border-radius: 11px; padding: 11px 14px;
+        }
+        .out-prog-bar { height: 8px; background: #dcfce7; border-radius: 999px; overflow: hidden; margin: 7px 0; }
+        .out-prog-fill { height: 100%; background: #059669; border-radius: 999px; }
+    </style>
+    <script src="/js/role_common.js"></script>
+    <script src="/js/sanova_xlsx_export.js"></script>
+</head>
+<body>
+    
+    <aside class="sidebar">
+        <div>
+            <div class="brand-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">ĐIỀU PHỐI KHO</div>
+
+            <ul class="nav-list">
+                <li>
+                    <a href="/dispatcher" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Tổng quan</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/picking-requests" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M9 12h6"></path><path d="M9 16h6"></path></svg>
+                        <span>Yêu cầu lấy hàng</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/order-tracking" class="nav-link active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 7 2 2 4-4"></path><path d="m3 17 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+                        <span>Theo dõi xử lý đơn</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/reconciliation-data" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+                        <span>Dữ liệu đối soát</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/outbound-reconciliation" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>
+                        <span>Đối soát xuất hàng</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/reports" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        <span>Báo cáo &amp; lịch sử</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="/dispatcher/profile" class="nav-link ">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>Tài khoản cá nhân</span>
+            </a>
+            <a href="/logout" class="nav-link logout-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span>Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <div class="top-navbar">
+            <span class="sync-badge" id="syncStatusPill"><span class="sync-dot"></span> <span id="syncStatusText">Đồng bộ lúc --:--:--</span></span>
+            <div class="user-chip">
+                <div class="user-avatar">ĐP</div>
+                <span><span data-sanova-user-name>Điều phối viên</span></span>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <div class="page-header-row">
+                <div>
+                    <h1 class="page-title">Theo dõi xử lý đơn</h1>
+                    <p class="page-subtitle">Giám sát tiến độ OUT &rarr; Pre-packing &rarr; Đóng gói &rarr; Bàn giao · Bấm vào dòng phiếu để xem chi tiết</p>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <!-- BỘ LỌC KHOẢNG NGÀY -->
+                    <select class="ctrl" id="fltDateRange" onchange="onDateRangeChange()">
+                        <option value="TODAY" selected>Khoảng ngày: Hôm nay</option>
+                        <option value="7D">7 ngày gần nhất</option>
+                        <option value="30D">30 ngày gần nhất</option>
+                        <option value="CUSTOM">Tùy chỉnh ngày...</option>
+                    </select>
+                    <div id="customDateInputs" style="display:none; gap:6px; align-items:center;">
+                        <input type="date" class="ctrl" id="fltDateFrom" onchange="loadOrderTracking()">
+                        <span style="font-size:12px; color:#64748b;">đến</span>
+                        <input type="date" class="ctrl" id="fltDateTo" onchange="loadOrderTracking()">
+                    </div>
+                    <button class="btn btn-outline" onclick="exportProgressExcel()">⬇ Xuất báo cáo tiến độ</button>
+                </div>
+            </div>
+
+            <!-- 7 THẺ KPI THEO CÔNG ĐOẠN -->
+            <section class="kpi-7-row">
+                <div class="kpi-tile" onclick="selectStage('ALL')">
+                    <div class="kpi-ico" style="background:#ecfdf5; color:#059669;">📋</div>
+                    <div class="kpi-val" id="kpiAll">0</div>
+                    <div class="kpi-lbl">Tổng phiếu</div>
+                </div>
+                <div class="kpi-tile" onclick="selectStage('WAITING_PICK')">
+                    <div class="kpi-ico" style="background:#eff6ff; color:#2563eb;">🕒</div>
+                    <div class="kpi-val" id="kpiWaitPick">0</div>
+                    <div class="kpi-lbl">Chờ lấy hàng</div>
+                </div>
+                <div class="kpi-tile" onclick="selectStage('PICKING')">
+                    <div class="kpi-ico" style="background:#fffbeb; color:#d97706;">📦</div>
+                    <div class="kpi-val" id="kpiPicking">0</div>
+                    <div class="kpi-lbl">Đang OUT</div>
+                </div>
+                <div class="kpi-tile" onclick="selectStage('PREPACKING')">
+                    <div class="kpi-ico" style="background:#f5f3ff; color:#7c3aed;">🧩</div>
+                    <div class="kpi-val" id="kpiPrepack">0</div>
+                    <div class="kpi-lbl">Pre-packing</div>
+                </div>
+                <div class="kpi-tile" onclick="selectStage('PACKING')">
+                    <div class="kpi-ico" style="background:#ffedd5; color:#c2410c;">🛍️</div>
+                    <div class="kpi-val" id="kpiPacking">0</div>
+                    <div class="kpi-lbl">Đóng gói</div>
+                </div>
+                <div class="kpi-tile" onclick="selectStage('WAITING_HANDOVER')">
+                    <div class="kpi-ico" style="background:#e0f2fe; color:#0284c7;">🚚</div>
+                    <div class="kpi-val" id="kpiWaitHandover">0</div>
+                    <div class="kpi-lbl">Chờ bàn giao</div>
+                </div>
+                <div class="kpi-tile" onclick="selectStage('HANDED_OVER')">
+                    <div class="kpi-ico" style="background:#dcfce7; color:#15803d;">✅</div>
+                    <div class="kpi-val" id="kpiHandedOver">0</div>
+                    <div class="kpi-lbl">Đã bàn giao</div>
+                </div>
+            </section>
+
+            <!-- WORKSPACE: BẢNG DANH SÁCH (60%) + KHUNG CHI TIẾT CUỘN ĐỘC LẬP (40%) -->
+            <div class="tracking-workspace" id="trackingWorkspace">
+                <section class="card-box">
+                    <div class="stage-tabs">
+                        <button class="st-tab active" data-st="ALL" onclick="selectStage('ALL')">Tất cả (<span id="tbAll">0</span>)</button>
+                        <button class="st-tab" data-st="WAITING_PICK" onclick="selectStage('WAITING_PICK')">Chờ lấy hàng (<span id="tbWaitPick">0</span>)</button>
+                        <button class="st-tab" data-st="PICKING" onclick="selectStage('PICKING')">Đang OUT (<span id="tbPicking">0</span>)</button>
+                        <button class="st-tab" data-st="PREPACKING" onclick="selectStage('PREPACKING')">Pre-packing (<span id="tbPrepack">0</span>)</button>
+                        <button class="st-tab" data-st="PACKING" onclick="selectStage('PACKING')">Đóng gói (<span id="tbPacking">0</span>)</button>
+                        <button class="st-tab" data-st="WAITING_HANDOVER" onclick="selectStage('WAITING_HANDOVER')">Chờ bàn giao (<span id="tbWaitHandover">0</span>)</button>
+                        <button class="st-tab" data-st="HANDED_OVER" onclick="selectStage('HANDED_OVER')">Đã bàn giao (<span id="tbHandedOver">0</span>)</button>
+                    </div>
+
+                    <div class="filter-row">
+                        <input type="text" class="ctrl" id="fltKw" style="flex:1; min-width:190px;" placeholder="Tìm mã phiếu, mã đơn, sản phẩm..." oninput="renderTrackingTable()">
+                        <select class="ctrl" id="fltPlatform" onchange="renderTrackingTable()">
+                            <option value="ALL">Nguồn: Tất cả</option>
+                            <option value="Shopee">Shopee</option>
+                            <option value="TikTok">TikTok</option>
+                            <option value="Lazada">Lazada</option>
+                            <option value="Nội bộ">Nội bộ</option>
+                        </select>
+                        <select class="ctrl" id="fltStaff" onchange="renderTrackingTable()">
+                            <option value="ALL">Nhân viên: Tất cả</option>
+                        </select>
+                        <select class="ctrl" id="fltPriority" onchange="renderTrackingTable()">
+                            <option value="ALL">Ưu tiên: Tất cả</option>
+                            <option value="Khẩn">Khẩn</option>
+                            <option value="Bình thường">Bình thường</option>
+                        </select>
+                        <select class="ctrl" id="fltAlert" onchange="renderTrackingTable()">
+                            <option value="ALL">Cảnh báo: Tất cả</option>
+                            <option value="HAS_ALERT">Có cảnh báo ngoại lệ</option>
+                        </select>
+                    </div>
+
+                    <div style="overflow-x:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Mã phiếu</th>
+                                    <th>Mã đơn</th>
+                                    <th>Nguồn</th>
+                                    <th>Sản phẩm (SKU)</th>
+                                    <th>Yêu cầu</th>
+                                    <th>Đã OUT</th>
+                                    <th>Tiến độ toàn đơn</th>
+                                    <th>Trạng thái &amp; Cảnh báo</th>
+                                    <th>Thời hạn</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trackingTableBody">
+                                <tr><td colspan="10" style="text-align:center; color:#64748b;">Đang tải tiến độ xử lý đơn...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- KHUNG CHI TIẾT PHIẾU (HEADER + TABS GHIM CỐ ĐỊNH, CUỘN RIÊNG PHẦN GIỮA, NÚT Ở ĐÁY) -->
+                <aside class="detail-drawer" id="detailDrawer">
+                    <div class="drawer-fixed-top">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div>
+                                <h2 style="font-size:18px; font-weight:800;" id="dTitle">Chi tiết phiếu --</h2>
+                                <p style="font-size:12.5px; color:#64748b; margin-top:2px;" id="dSub">--</p>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span id="dStageBadge"></span>
+                                <button class="icon-eye" onclick="closeDetailDrawer()" title="Đóng khung chi tiết">✕</button>
+                            </div>
+                        </div>
+
+                        <div class="d-tabs">
+                            <button class="d-tab active" data-dtab="OVERVIEW" onclick="switchDrawerTab('OVERVIEW')">Tổng quan</button>
+                            <button class="d-tab" data-dtab="OUT" onclick="switchDrawerTab('OUT')">Lấy hàng (OUT)</button>
+                            <button class="d-tab" data-dtab="PREPACK" onclick="switchDrawerTab('PREPACK')">Pre-packing</button>
+                            <button class="d-tab" data-dtab="PACKING" onclick="switchDrawerTab('PACKING')">Đóng gói</button>
+                            <button class="d-tab" data-dtab="HANDOVER" onclick="switchDrawerTab('HANDOVER')">Bàn giao</button>
+                            <button class="d-tab" data-dtab="HISTORY" onclick="switchDrawerTab('HISTORY')">Lịch sử</button>
+                        </div>
+                    </div>
+
+                    <div class="drawer-scroll-body" id="drawerTabContent"></div>
+
+                    <div class="drawer-fixed-bottom" id="drawerFooterActions"></div>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let allOrders = [];
+        let currentStage = 'ALL';
+        let selectedPickId = null;
+        let currentDrawerTab = 'OVERVIEW';
+
+        function onDateRangeChange() {
+            const val = document.getElementById('fltDateRange').value;
+            document.getElementById('customDateInputs').style.display = (val === 'CUSTOM') ? 'inline-flex' : 'none';
+            if (val !== 'CUSTOM') loadOrderTracking();
+        }
+
+        function selectStage(st) {
+            currentStage = st;
+            document.querySelectorAll('.st-tab').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-st') === st);
+            });
+            renderTrackingTable();
+        }
+
+        function switchDrawerTab(tabKey) {
+            currentDrawerTab = tabKey;
+            document.querySelectorAll('.d-tab').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-dtab') === tabKey);
+            });
+            renderDrawerBody();
+        }
+
+        function closeDetailDrawer() {
+            selectedPickId = null;
+            document.getElementById('detailDrawer').classList.remove('open');
+            document.getElementById('trackingWorkspace').classList.remove('has-drawer');
+            renderTrackingTable();
+        }
+
+        function renderStageBadge(stageKey, label) {
+            if (stageKey === 'WAITING_PICK') return `<span class="badge bg-purple">🕒 ${label}</span>`;
+            if (stageKey === 'PICKING') return `<span class="badge bg-blue">📦 ${label}</span>`;
+            if (stageKey === 'PREPACKING') return `<span class="badge bg-purple">🧩 ${label}</span>`;
+            if (stageKey === 'PACKING') return `<span class="badge bg-amber">🛍️ ${label}</span>`;
+            if (stageKey === 'WAITING_HANDOVER') return `<span class="badge bg-blue">🚚 ${label}</span>`;
+            return `<span class="badge bg-green">✅ ${label}</span>`;
+        }
+
+        async function loadOrderTracking() {
+            const pill = document.getElementById('syncStatusPill');
+            const txt = document.getElementById('syncStatusText');
+            const range = document.getElementById('fltDateRange').value;
+            const dFrom = document.getElementById('fltDateFrom').value;
+            const dTo = document.getElementById('fltDateTo').value;
+
+            const qs = new URLSearchParams({ range, from: dFrom, to: dTo });
+            try {
+                const res = await fetch(`/api/dispatcher/order-tracking?${qs.toString()}`);
+                if (!res.ok) throw new Error('Sync failed');
+                const data = await res.json();
+
+                pill.classList.remove('offline');
+                txt.textContent = `Đồng bộ lúc ${data.synced_at}`;
+
+                allOrders = data.orders || [];
+                const c = data.counts || {};
+
+                document.getElementById('kpiAll').textContent = c.ALL || 0;
+                document.getElementById('kpiWaitPick').textContent = c.WAITING_PICK || 0;
+                document.getElementById('kpiPicking').textContent = c.PICKING || 0;
+                document.getElementById('kpiPrepack').textContent = c.PREPACKING || 0;
+                document.getElementById('kpiPacking').textContent = c.PACKING || 0;
+                document.getElementById('kpiWaitHandover').textContent = c.WAITING_HANDOVER || 0;
+                document.getElementById('kpiHandedOver').textContent = c.HANDED_OVER || 0;
+
+                document.getElementById('tbAll').textContent = c.ALL || 0;
+                document.getElementById('tbWaitPick').textContent = c.WAITING_PICK || 0;
+                document.getElementById('tbPicking').textContent = c.PICKING || 0;
+                document.getElementById('tbPrepack').textContent = c.PREPACKING || 0;
+                document.getElementById('tbPacking').textContent = c.PACKING || 0;
+                document.getElementById('tbWaitHandover').textContent = c.WAITING_HANDOVER || 0;
+                document.getElementById('tbHandedOver').textContent = c.HANDED_OVER || 0;
+
+                const fltStaff = document.getElementById('fltStaff');
+                const curS = fltStaff.value;
+                fltStaff.innerHTML = `<option value="ALL">Nhân viên: Tất cả</option>` +
+                    (data.staffs || []).map(s => `<option value="${s.name}">${s.label}</option>`).join('');
+                fltStaff.value = curS || 'ALL';
+
+                const urlPick = new URLSearchParams(window.location.search).get('pick_id');
+                if (urlPick && !selectedPickId && allOrders.some(x => x.pick_id === urlPick)) {
+                    selectedPickId = urlPick;
+                    document.getElementById('trackingWorkspace').classList.add('has-drawer');
+                    document.getElementById('detailDrawer').classList.add('open');
+                }
+
+                renderTrackingTable();
+                if (selectedPickId) renderDrawerBody();
+            } catch (err) {
+                pill.classList.add('offline');
+                txt.textContent = 'Mất kết nối đồng bộ · Dữ liệu có thể chưa cập nhật';
+            }
+        }
+
+        function renderTrackingTable() {
+            const kw = document.getElementById('fltKw').value.trim().toLowerCase();
+            const plat = document.getElementById('fltPlatform').value;
+            const stf = document.getElementById('fltStaff').value;
+            const prio = document.getElementById('fltPriority').value;
+            const alrt = document.getElementById('fltAlert').value;
+
+            const filtered = allOrders.filter(o => {
+                if (currentStage !== 'ALL' && o.stage_key !== currentStage) return false;
+                if (plat !== 'ALL' && o.platform.toLowerCase() !== plat.toLowerCase()) return false;
+                if (stf !== 'ALL' && o.assignee !== stf) return false;
+                if (prio !== 'ALL' && o.priority !== prio) return false;
+                if (alrt === 'HAS_ALERT' && (!o.alerts || o.alerts.length === 0)) return false;
+                if (kw && !(`${o.pick_id} ${o.order_code} ${o.sku_summary} ${o.assignee}`.toLowerCase().includes(kw))) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('trackingTableBody');
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#64748b; padding:24px;">Không có đơn hàng nào khớp điều kiện lọc.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(o => {
+                const alertsHtml = (o.alerts || []).map(a =>
+                    `<span class="badge ${a.level === 'danger' ? 'bg-red' : (a.level === 'warning' ? 'bg-amber' : 'bg-blue')}" style="margin-top:3px;">⚠ ${a.label}</span>`
+                ).join(' ');
+
+                return `
+                    <tr class="${selectedPickId === o.pick_id ? 'selected-row' : ''}" onclick="openDetailDrawer('${o.pick_id}')">
+                        <td><strong style="color:#086f68;">${o.pick_id}</strong></td>
+                        <td><strong>${o.order_code}</strong></td>
+                        <td>${o.platform}</td>
+                        <td><strong>${o.sku_summary}</strong></td>
+                        <td><strong>${o.total_req_pcs}</strong></td>
+                        <td style="color:#057a55; font-weight:700;">${o.total_out_pcs}</td>
+                        <td title="${o.weight_formula_note}">
+                            <div class="mini-prog">
+                                <div class="mini-track"><div class="mini-fill" style="width:${o.overall_progress_pct}%"></div></div>
+                                <span style="font-weight:700; font-size:11.5px;">${o.overall_progress_pct}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div>${renderStageBadge(o.stage_key, o.stage_label)}</div>
+                            <div>${alertsHtml}</div>
+                        </td>
+                        <td style="color:#475569;">${o.deadline}</td>
+                        <td>
+                            <button type="button" class="icon-eye" title="Xem chi tiết tiến độ" onclick="event.stopPropagation(); openDetailDrawer('${o.pick_id}')">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openDetailDrawer(pickId) {
+            selectedPickId = pickId;
+            document.getElementById('trackingWorkspace').classList.add('has-drawer');
+            document.getElementById('detailDrawer').classList.add('open');
+            renderTrackingTable();
+            renderDrawerBody();
+        }
+
+        function renderDrawerBody() {
+            const o = allOrders.find(x => x.pick_id === selectedPickId);
+            if (!o) return;
+
+            document.getElementById('dTitle').textContent = `Chi tiết phiếu ${o.pick_id}`;
+            document.getElementById('dSub').textContent = `${o.order_code} · ${o.platform}`;
+            document.getElementById('dStageBadge').innerHTML = renderStageBadge(o.stage_key, o.stage_label);
+
+            const box = document.getElementById('drawerTabContent');
+
+            if (currentDrawerTab === 'OVERVIEW') {
+                const skuTableRows = (o.sku_lines || []).map(l => `
+                    <tr>
+                        <td><strong>${l.sku}</strong></td>
+                        <td>${l.requested_pcs}</td>
+                        <td style="color:#057a55; font-weight:700;">${l.out_pcs}</td>
+                        <td style="color:#d97706; font-weight:700;">${l.packed_pcs}</td>
+                        <td style="color:#0369a1; font-weight:700;">${l.handed_pcs}</td>
+                    </tr>
+                `).join('');
+
+                box.innerHTML = `
+                    <!-- 3 THẺ SỐ LIỆU: YÊU CẦU / ĐÃ OUT / CÒN CẦN LẤY -->
+                    <div class="stat-3">
+                        <div class="stat-cell"><span>Yêu cầu</span><strong>${o.total_req_pcs} PCS</strong></div>
+                        <div class="stat-cell" style="background:#ecfdf5;"><span>Đã OUT</span><strong style="color:#057a55;">${o.total_out_pcs} PCS</strong></div>
+                        <div class="stat-cell" style="background:#eff6ff;"><span>Còn cần lấy</span><strong style="color:#0369a1;">${o.total_rem_out_pcs} PCS</strong></div>
+                    </div>
+
+                    <!-- THANH TIẾN ĐỘ LẤY HÀNG RIÊNG (OUT RÒNG / YÊU CẦU) -->
+                    <div class="out-prog-card">
+                        <div style="display:flex; justify-content:space-between; font-size:12.5px; font-weight:800; color:#065f46;">
+                            <span>Tiến độ lấy hàng (OUT)</span>
+                            <span>${o.pick_progress_pct}%</span>
+                        </div>
+                        <div class="out-prog-bar"><div class="out-prog-fill" style="width:${o.pick_progress_pct}%"></div></div>
+                        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#14532d;">
+                            <span>Còn cần lấy: <strong>${o.total_rem_out_pcs} PCS</strong></span>
+                            <span>Tiến độ toàn đơn: <strong>${o.overall_progress_pct}%</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- THÔNG TIN CHUNG ĐẦY ĐỦ -->
+                    <div class="d-box">
+                        <div class="d-box-title">Thông tin điều phối &amp; thực hiện</div>
+                        <div class="kv-row"><span>Nhân viên phụ trách</span><strong>${o.assignee}</strong></div>
+                        <div class="kv-row"><span>Độ ưu tiên</span><strong>${o.priority === 'Khẩn' ? '<span class="badge bg-red">Khẩn</span>' : 'Bình thường'}</strong></div>
+                        <div class="kv-row"><span>Hạn hoàn thành</span><strong>${o.deadline}</strong></div>
+                        <div class="kv-row"><span>Yêu cầu Combo</span><strong>${o.has_combo ? 'Có (Pre-packing)' : 'Không'}</strong></div>
+                        <div class="kv-row"><span>Cập nhật cuối</span><strong>${o.updated_at}</strong></div>
+                        <div class="kv-row"><span>Ghi chú</span><strong>${o.note || '—'}</strong></div>
+                    </div>
+
+                    <div class="d-box">
+                        <div class="d-box-title">Tiến độ chi tiết theo từng SKU</div>
+                        <table class="data-table">
+                            <thead><tr><th>SKU</th><th>Yêu cầu</th><th>Đã OUT</th><th>Đóng gói</th><th>Bàn giao</th></tr></thead>
+                            <tbody>${skuTableRows}</tbody>
+                        </table>
+                        <div style="font-size:11px; color:#64748b; margin-top:8px;">${o.weight_formula_note}</div>
+                    </div>
+                `;
+            } else if (currentDrawerTab === 'OUT') {
+                const rows = (o.tx_logs || []).map(tx => `
+                    <tr>
+                        <td><strong>${tx.box_id}</strong></td>
+                        <td>${tx.location}</td>
+                        <td style="font-weight:700; color:${tx.type === 'RETURNED' ? '#d97706' : '#057a55'};">
+                            ${tx.type === 'RETURNED' ? `RETURNED ${tx.qty_pcs} PCS` : `OUT ${tx.qty_pcs} PCS`}
+                        </td>
+                        <td>${tx.staff} · ${tx.time}</td>
+                    </tr>
+                `).join('');
+                box.innerHTML = `
+                    <div class="d-box">
+                        <div class="d-box-title">Giao dịch OUT &amp; RETURNED thực tế</div>
+                        <table class="data-table">
+                            <thead><tr><th>Box</th><th>Kệ/tầng</th><th>Biến động</th><th>Nhân viên / Giờ</th></tr></thead>
+                            <tbody>${rows || '<tr><td colspan="4" style="text-align:center; color:#64748b;">Chưa phát sinh giao dịch OUT.</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (currentDrawerTab === 'PREPACK') {
+                const pr = o.prepack_info;
+                box.innerHTML = pr.applicable ? `
+                    <div class="d-box">
+                        <div class="d-box-title">Chi tiết Pre-packing &amp; Combo (${pr.id})</div>
+                        <div class="kv-row"><span>Trạng thái</span><strong>${pr.status}</strong></div>
+                        <div class="kv-row"><span>Số lượng Combo đã chuẩn bị</span><strong>${pr.prepared_qty} / ${pr.required_qty} bộ</strong></div>
+                        <div class="kv-row"><span>Nhân viên thực hiện</span><strong>${pr.assignee}</strong></div>
+                    </div>
+                ` : `
+                    <div class="d-box" style="text-align:center; padding:28px 16px; color:#64748b;">
+                        <strong>Không áp dụng</strong>
+                        <p style="font-size:12.5px; margin-top:4px;">Đơn hàng sản phẩm lẻ, chuyển thẳng từ OUT sang Đóng gói.</p>
+                    </div>
+                `;
+            } else if (currentDrawerTab === 'PACKING') {
+                const pk = o.packing_info;
+                const pkgList = (pk.packages || []).map(p => `
+                    <div style="padding:7px 10px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; font-size:12px; margin-top:6px;">
+                        <strong>${p.package_code}</strong> (${p.condition || 'Nguyên vẹn'}) · ${(p.items || []).map(x => `${x.name}: ${x.qty} ${x.unit}`).join(', ')}
+                    </div>
+                `).join('');
+                box.innerHTML = `
+                    <div class="d-box">
+                        <div class="d-box-title">Thông tin đóng gói (${pk.id})</div>
+                        <div class="kv-row"><span>Trạng thái đóng gói</span><strong>${pk.status}</strong></div>
+                        <div class="kv-row"><span>Số kiện / Tổng PCS đã đóng</span><strong>${pk.packages_count} kiện · ${pk.packed_pcs} PCS</strong></div>
+                        <div class="kv-row"><span>Nhân viên đóng gói</span><strong>${pk.assignee}</strong></div>
+                        ${pkgList}
+                    </div>
+                `;
+            } else if (currentDrawerTab === 'HANDOVER') {
+                const ho = o.handover_info;
+                box.innerHTML = `
+                    <div class="d-box">
+                        <div class="d-box-title">Thông tin bàn giao (${ho.id})</div>
+                        <div class="kv-row"><span>Trạng thái bàn giao</span><strong>${ho.status}</strong></div>
+                        <div class="kv-row"><span>Mã đơn / Nền tảng</span><strong>${o.order_code} · ${o.platform}</strong></div>
+                        <div class="kv-row"><span>Người bàn giao (Staff)</span><strong>${ho.sender}</strong></div>
+                        <div class="kv-row"><span>Đơn vị / Người nhận</span><strong>${ho.receiver}</strong></div>
+                        <div class="kv-row"><span>Manager xác nhận</span><strong>${ho.reviewed_by} (${ho.reviewed_at})</strong></div>
+                        <div class="kv-row"><span>Tổng PCS bàn giao</span><strong>${ho.total_pcs} PCS</strong></div>
+                    </div>
+                `;
+            } else if (currentDrawerTab === 'HISTORY') {
+                const hList = (o.history || []).map(h => `
+                    <div style="padding:8px 10px; background:#f8fafc; border-left:3px solid #086f68; border-radius:6px; font-size:12px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>${h.event}</strong>
+                            <span style="color:#64748b; font-weight:600;">${h.time}</span>
+                        </div>
+                        <div style="color:#475569; margin-top:2px;">${h.detail} · <strong style="color:#086f68;">${h.actor}</strong></div>
+                    </div>
+                `).join('');
+                box.innerHTML = `
+                    <div class="d-box">
+                        <div class="d-box-title">Dòng thời gian xử lý (Điều phối · Staff · Manager)</div>
+                        <div style="display:flex; flex-direction:column; gap:7px;">${hList || '<div style="color:#64748b; font-size:12.5px;">Chưa có sự kiện ghi nhận.</div>'}</div>
+                    </div>
+                `;
+            }
+
+            // Chỉ hiển thị nút "Xử lý thiếu tồn" khi thực sự phát sinh thiếu tồn (has_real_shortage === true)
+            let footerHtml = `<a href="/dispatcher/picking-requests" class="btn btn-outline" style="flex:1;">👥 Đổi nhân viên</a>`;
+            if (o.has_real_shortage) {
+                footerHtml += `<a href="/dispatcher/picking-requests" class="btn btn-warn-soft" style="flex:1;">⚠️ Xử lý thiếu tồn</a>`;
+            }
+            document.getElementById('drawerFooterActions').innerHTML = footerHtml;
+        }
+
+        function exportProgressExcel() {
+            let csv = '\uFEFFMã phiếu,Mã đơn,Nguồn,Sản phẩm,PCS yêu cầu,Đã OUT,Tiến độ OUT (%),Tiến độ toàn đơn (%),Công đoạn,Thời hạn,Nhân viên\n';
+            allOrders.forEach(o => {
+                csv += `"${o.pick_id}","${o.order_code}","${o.platform}","${o.sku_summary}",${o.total_req_pcs},${o.total_out_pcs},${o.pick_progress_pct}%,${o.overall_progress_pct}%,"${o.stage_label}","${o.deadline}","${o.assignee}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `SANOVA_TheoDoiXuLyDon_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+        }
+
+        loadOrderTracking();
+        setInterval(loadOrderTracking, 5000);
+    </script>
+</body>
+</html>

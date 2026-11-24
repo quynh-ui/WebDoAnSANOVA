@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiểm kê kho · SANOVA WMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #063b2c;
+            --sidebar-active: #167963;
+            --brand-mint: #79b49f;
+            --primary: #0f766e;
+            --primary-hover: #0d5c56;
+            --bg-main: #f4f7f6;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --warning: #d97706;
+            --warning-bg: #fffbeb;
+            --info: #0284c7;
+            --info-bg: #f0f9ff;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+        }
+
+        /* ================= 1. SIDEBAR CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            left: 0;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .sidebar-top {
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .sidebar-top::-webkit-scrollbar { display: none; }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 10px 22px;
+        }
+
+        .brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-category {
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--brand-mint);
+            letter-spacing: 0.6px;
+            padding: 0 10px 14px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            color: #e2ece9;
+            text-decoration: none;
+            font-size: 14.5px;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.14);
+            padding-top: 14px;
+            margin-top: 10px;
+        }
+
+        .logout-link:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        /* ================= 2. VÙNG NỘI DUNG CHÍNH ================= */
+        .main-content {
+            flex-grow: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 24px 32px 48px;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #063b2c;
+            letter-spacing: -0.3px;
+        }
+
+        .page-sub {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header-icons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .circle-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #334155;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .circle-icon-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* 4 THẺ KPI 2x2 GIỐNG ẢNH MẪU */
+        .kpi-grid-2x2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-box {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 18px 20px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .kpi-box:hover {
+            border-color: #99f6e4;
+            transform: translateY(-2px);
+        }
+
+        .kpi-box-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .kpi-box-label {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .kpi-box-icon { color: var(--primary); }
+
+        .kpi-box-num {
+            font-size: 28px;
+            font-weight: 800;
+            color: #063b2c;
+            line-height: 1;
+        }
+
+        /* KHUNG CARD CHÍNH */
+        .workspace-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px 28px;
+            margin-bottom: 20px;
+        }
+
+        .section-head-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #063b2c;
+        }
+
+        .section-sub {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .count-pill {
+            padding: 5px 12px;
+            border-radius: 99px;
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 12.5px;
+            font-weight: 700;
+        }
+
+        .search-bar {
+            position: relative;
+            margin-bottom: 14px;
+        }
+
+        .search-bar svg {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            padding: 0 18px 0 42px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-input:focus { border-color: var(--primary); }
+
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .chip-btn {
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: #475569;
+            padding: 7px 15px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .chip-btn.active {
+            background: #eef2f1;
+            color: #063b2c;
+            border-color: #cbd5e1;
+        }
+
+        /* Thẻ phiếu kiểm kê giống ảnh mẫu */
+        .stocktake-cards-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .kk-card {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 20px;
+            background: #ffffff;
+            transition: all 0.15s;
+        }
+
+        .kk-card:hover {
+            border-color: #99f6e4;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+        }
+
+        .kk-card.recount-card {
+            border-left: 4px solid var(--danger);
+            background: #fffafa;
+        }
+
+        .kk-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .kk-code {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .status-pill {
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .st-doing { background: #e0f2fe; color: #0369a1; }
+        .st-waiting { background: #fef3c7; color: #b45309; }
+        .st-recount { background: #fee2e2; color: #b91c1c; }
+        .st-done { background: #dcfce7; color: #15803d; }
+
+        .kk-scope {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .kk-bottom-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 12px;
+        }
+
+        .kk-meta {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .btn-pill-action {
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: var(--text-dark);
+            padding: 7px 16px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-pill-action:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #f0fdf9;
+        }
+
+        .kk-track {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .kk-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 99px;
+            transition: width 0.3s ease;
+        }
+
+        /* ================= MÀN HÌNH 2 & 3: THỰC HIỆN KIỂM KÊ & TỔNG KẾT ================= */
+        .screen-view { display: none; }
+        .screen-view.active { display: block; }
+
+        .sub-panel {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px;
+            background: #f8fafc;
+            margin-bottom: 16px;
+        }
+
+        .loc-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .loc-chip-box {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .loc-chip-box span { display: block; font-size: 11px; color: var(--text-muted); }
+        .loc-chip-box strong { font-size: 17px; font-weight: 800; color: #063b2c; }
+
+        .two-col-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr;
+            gap: 18px;
+        }
+
+        .form-field { margin-bottom: 12px; }
+        .form-field label { display: block; font-size: 12.5px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+        .form-input, .form-select { width: 100%; height: 40px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 12px; font-size: 13.5px; background: #ffffff; outline: none; }
+        .form-input:focus { border-color: var(--primary); }
+
+        .inner-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .inner-table th {
+            background: #f1f5f9;
+            padding: 9px 12px;
+            text-align: left;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .inner-table td {
+            padding: 10px 12px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn-dark {
+            background: #0f172a;
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-outline {
+            background: #ffffff;
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-danger-outline {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .summary-grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .sum-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .sum-card span { display: block; font-size: 11.5px; color: var(--text-muted); margin-bottom: 4px; }
+        .sum-card strong { font-size: 19px; font-weight: 800; color: #063b2c; }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-backdrop.open { display: flex; }
+
+        .modal-card {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 460px;
+            max-width: 94vw;
+            padding: 22px;
+        }
+
+        @media (max-width: 960px) {
+            .kpi-grid-2x2, .two-col-layout, .summary-grid-5 { grid-template-columns: 1fr; }
+        }
+    </style>
+    <script src="/js/role_common.js"></script>
+    <script src="/js/sanova_xlsx_export.js"></script>
+</head>
+<body>
+
+    <!-- 1. SIDEBAR NHÂN VIÊN KHO SANOVA CỐ ĐỊNH -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path>
+                    <polyline points="7 5 12 8 17 5"></polyline>
+                    <line x1="12" y1="8" x2="12" y2="13"></line>
+                    <path d="M7 10L12 13V18L7 21L2 18V13L7 10Z"></path>
+                    <polyline points="2 13 7 16 12 13"></polyline>
+                    <line x1="7" y1="16" x2="7" y2="21"></line>
+                    <path d="M17 10L22 13V18L17 21L12 18V13L17 10Z"></path>
+                    <polyline points="12 13 17 16 22 13"></polyline>
+                    <line x1="17" y1="16" x2="17" y2="21"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">NHÂN VIÊN KHO</div>
+
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/staff/dashboard" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Tổng quan công việc</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/inbound" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><line x1="16" y1="19" x2="22" y2="19"></line><line x1="19" y1="16" x2="19" y2="22"></line></svg>
+                        <span>Nhập kho &amp; lưu trữ</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/scan" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+                        <span>Quét QR / Barcode</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/picking-returns" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+                        <span>Lấy hàng &amp; Trả hàng</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/prepacking" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path><path d="M7 10L12 13V18L7 21L2 18V13L7 10Z"></path><path d="M17 10L22 13V18L17 21L12 18V13L17 10Z"></path></svg>
+                        <span>Pre-packing &amp; Combo</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/packing-handover" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><polyline points="16 16 18 18 22 14"></polyline></svg>
+                        <span>Đóng gói &amp; Bàn giao</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/stocktake" class="nav-link active">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                        <span>Kiểm kê kho</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/history" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
+                        <span>Lịch sử giao dịch</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/staff/profile" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>Tài khoản cá nhân</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/logout" class="nav-link logout-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span>Đăng xuất</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- 2. VÙNG NỘI DUNG KIỂM KÊ KHO (3 MÀN HÌNH) -->
+    <main class="main-content">
+
+        <header class="top-header">
+            <div>
+                <h1 class="page-title">Kiểm kê kho</h1>
+                <p class="page-sub">Kiểm đếm Box, PCS và ghi nhận chênh lệch tồn kho</p>
+            </div>
+            <div class="header-icons">
+                <a href="/staff/dashboard" class="circle-icon-btn" title="Thông báo công việc">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </a>
+                <a href="/staff/profile" class="circle-icon-btn" title="Tài khoản cá nhân">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </a>
+            </div>
+        </header>
+
+        <!-- 4 THẺ KPI 2x2 GIỐNG ẢNH MẪU -->
+        <section class="kpi-grid-2x2">
+            <div class="kpi-box" onclick="filterStocktakeByStatus('Chờ thực hiện')">
+                <div class="kpi-box-top">
+                    <span class="kpi-box-label">Chờ kiểm kê</span>
+                    <span class="kpi-box-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg>
+                    </span>
+                </div>
+                <div class="kpi-box-num" id="kpiKkWait">00</div>
+            </div>
+
+            <div class="kpi-box" onclick="filterStocktakeByStatus('Đang kiểm kê')">
+                <div class="kpi-box-top">
+                    <span class="kpi-box-label">Đang kiểm kê</span>
+                    <span class="kpi-box-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path></svg>
+                    </span>
+                </div>
+                <div class="kpi-box-num" id="kpiKkDoing">00</div>
+            </div>
+
+            <div class="kpi-box" onclick="filterStocktakeByStatus('Chờ phê duyệt')">
+                <div class="kpi-box-top">
+                    <span class="kpi-box-label">Chờ xác nhận</span>
+                    <span class="kpi-box-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </span>
+                </div>
+                <div class="kpi-box-num" id="kpiKkWaiting">00</div>
+            </div>
+
+            <div class="kpi-box" onclick="filterStocktakeByStatus('Hoàn tất')">
+                <div class="kpi-box-top">
+                    <span class="kpi-box-label">Hoàn thành</span>
+                    <span class="kpi-box-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </span>
+                </div>
+                <div class="kpi-box-num" id="kpiKkDone">00</div>
+            </div>
+        </section>
+
+        <!-- ================= MÀN HÌNH 1: DANH SÁCH PHIẾU KIỂM KÊ ================= -->
+        <section class="workspace-card screen-view active" id="screenStocktakeList">
+            <div class="section-head-row">
+                <div>
+                    <h2 class="section-title">Danh sách phiếu kiểm kê</h2>
+                    <p class="section-sub">Các phiếu được Manager phân công cho nhân viên (STAFF không tự sửa tồn kho)</p>
+                </div>
+                <span class="count-pill" id="totalKkBadge">0 phiếu</span>
+            </div>
+
+            <div class="search-bar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" class="search-input" id="searchKkInput" placeholder="Tìm mã phiếu, khu vực, kệ..." oninput="renderStocktakeCards()">
+            </div>
+
+            <div class="filter-chips" id="kkFilterChips">
+                <button type="button" class="chip-btn active" data-st="ALL" onclick="filterStocktakeByStatus('ALL')">Tất cả</button>
+                <button type="button" class="chip-btn" data-st="Chờ thực hiện" onclick="filterStocktakeByStatus('Chờ thực hiện')">Chờ làm</button>
+                <button type="button" class="chip-btn" data-st="Đang kiểm kê" onclick="filterStocktakeByStatus('Đang kiểm kê')">Đang kiểm kê</button>
+                <button type="button" class="chip-btn" data-st="Chờ phê duyệt" onclick="filterStocktakeByStatus('Chờ phê duyệt')">Chờ xác nhận</button>
+                <button type="button" class="chip-btn" data-st="Hoàn tất" onclick="filterStocktakeByStatus('Hoàn tất')">Hoàn thành</button>
+            </div>
+
+            <div class="stocktake-cards-list" id="stocktakeCardsContainer"></div>
+        </section>
+
+        <!-- ================= MÀN HÌNH 2: THỰC HIỆN KIỂM KÊ ================= -->
+        <section class="workspace-card screen-view" id="screenStocktakeExecute">
+            <div class="section-head-row">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <button type="button" class="btn-outline" style="padding:5px 12px;" onclick="switchStocktakeScreen('screenStocktakeList')">← Quay lại danh sách</button>
+                        <h2 class="section-title" id="execKkCode">KK-0021</h2>
+                        <span class="status-pill" id="execKkStatusBadge">Đang kiểm kê</span>
+                        <span id="blindCountBadge" style="display:none; background:#fef3c7; color:#92400e; font-size:11.5px; font-weight:800; padding:4px 10px; border-radius:99px;">Chế độ Kiểm kê mù (Ẩn tồn hệ thống)</span>
+                    </div>
+                    <p class="section-sub" id="execKkMeta" style="margin-top:6px;">Phạm vi: -- · Mốc chốt tồn: --</p>
+                </div>
+                <button type="button" class="btn-dark" onclick="openSummaryScreen()">Xem tổng kết &amp; Gửi Manager →</button>
+            </div>
+
+            <div class="two-col-layout">
+                <!-- Cột trái: Quét vị trí & Quét QR Box + Nhập PCS thực tế -->
+                <div>
+                    <div class="sub-panel">
+                        <h4 style="font-size:14px; font-weight:800; color:#063b2c; margin-bottom:10px;">1. Quét mã vị trí kệ thực tế *</h4>
+                        <div style="display:flex; gap:8px; margin-bottom:10px;">
+                            <input type="text" class="form-input" id="kkScanShelfInput" placeholder="Quét mã vị trí (VD: A1-001)" onkeydown="if(event.key==='Enter'){ verifyShelfLocation(); }">
+                            <button type="button" class="btn-primary" onclick="verifyShelfLocation()">Xác nhận vị trí</button>
+                        </div>
+
+                        <div class="loc-grid-4">
+                            <div class="loc-chip-box"><span>Khu</span><strong id="locZoneVal">--</strong></div>
+                            <div class="loc-chip-box"><span>Kệ</span><strong id="locRackVal">--</strong></div>
+                            <div class="loc-chip-box"><span>Tầng</span><strong id="locFloorVal">--</strong></div>
+                            <div class="loc-chip-box"><span>Vị trí</span><strong id="locSlotVal">--</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="sub-panel">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h4 style="font-size:14px; font-weight:800; color:#063b2c;">2. Quét QR Box &amp; Kiểm đếm PCS</h4>
+                            <button type="button" class="btn-danger-outline" style="padding:5px 10px; font-size:12px;" onclick="document.getElementById('kkIssueModal').classList.add('open')">+ Ghi nhận bất thường</button>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Quét QR nội bộ của Box *</label>
+                            <input type="text" class="form-input" id="kkScanBoxInput" placeholder="Bắt buộc xác nhận vị trí kệ trước khi quét Box" disabled onkeydown="if(event.key==='Enter'){ onScanBoxForCount(); }">
+                        </div>
+
+                        <div id="kkBoxInfoBanner" style="display:none; background:#ffffff; border:1px solid #99f6e4; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:12.5px;"></div>
+
+                        <div class="form-field">
+                            <label>Số lượng PCS kiểm đếm thực tế *</label>
+                            <input type="number" class="form-input" id="kkCountedPcsInput" min="0" placeholder="Nhập số đếm thực tế..." disabled>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Tình trạng Box thực tế</label>
+                            <select class="form-select" id="kkBoxConditionSelect" disabled>
+                                <option value="Bình thường">Bình thường</option>
+                                <option value="Box bị hư hỏng / móp méo">Box bị hư hỏng / móp méo</option>
+                            </select>
+                        </div>
+
+                        <button type="button" class="btn-primary" style="width:100%;" id="btnSaveBoxCount" disabled onclick="submitBoxCount()">Lưu kết quả kiểm đếm Box</button>
+                    </div>
+                </div>
+
+                <!-- Cột phải: Danh sách Box tại vị trí & Tiến độ phạm vi -->
+                <div>
+                    <div class="sub-panel" style="margin-bottom:0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h4 style="font-size:14px; font-weight:800; color:#063b2c;">Danh sách Box tại vị trí (<span id="slotBoxesCountLabel">0</span> Box)</h4>
+                            <span id="execProgressLabel" style="font-size:12.5px; font-weight:800; color:#0f766e;">Đã kiểm: 0/0 vị trí</span>
+                        </div>
+                        <div style="overflow-x:auto; max-height:460px;">
+                            <table class="inner-table">
+                                <thead>
+                                    <tr>
+                                        <th>Box / Sản phẩm</th>
+                                        <th>Tồn hệ thống</th>
+                                        <th>PCS thực tế</th>
+                                        <th>Kết quả</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="slotBoxesTbody">
+                                    <tr><td colspan="4" style="text-align:center; color:#64748b; padding:24px;">Hãy quét mã vị trí kệ ở cột bên trái để hiển thị danh sách Box cần kiểm.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= MÀN HÌNH 3: TỔNG KẾT & GỬI MANAGER ================= -->
+        <section class="workspace-card screen-view" id="screenStocktakeSummary">
+            <div class="section-head-row">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button type="button" class="btn-outline" style="padding:5px 12px;" onclick="switchStocktakeScreen('screenStocktakeExecute')">← Quay lại kiểm đếm</button>
+                        <h2 class="section-title" id="sumKkTitle">Tổng kết kết quả kiểm kê</h2>
+                    </div>
+                    <p class="section-sub" style="margin-top:4px;">Đối chiếu số liệu sau kiểm đếm và gửi Manager phê duyệt điều chỉnh (STAFF không tự điều chỉnh tồn).</p>
+                </div>
+            </div>
+
+            <div class="summary-grid-5">
+                <div class="sum-card"><span>Vị trí đã kiểm</span><strong id="sumSlotsRatio">0/0</strong></div>
+                <div class="sum-card"><span>Box khớp 100%</span><strong id="sumMatchedBoxes" style="color:#059669;">0</strong></div>
+                <div class="sum-card"><span>Box thiếu / dư</span><strong id="sumDiffBoxes" style="color:#d97706;">0</strong></div>
+                <div class="sum-card"><span>Sai vị trí / Phát sinh</span><strong id="sumMiscBoxes" style="color:#0284c7;">0</strong></div>
+                <div class="sum-card"><span>Không tìm thấy / Hỏng</span><strong id="sumLostDamagedBoxes" style="color:#dc2626;">0</strong></div>
+            </div>
+
+            <div style="overflow-x:auto; margin-bottom:16px;">
+                <table class="inner-table">
+                    <thead>
+                        <tr>
+                            <th>Vị trí kệ</th>
+                            <th>BoxId / Sản phẩm</th>
+                            <th>Tồn mốc kiểm kê</th>
+                            <th>PCS thực tế</th>
+                            <th>Chênh lệch</th>
+                            <th>Ghi nhận tình trạng</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryDiffTbody"></tbody>
+                </table>
+            </div>
+
+            <div class="form-field">
+                <label>Giải trình chênh lệch &amp; Ghi chú gửi Manager xác nhận</label>
+                <input type="text" class="form-input" id="sumSubmitNoteInput" placeholder="Nhập giải trình nguyên nhân thiếu/dư hoặc báo cáo các vị trí bất thường...">
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+                <button type="button" class="btn-primary" id="btnSubmitStocktakeResult" onclick="submitStocktakeToManager()">Gửi kết quả kiểm kê cho Manager</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL GHI NHẬN BẤT THƯỜNG (KHÔNG TÌM THẤY BOX / SAI VỊ TRÍ / BOX PHÁT SINH) -->
+    <div class="modal-backdrop" id="kkIssueModal">
+        <div class="modal-card">
+            <h3 style="font-size:16px; font-weight:800; color:#991b1b; margin-bottom:8px;">Ghi nhận bất thường kiểm kê</h3>
+            <p style="font-size:12.5px; color:#475569; margin-bottom:12px;">Phân biệt rõ "Box không tìm thấy" với "Box có 0 PCS". STAFF không tự ý đổi vị trí hoặc xóa Box trên hệ thống.</p>
+            <div class="form-field">
+                <label>Loại bất thường *</label>
+                <select class="form-select" id="kkIssueTypeSelect" onchange="onIssueTypeChange()">
+                    <option value="NOT_FOUND">Không tìm thấy Box tại vị trí kệ</option>
+                    <option value="WRONG_LOCATION">Sai vị trí (Tìm thấy Box nằm nhầm kệ)</option>
+                    <option value="UNREGISTERED_BOX">Box phát sinh ngoài danh sách hệ thống</option>
+                    <option value="DAMAGED_BOX">Box bị hư hỏng / rách vỡ</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Mã Box / QR liên quan *</label>
+                <input type="text" class="form-input" id="kkIssueBoxCode" placeholder="Nhập hoặc quét mã Box...">
+            </div>
+            <div class="form-field" id="kkIssueExtraGroup" style="display:none;">
+                <label id="kkIssueExtraLabel">Mã SKU &amp; Số PCS thực tế</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" class="form-input" id="kkIssueSkuInput" placeholder="Mã SKU (VD: SP0001)">
+                    <input type="number" class="form-input" id="kkIssuePcsInput" min="0" value="1" placeholder="Số PCS">
+                </div>
+            </div>
+            <div class="form-field">
+                <label>Ghi chú chi tiết *</label>
+                <input type="text" class="form-input" id="kkIssueNoteInput" placeholder="Mô tả chi tiết tình trạng thực tế...">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+                <button type="button" class="btn-outline" onclick="document.getElementById('kkIssueModal').classList.remove('open')">Hủy</button>
+                <button type="button" class="btn-danger-outline" onclick="submitStocktakeIssue()">Lưu ghi nhận bất thường</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let kkState = {
+            sessions: [],
+            statusFilter: 'ALL',
+            activeSession: null,
+            verifiedSlotCode: '',
+            slotBoxes: [],
+            selectedBox: null
+        };
+
+        function switchStocktakeScreen(screenId) {
+            document.querySelectorAll('.screen-view').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function filterStocktakeByStatus(st) {
+            kkState.statusFilter = st;
+            document.querySelectorAll('#kkFilterChips .chip-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.st === st);
+            });
+            switchStocktakeScreen('screenStocktakeList');
+            renderStocktakeCards();
+        }
+
+        async function loadStocktakeSessions() {
+            try {
+                const res = await fetch('/api/staff/stock-counts', { credentials: 'same-origin', cache: 'no-store' });
+                if (!res.ok) return;
+                const data = await res.json();
+                kkState.sessions = data.sessions || [];
+
+                const stats = data.stats || {};
+                document.getElementById('kpiKkWait').textContent = String(stats.waiting ?? 0).padStart(2, '0');
+                document.getElementById('kpiKkDoing').textContent = String(stats.counting ?? 0).padStart(2, '0');
+                document.getElementById('kpiKkWaiting').textContent = String(stats.pending_approval ?? 0).padStart(2, '0');
+                document.getElementById('kpiKkDone').textContent = String(stats.completed ?? 0).padStart(2, '0');
+                document.getElementById('totalKkBadge').textContent = `${kkState.sessions.length} phiếu`;
+
+                renderStocktakeCards();
+
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('ticket')) {
+                    openStocktakeDetail(params.get('ticket'));
+                }
+            } catch (e) {}
+        }
+
+        function getKkStatusClass(st) {
+            if (st === 'Đang kiểm kê') return 'st-doing';
+            if (st === 'Chờ phê duyệt') return 'st-waiting';
+            if (st === 'Yêu cầu kiểm lại') return 'st-recount';
+            if (st === 'Hoàn tất') return 'st-done';
+            return '';
+        }
+
+        function renderStocktakeCards() {
+            const container = document.getElementById('stocktakeCardsContainer');
+            const kw = (document.getElementById('searchKkInput').value || '').trim().toLowerCase();
+
+            const filtered = kkState.sessions.filter(s => {
+                if (kkState.statusFilter !== 'ALL' && s.status !== kkState.statusFilter) return false;
+                if (kw) {
+                    const hay = `${s.id} ${s.scope} ${s.scope_type_label}`.toLowerCase();
+                    if (!hay.includes(kw)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:32px; color:#64748b; border:1px dashed #cbd5e1; border-radius:12px;">Chưa có phiếu kiểm kê nào được phân công cho bạn.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(s => {
+                const total = Number(s.total_slots || 1);
+                const counted = Number(s.counted_slots || 0);
+                const pct = Math.min(100, Math.round((counted / total) * 100));
+                const isRecount = s.status === 'Yêu cầu kiểm lại';
+                const btnText = s.status === 'Chờ thực hiện' ? 'Bắt đầu →' : 'Xem phiếu →';
+
+                return `
+                    <div class="kk-card ${isRecount ? 'recount-card' : ''}">
+                        <div class="kk-top">
+                            <span class="kk-code">${s.id}</span>
+                            <span class="status-pill ${getKkStatusClass(s.status)}">${s.status}</span>
+                        </div>
+                        <div class="kk-scope">${s.scope}</div>
+                        <div class="kk-bottom-row">
+                            <span class="kk-meta">${s.scope_type_label || 'Định kỳ'} · ${counted}/${total} vị trí · Hạn: ${s.time_range || '--'}</span>
+                            <button type="button" class="btn-pill-action" onclick="openStocktakeDetail('${s.id}')">${btnText}</button>
+                        </div>
+                        <div class="kk-track">
+                            <div class="kk-fill" style="width:${pct}%;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function openStocktakeDetail(sessionId) {
+            const res = await fetch(`/api/staff/stock-counts/${encodeURIComponent(sessionId)}`, { credentials: 'same-origin', cache: 'no-store' });
+            if (!res.ok) return;
+            const data = await res.json();
+            let sess = data.session;
+
+            // Nếu đang ở trạng thái Chờ thực hiện -> Tự động gọi /start để chốt mốc tồn kho
+            if (sess.status === 'Chờ thực hiện') {
+                const startRes = await fetch(`/api/staff/stock-counts/${encodeURIComponent(sessionId)}/start`, {
+                    method: 'POST', credentials: 'same-origin'
+                });
+                if (startRes.ok) {
+                    const startData = await startRes.json();
+                    sess = startData.session || sess;
+                }
+            }
+
+            kkState.activeSession = sess;
+            kkState.verifiedSlotCode = '';
+            kkState.slotBoxes = [];
+            kkState.selectedBox = null;
+
+            switchStocktakeScreen('screenStocktakeExecute');
+
+            document.getElementById('execKkCode').textContent = sess.id;
+            const badge = document.getElementById('execKkStatusBadge');
+            badge.textContent = sess.status;
+            badge.className = `status-pill ${getKkStatusClass(sess.status)}`;
+
+            document.getElementById('blindCountBadge').style.display = sess.blind_count ? 'inline-block' : 'none';
+            document.getElementById('execKkMeta').textContent =
+                `Phạm vi: ${sess.scope} · Mốc chốt tồn: ${sess.snapshot_time || '--'}`;
+            document.getElementById('execProgressLabel').textContent =
+                `Đã kiểm: ${sess.counted_slots || 0}/${sess.total_slots || 0} vị trí`;
+
+            // Reset ô quét vị trí & Box
+            document.getElementById('kkScanShelfInput').value = '';
+            ['locZoneVal', 'locRackVal', 'locFloorVal', 'locSlotVal'].forEach(id => document.getElementById(id).textContent = '--');
+            document.getElementById('kkScanBoxInput').value = '';
+            document.getElementById('kkScanBoxInput').disabled = true;
+            document.getElementById('kkCountedPcsInput').value = '';
+            document.getElementById('kkCountedPcsInput').disabled = true;
+            document.getElementById('kkBoxConditionSelect').disabled = true;
+            document.getElementById('btnSaveBoxCount').disabled = true;
+            document.getElementById('kkBoxInfoBanner').style.display = 'none';
+            document.getElementById('slotBoxesCountLabel').textContent = '0';
+            document.getElementById('slotBoxesTbody').innerHTML =
+                `<tr><td colspan="4" style="text-align:center; color:#64748b; padding:24px;">Hãy quét mã vị trí kệ ở cột bên trái để hiển thị danh sách Box cần kiểm.</td></tr>`;
+        }
+
+        // Bước 2: Quét & xác nhận đúng vị trí kệ trước khi kiểm đếm Box
+        async function verifyShelfLocation() {
+            if (!kkState.activeSession) return;
+            const slotCode = document.getElementById('kkScanShelfInput').value.trim().toUpperCase();
+            if (!slotCode) {
+                alert('Vui lòng nhập hoặc quét mã vị trí kệ.');
+                return;
+            }
+
+            const res = await fetch(`/api/staff/stock-counts/${encodeURIComponent(kkState.activeSession.id)}/scan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ scan_type: 'SHELF', code: slotCode })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Vị trí kệ không thuộc phạm vi kiểm kê này!');
+                return;
+            }
+
+            kkState.verifiedSlotCode = data.slot_code;
+            kkState.slotBoxes = data.boxes || [];
+
+            document.getElementById('locZoneVal').textContent = data.hierarchy.zone || '--';
+            document.getElementById('locRackVal').textContent = data.hierarchy.rack || '--';
+            document.getElementById('locFloorVal').textContent = data.hierarchy.floor || '--';
+            document.getElementById('locSlotVal').textContent = data.slot_code;
+
+            // Mở khóa ô quét QR Box
+            const boxInput = document.getElementById('kkScanBoxInput');
+            boxInput.disabled = false;
+            boxInput.placeholder = `Quét QR Box tại vị trí ${data.slot_code}...`;
+            boxInput.focus();
+
+            renderSlotBoxesTable();
+        }
+
+        function renderSlotBoxesTable() {
+            const isBlind = Boolean(kkState.activeSession && kkState.activeSession.blind_count);
+            document.getElementById('slotBoxesCountLabel').textContent = kkState.slotBoxes.length;
+            const tbody = document.getElementById('slotBoxesTbody');
+
+            if (kkState.slotBoxes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b; padding:20px;">Vị trí ${kkState.verifiedSlotCode} hiện không có Box nào trên hệ thống.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = kkState.slotBoxes.map(b => {
+                const isCounted = b.counted_pcs !== null && b.counted_pcs !== undefined;
+                const sysStr = (isBlind && !isCounted) ? '<em>Ẩn (Kiểm mù)</em>' : `${b.system_pcs} PCS`;
+                const actStr = isCounted ? `<strong>${b.counted_pcs} PCS</strong>` : '—';
+
+                let resBadge = `<span class="status-pill">Chưa kiểm</span>`;
+                if (b.issue_type === 'NOT_FOUND') {
+                    resBadge = `<span class="status-pill st-recount">Không tìm thấy</span>`;
+                } else if (b.issue_type === 'UNREGISTERED_BOX') {
+                    resBadge = `<span class="status-pill st-doing">Box phát sinh</span>`;
+                } else if (isCounted) {
+                    const diff = Number(b.counted_pcs) - Number(b.system_pcs);
+                    if (diff === 0) resBadge = `<span class="status-pill st-done">Khớp</span>`;
+                    else if (diff < 0) resBadge = `<span class="status-pill st-recount">Thiếu ${Math.abs(diff)}</span>`;
+                    else resBadge = `<span class="status-pill st-waiting">Dư +${diff}</span>`;
+                }
+
+                return `
+                    <tr style="cursor:pointer;" onclick="selectBoxFromTable('${b.box_id}')">
+                        <td><strong>${b.box_id}</strong><br><span style="font-size:11.5px; color:#64748b;">${b.sku} · ${b.product_name}</span></td>
+                        <td>${sysStr}</td>
+                        <td>${actStr}</td>
+                        <td>${resBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function selectBoxFromTable(boxId) {
+            document.getElementById('kkScanBoxInput').value = boxId;
+            onScanBoxForCount();
+        }
+
+        async function onScanBoxForCount() {
+            const boxCode = document.getElementById('kkScanBoxInput').value.trim();
+            if (!boxCode || !kkState.verifiedSlotCode) return;
+
+            const res = await fetch(`/api/staff/stock-counts/${encodeURIComponent(kkState.activeSession.id)}/scan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    scan_type: 'BOX',
+                    slot_code: kkState.verifiedSlotCode,
+                    code: boxCode
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Mã Box không hợp lệ tại vị trí này!');
+                return;
+            }
+
+            if (data.already_counted) {
+                if (!confirm(`Cảnh báo: Box ${data.box.box_id} đã được kiểm đếm trước đó (${data.box.counted_pcs} PCS). Bạn có muốn kiểm đếm lại lượt mới không?`)) {
+                    return;
+                }
+            }
+
+            kkState.selectedBox = data.box;
+            const banner = document.getElementById('kkBoxInfoBanner');
+            banner.style.display = 'block';
+            banner.innerHTML = `<strong>${data.box.box_id}</strong> · ${data.box.sku} (${data.box.product_name})` +
+                (kkState.activeSession.blind_count ? '' : ` · Tồn hệ thống: <strong>${data.box.system_pcs} PCS</strong>`);
+
+            const pcsInput = document.getElementById('kkCountedPcsInput');
+            pcsInput.disabled = false;
+            pcsInput.value = '';
+            pcsInput.focus();
+            document.getElementById('kkBoxConditionSelect').disabled = false;
+            document.getElementById('btnSaveBoxCount').disabled = false;
+        }
+
+        async function submitBoxCount() {
+            if (!kkState.activeSession || !kkState.selectedBox) return;
+            const rawVal = document.getElementById('kkCountedPcsInput').value;
+            if (rawVal === '' || Number(rawVal) < 0) {
+                alert('Vui lòng nhập số lượng PCS kiểm đếm thực tế (>= 0).');
+                return;
+            }
+
+            const res = await fetch(`/api/staff/stock-counts/${encodeURIComponent(kkState.activeSession.id)}/counts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    slot_code: kkState.verifiedSlotCode,
+                    box_id: kkState.selectedBox.box_id,
+                    counted_pcs: Number(rawVal),
+                    condition: document.getElementById('kkBoxConditionSelect').value
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Lỗi lưu kết quả kiểm đếm');
+                return;
+            }
+
+            kkState.slotBoxes = data.slot_boxes || kkState.slotBoxes;
+            document.getElementById('execProgressLabel').textContent =
+                `Đã kiểm: ${data.counted_slots}/${data.total_slots} vị trí`;
+            document.getElementById('kkScanBoxInput').value = '';
+            document.getElementById('kkCountedPcsInput').value = '';
+            document.getElementById('kkBoxInfoBanner').style.display = 'none';
+            renderSlotBoxesTable();
+        }
+
+        function onIssueTypeChange() {
+            const t = document.getElementById('kkIssueTypeSelect').value;
+            const extra = document.getElementById('kkIssueExtraGroup');
+            extra.style.display = (t === 'UNREGISTERED_BOX' || t === 'WRONG_LOCATION') ? 'block' : 'none';
+        }
+
+        async function submitStocktakeIssue() {
+            if (!kkState.activeSession) return;
+            const payload = {
+                slot_code: kkState.verifiedSlotCode || document.getElementById('kkScanShelfInput').value.trim().toUpperCase(),
+                issue_type: document.getElementById('kkIssueTypeSelect').value,
+                box_code: document.getElementById('kkIssueBoxCode').value.trim(),
+                sku: document.getElementById('kkIssueSkuInput').value.trim().toUpperCase(),
+                actual_pcs: Number(document.getElementById('kkIssuePcsInput').value || 0),
+                note: document.getElementById('kkIssueNoteInput').value.trim()
+            };
+
+            const res = await fetch(`/api/staff/stock-counts/${encodeURIComponent(kkState.activeSession.id)}/issues`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Không thể ghi nhận bất thường');
+                return;
+            }
+            alert(data.message || 'Đã ghi nhận bất thường kiểm kê.');
+            document.getElementById('kkIssueModal').classList.remove('open');
+            if (kkState.verifiedSlotCode) {
+                verifyShelfLocation();
+            }
+        }
+
+        // Màn hình 3: Tổng kết & Gửi Manager
+        async function openSummaryScreen() {
+            if (!kkState.activeSession) return;
+            const res = await fetch(`/api/staff/stock-counts/${encodeURIComponent(kkState.activeSession.id)}/summary`, {
+                credentials: 'same-origin', cache: 'no-store'
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+
+            switchStocktakeScreen('screenStocktakeSummary');
+            document.getElementById('sumKkTitle').textContent = `Tổng kết kết quả kiểm kê · ${data.session_id}`;
+            document.getElementById('sumSlotsRatio').textContent = `${data.counted_slots}/${data.total_slots}`;
+            document.getElementById('sumMatchedBoxes').textContent = data.matched_boxes;
+            document.getElementById('sumDiffBoxes').textContent = data.diff_boxes;
+            document.getElementById('sumMiscBoxes').textContent = data.misc_boxes;
+            document.getElementById('sumLostDamagedBoxes').textContent = data.lost_damaged_boxes;
+
+            const isLocked = (data.status === 'Chờ phê duyệt' || data.status === 'Hoàn tất');
+            document.getElementById('btnSubmitStocktakeResult').disabled = isLocked;
+
+            const rows = data.records || [];
+            document.getElementById('summaryDiffTbody').innerHTML = rows.length === 0
+                ? `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:18px;">Chưa có dữ liệu kiểm đếm nào được ghi nhận.</td></tr>`
+                : rows.map(r => {
+                    const diff = Number(r.counted_pcs || 0) - Number(r.system_pcs || 0);
+                    return `
+                        <tr>
+                            <td><strong>${r.slot_code}</strong></td>
+                            <td><strong>${r.box_id}</strong> · ${r.sku}</td>
+                            <td>${r.system_pcs} PCS</td>
+                            <td><strong>${r.issue_type === 'NOT_FOUND' ? 'Không tìm thấy' : r.counted_pcs + ' PCS'}</strong></td>
+                            <td style="font-weight:700; color:${diff < 0 ? '#dc2626' : (diff > 0 ? '#d97706' : '#059669')};">${diff > 0 ? '+' + diff : diff}</td>
+                            <td>${r.condition || 'Bình thường'}</td>
+                        </tr>
+                    `;
+                }).join('');
+        }
+
+        async function submitStocktakeToManager() {
+            if (!kkState.activeSession) return;
+            const note = document.getElementById('sumSubmitNoteInput').value.trim();
+            const res = await fetch(`/api/staff/stock-counts/${encodeURIComponent(kkState.activeSession.id)}/submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ note: note })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                alert(data.error || 'Không thể gửi kết quả kiểm kê');
+                return;
+            }
+            alert(data.message || 'Đã gửi kết quả kiểm kê sang Manager phê duyệt thành công!');
+            await loadStocktakeSessions();
+            switchStocktakeScreen('screenStocktakeList');
+        }
+
+        loadStocktakeSessions();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tổng quan điều phối · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #086f68;
+            --brand-teal: #086f68;
+            --brand-green: #057a55;
+            --mint-label: #34d399;
+            --mint-text: #a7f3d0;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+        }
+
+        /* SIDEBAR CỐ ĐỊNH - TÀI KHOẢN & ĐĂNG XUẤT SÁT NHAU Ở ĐÁY */
+        .sidebar {
+            width: 248px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ecfdf5;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 90;
+            user-select: none;
+        }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 0 10px 22px;
+        }
+
+        .brand-name {
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: 1.1px;
+            color: #ffffff;
+        }
+
+        .nav-category {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--mint-label);
+            padding: 0 12px 12px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            color: var(--mint-text);
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 600;
+            transition: all 0.16s ease;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            padding-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .logout-link:hover {
+            background-color: rgba(220, 38, 38, 0.22);
+            color: #fca5a5;
+        }
+
+        /* VÙNG NỘI DUNG CHÍNH */
+        .main-wrapper {
+            flex: 1;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* TOP BAR */
+        .top-navbar {
+            height: 54px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 0 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .top-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #475569;
+            font-size: 13px;
+        }
+
+        .sync-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+            padding: 4px 11px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .sync-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .top-nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .bell-wrapper {
+            position: relative;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #334155;
+            transition: background 0.15s;
+        }
+        .bell-wrapper:hover { background: #f1f5f9; }
+
+        .bell-count {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            min-width: 17px;
+            height: 17px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .bell-dropdown {
+            position: absolute;
+            top: 44px;
+            right: 0;
+            width: 340px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+            padding: 12px;
+            display: none;
+            z-index: 120;
+        }
+        .bell-dropdown.open { display: block; }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        /* NỘI DUNG DASHBOARD */
+        .content-body {
+            padding: 20px 28px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .page-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .page-title {
+            font-size: 26px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+
+        .page-subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 9px;
+            padding: 0 12px;
+            height: 38px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .filter-box input[type="date"],
+        .filter-box select {
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0f172a;
+            cursor: pointer;
+        }
+
+        /* 6 THẺ KPI THEO MẪU CHỐT */
+        .kpi-6-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 14px;
+        }
+        @media (max-width: 1320px) { .kpi-6-row { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px)  { .kpi-6-row { grid-template-columns: repeat(2, 1fr); } }
+
+        .kpi-tile {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            padding: 15px 16px 13px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 112px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+        }
+
+        .kpi-tile::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 16px;
+            right: 16px;
+            height: 3.5px;
+            border-radius: 3px 3px 0 0;
+        }
+        .tile-green::after  { background: #10b981; }
+        .tile-blue::after   { background: #3b82f6; }
+        .tile-amber::after  { background: #f59e0b; }
+        .tile-teal::after   { background: #059669; }
+        .tile-purple::after { background: #8b5cf6; }
+        .tile-red::after    { background: #ef4444; }
+
+        .kpi-top-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .kpi-num {
+            font-size: 26px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+
+        .kpi-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 12.5px;
+        }
+
+        .kpi-name {
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .kpi-delta {
+            font-weight: 700;
+            font-size: 11.5px;
+            color: #059669;
+        }
+
+        /* HÀNG GIỮA: CÔNG VIỆC CẦN XỬ LÝ + TIẾN ĐỘ XỬ LÝ HÔM NAY */
+        .mid-grid {
+            display: grid;
+            grid-template-columns: 1.25fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 1120px) { .mid-grid { grid-template-columns: 1fr; } }
+
+        .panel-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 20px;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .link-more {
+            font-size: 13px;
+            font-weight: 700;
+            color: #086f68;
+            text-decoration: none;
+        }
+        .link-more:hover { text-decoration: underline; }
+
+        /* DANH SÁCH CÔNG VIỆC CẦN XỬ LÝ */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .task-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 4px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .task-row:last-child { border-bottom: none; }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .task-ico {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .task-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .task-sub {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .task-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .task-time {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        /* BIỂU ĐỒ DONUT TIẾN ĐỘ XỬ LÝ */
+        .progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding-top: 6px;
+        }
+
+        .donut-box {
+            position: relative;
+            width: 146px;
+            height: 146px;
+            flex-shrink: 0;
+        }
+
+        .donut-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .donut-pct {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+
+        .donut-lbl {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .legend-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 11px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .legend-left {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .dot-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .legend-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .legend-pcs {
+            font-size: 11.5px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        /* BẢNG DANH SÁCH PHIẾU GẦN ĐÂY & HOẠT ĐỘNG GẦN ĐÂY */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 11px 14px;
+            border-bottom: 1.5px solid var(--border);
+        }
+
+        .data-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            color: #0f172a;
+        }
+
+        .data-table tr:hover td { background: #f8fafc; }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 11px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+        .bg-amber  { background: #fef3c7; color: #b45309; }
+        .bg-blue   { background: #e0f2fe; color: #0369a1; }
+        .bg-green  { background: #dcfce7; color: #15803d; }
+        .bg-purple { background: #f3e8ff; color: #7e22ce; }
+        .bg-red    { background: #fee2e2; color: #b91c1c; }
+        .bg-gray   { background: #f1f5f9; color: #475569; }
+
+        .btn-detail-link {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #086f68;
+            text-decoration: none;
+        }
+        .btn-detail-link:hover { text-decoration: underline; }
+
+        /* HOẠT ĐỘNG GẦN ĐÂY */
+        .activity-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .activity-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-radius: 9px;
+            border: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+    </style>
+    <script src="/js/role_common.js"></script>
+    <script src="/js/sanova_xlsx_export.js"></script>
+</head>
+<body>
+    
+    <!-- SIDEBAR ĐIỀU PHỐI KHO GỘP TRỰC TIẾP -->
+    <aside class="sidebar">
+        <div>
+            <div class="brand-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">ĐIỀU PHỐI KHO</div>
+
+            <ul class="nav-list">
+                <li>
+                    <a href="/dispatcher" class="nav-link active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Tổng quan</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/picking-requests" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M9 12h6"></path><path d="M9 16h6"></path></svg>
+                        <span>Yêu cầu lấy hàng</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/order-tracking" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 7 2 2 4-4"></path><path d="m3 17 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+                        <span>Theo dõi xử lý đơn</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/reconciliation-data" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+                        <span>Dữ liệu đối soát</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/outbound-reconciliation" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>
+                        <span>Đối soát xuất hàng</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/reports" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        <span>Báo cáo &amp; lịch sử</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="/dispatcher/profile" class="nav-link ">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>Tài khoản cá nhân</span>
+            </a>
+            <a href="/logout" class="nav-link logout-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span>Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <!-- THANH ĐIỀU HƯỚNG TRÊN CÙNG (CHUÔNG THÔNG BÁO + TÀI KHOẢN) -->
+        <div class="top-navbar">
+            <div class="top-nav-left">
+                <span class="sync-badge"><span class="sync-dot"></span> Đồng bộ thời gian thực · <span id="syncClock">--:--:--</span></span>
+            </div>
+            <div class="top-nav-right">
+                <!-- CHUÔNG THÔNG BÁO ĐỒNG BỘ -->
+                <div class="bell-wrapper" onclick="toggleBellDropdown(event)" title="Thông báo điều phối">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span class="bell-count" id="bellBadgeCount">0</span>
+                    <div class="bell-dropdown" id="bellDropdown" onclick="event.stopPropagation()">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid #e2e8f0; margin-bottom:8px;">
+                            <span style="font-size:13px; font-weight:800; color:#0f172a;">Thông báo điều phối</span>
+                            <button type="button" onclick="markAllDispNotiRead()" style="background:none; border:none; color:#057a55; font-size:11.5px; font-weight:700; cursor:pointer;">Đánh dấu đã đọc</button>
+                        </div>
+                        <div id="bellList" style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto;">
+                            <div style="font-size:12.5px; color:#64748b; text-align:center; padding:12px;">Đang tải thông báo...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="user-chip">
+                    <div class="user-avatar">ĐP</div>
+                    <span><span data-sanova-user-name>Nguyễn Văn D</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <!-- 1. HEADER & BỘ LỌC NGÀY + NỀN TẢNG -->
+            <header class="page-header-row">
+                <div>
+                    <h1 class="page-title">Tổng quan</h1>
+                    <p class="page-subtitle">Theo dõi hoạt động điều phối kho</p>
+                </div>
+                <div class="filter-bar">
+                    <div class="filter-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <input type="date" id="filterDateFrom" onchange="loadDispatcherDashboard(true)">
+                        <span>-</span>
+                        <input type="date" id="filterDateTo" onchange="loadDispatcherDashboard(true)">
+                    </div>
+                    <div class="filter-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        <select id="filterPlatform" onchange="loadDispatcherDashboard(true)">
+                            <option value="ALL">Tất cả nền tảng</option>
+                            <option value="Shopee">Shopee</option>
+                            <option value="TikTok">TikTok</option>
+                            <option value="Lazada">Lazada</option>
+                            <option value="Website">Website / B2B</option>
+                        </select>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 2. 6 THẺ KPI ĐẾM THEO PHIẾU -->
+            <section class="kpi-6-row">
+                <div class="kpi-tile tile-green">
+                    <div class="kpi-top-icon" style="background:#ecfdf5; color:#059669;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="8" height="4" x="8" y="2" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><polyline points="9 14 11 16 15 12"></polyline></svg>
+                    </div>
+                    <div class="kpi-num" id="kpiTotalTickets">00</div>
+                    <div class="kpi-foot">
+                        <span class="kpi-name">Tổng phiếu</span>
+                        <span class="kpi-delta" id="deltaTotal">+0%</span>
+                    </div>
+                </div>
+
+                <div class="kpi-tile tile-blue">
+                    <div class="kpi-top-icon" style="background:#eff6ff; color:#2563eb;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </div>
+                    <div class="kpi-num" id="kpiProcessing">00</div>
+                    <div class="kpi-foot">
+                        <span class="kpi-name">Đang xử lý</span>
+                        <span class="kpi-delta" id="deltaProcessing">+0%</span>
+                    </div>
+                </div>
+
+                <div class="kpi-tile tile-amber">
+                    <div class="kpi-top-icon" style="background:#fef2f2; color:#dc2626;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </div>
+                    <div class="kpi-num" id="kpiShortage">00</div>
+                    <div class="kpi-foot">
+                        <span class="kpi-name">Thiếu tồn</span>
+                        <span class="kpi-delta" id="deltaShortage">+0%</span>
+                    </div>
+                </div>
+
+                <div class="kpi-tile tile-teal">
+                    <div class="kpi-top-icon" style="background:#ecfdf5; color:#059669;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="9 12 11 14 15 10"></polyline></svg>
+                    </div>
+                    <div class="kpi-num" id="kpiHandedOver">00</div>
+                    <div class="kpi-foot">
+                        <span class="kpi-name">Đã bàn giao</span>
+                        <span class="kpi-delta" id="deltaHandedOver">+0%</span>
+                    </div>
+                </div>
+
+                <div class="kpi-tile tile-purple">
+                    <div class="kpi-top-icon" style="background:#f5f3ff; color:#7c3aed;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><circle cx="15" cy="15" r="3"></circle></svg>
+                    </div>
+                    <div class="kpi-num" id="kpiPendingRecon">00</div>
+                    <div class="kpi-foot">
+                        <span class="kpi-name">Chờ đối soát</span>
+                        <span class="kpi-delta" id="deltaPendingRecon">+0%</span>
+                    </div>
+                </div>
+
+                <div class="kpi-tile tile-red">
+                    <div class="kpi-top-icon" style="background:#fef2f2; color:#dc2626;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>
+                    </div>
+                    <div class="kpi-num" id="kpiDiscrepancy">00</div>
+                    <div class="kpi-foot">
+                        <span class="kpi-name">Có chênh lệch</span>
+                        <span class="kpi-delta" id="deltaDiscrepancy">+0%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. HÀNG GIỮA: CÔNG VIỆC CẦN XỬ LÝ & TIẾN ĐỘ XỬ LÝ HÔM NAY -->
+            <section class="mid-grid">
+                <div class="panel-card">
+                    <div class="panel-head">
+                        <h2 class="panel-title">Công việc cần xử lý</h2>
+                        <a href="/dispatcher/order-tracking" class="link-more">Xem tất cả &rarr;</a>
+                    </div>
+                    <div class="task-list" id="priorityTasksContainer">
+                        <div style="font-size:13px; color:#64748b; padding:12px 0;">Đang tải danh sách công việc ưu tiên...</div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-head">
+                        <h2 class="panel-title">Tiến độ xử lý hôm nay</h2>
+                        <span style="font-size:12px; color:#64748b; font-weight:600;" id="pcsSummaryText">0 / 0 PCS đã bàn giao</span>
+                    </div>
+                    <div class="progress-wrap">
+                        <div class="donut-box">
+                            <svg width="146" height="146" viewBox="0 0 146 146">
+                                <circle cx="73" cy="73" r="54" fill="none" stroke="#e2e8f0" stroke-width="18"></circle>
+                                <circle id="ringHanded" cx="73" cy="73" r="54" fill="none" stroke="#10b981" stroke-width="18" stroke-dasharray="0 339.29" transform="rotate(-90 73 73)"></circle>
+                                <circle id="ringPacking" cx="73" cy="73" r="54" fill="none" stroke="#f59e0b" stroke-width="18" stroke-dasharray="0 339.29" transform="rotate(-90 73 73)"></circle>
+                                <circle id="ringPicking" cx="73" cy="73" r="54" fill="none" stroke="#3b82f6" stroke-width="18" stroke-dasharray="0 339.29" transform="rotate(-90 73 73)"></circle>
+                            </svg>
+                            <div class="donut-center">
+                                <span class="donut-pct" id="donutCompletedPct">0%</span>
+                                <span class="donut-lbl">Hoàn thành</span>
+                            </div>
+                        </div>
+                        <div class="legend-list">
+                            <div class="legend-item">
+                                <div class="legend-left"><span class="dot-swatch" style="background:#cbd5e1;"></span>Chờ lấy hàng</div>
+                                <div class="legend-right">
+                                    <span class="legend-pcs" id="pcsWaiting">0 PCS</span>
+                                    <span id="statWaiting">0% (0)</span>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left"><span class="dot-swatch" style="background:#3b82f6;"></span>Đang lấy hàng (OUT)</div>
+                                <div class="legend-right">
+                                    <span class="legend-pcs" id="pcsPicking">0 PCS</span>
+                                    <span id="statPicking">0% (0)</span>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left"><span class="dot-swatch" style="background:#f59e0b;"></span>Pre-packing / Đóng gói</div>
+                                <div class="legend-right">
+                                    <span class="legend-pcs" id="pcsPacking">0 PCS</span>
+                                    <span id="statPacking">0% (0)</span>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-left"><span class="dot-swatch" style="background:#10b981;"></span>Đã bàn giao</div>
+                                <div class="legend-right">
+                                    <span class="legend-pcs" id="pcsHanded">0 PCS</span>
+                                    <span id="statHanded">0% (0)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. DANH SÁCH PHIẾU GẦN ĐÂY (CHỈ ĐỌC TRÊN DASHBOARD) -->
+            <section class="panel-card">
+                <div class="panel-head">
+                    <h2 class="panel-title">Danh sách phiếu gần đây</h2>
+                    <a href="/dispatcher/picking-requests" class="link-more">Xem tất cả &rarr;</a>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Mã phiếu</th>
+                                <th>Nguồn</th>
+                                <th>Sản phẩm</th>
+                                <th>Số lượng (Yêu cầu / OUT / Đóng gói)</th>
+                                <th>Trạng thái</th>
+                                <th>Cập nhật cuối</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentTicketsBody">
+                            <tr><td colspan="7" style="text-align:center; color:#64748b;">Đang tải danh sách phiếu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 5. HOẠT ĐỘNG GẦN ĐÂY (5-10 SỰ KIỆN MỚI NHẤT TỪ HỆ THỐNG) -->
+            <section class="panel-card">
+                <div class="panel-head">
+                    <h2 class="panel-title">Hoạt động gần đây</h2>
+                    <a href="/dispatcher/reports" class="link-more">Xem lịch sử &rarr;</a>
+                </div>
+                <div class="activity-feed" id="recentActivitiesFeed">
+                    <div style="font-size:13px; color:#64748b;">Đang tải lịch sử hoạt động...</div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        let currentHash = '';
+
+        (function initDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('filterDateFrom').value = today;
+            document.getElementById('filterDateTo').value = today;
+        })();
+
+        function toggleBellDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('bellDropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', () => {
+            document.getElementById('bellDropdown').classList.remove('open');
+        });
+
+        function pad2(num) {
+            const n = Number(num) || 0;
+            return n < 10 ? '0' + n : String(n);
+        }
+
+        function renderStatusBadge(st) {
+            if (st === 'Thiếu tồn') return `<span class="badge bg-amber">${st}</span>`;
+            if (['Đang lấy hàng', 'Pre-packing / Đóng gói', 'Chờ xác nhận bàn giao'].includes(st)) return `<span class="badge bg-blue">${st}</span>`;
+            if (['Đã bàn giao', 'Hoàn thành'].includes(st)) return `<span class="badge bg-green">${st}</span>`;
+            if (['Chờ đối soát', 'Chờ lấy hàng'].includes(st)) return `<span class="badge bg-purple">${st}</span>`;
+            return `<span class="badge bg-red">${st}</span>`;
+        }
+
+        function renderPriorityBadge(level) {
+            if (level === 'URGENT') return `<span class="badge bg-red">Ưu tiên</span>`;
+            if (level === 'HIGH') return `<span class="badge bg-amber">Quan trọng</span>`;
+            return `<span class="badge bg-gray">Thường</span>`;
+        }
+
+        function updateDonutChart(p) {
+            const C = 2 * Math.PI * 54;
+            const lenHanded = (p.pct_handed / 100) * C;
+            const lenPacking = (p.pct_packing / 100) * C;
+            const lenPicking = (p.pct_picking / 100) * C;
+
+            const elHanded = document.getElementById('ringHanded');
+            const elPacking = document.getElementById('ringPacking');
+            const elPicking = document.getElementById('ringPicking');
+
+            elHanded.setAttribute('stroke-dasharray', `${lenHanded} ${C}`);
+            elHanded.setAttribute('stroke-dashoffset', '0');
+
+            elPacking.setAttribute('stroke-dasharray', `${lenPacking} ${C}`);
+            elPacking.setAttribute('stroke-dashoffset', `${-lenHanded}`);
+
+            elPicking.setAttribute('stroke-dasharray', `${lenPicking} ${C}`);
+            elPicking.setAttribute('stroke-dashoffset', `${-(lenHanded + lenPacking)}`);
+
+            document.getElementById('donutCompletedPct').textContent = `${p.pct_handed}%`;
+            document.getElementById('pcsSummaryText').textContent = `${p.handed_pcs.toLocaleString('vi-VN')} / ${p.total_pcs.toLocaleString('vi-VN')} PCS đã bàn giao`;
+
+            document.getElementById('pcsWaiting').textContent = `${p.waiting_pcs} PCS`;
+            document.getElementById('statWaiting').textContent = `${p.pct_waiting}% (${p.waiting_tickets})`;
+
+            document.getElementById('pcsPicking').textContent = `${p.picking_pcs} PCS`;
+            document.getElementById('statPicking').textContent = `${p.pct_picking}% (${p.picking_tickets})`;
+
+            document.getElementById('pcsPacking').textContent = `${p.packing_pcs} PCS`;
+            document.getElementById('statPacking').textContent = `${p.pct_packing}% (${p.packing_tickets})`;
+
+            document.getElementById('pcsHanded').textContent = `${p.handed_pcs} PCS`;
+            document.getElementById('statHanded').textContent = `${p.pct_handed}% (${p.handed_tickets})`;
+        }
+
+        async function loadDispatcherDashboard(forceReload = false) {
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            const platform = document.getElementById('filterPlatform').value;
+
+            const params = new URLSearchParams({
+                date_from: dateFrom,
+                date_to: dateTo,
+                platform: platform
+            });
+
+            try {
+                const res = await fetch(`/api/dispatcher/dashboard?${params.toString()}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                document.getElementById('syncClock').textContent = data.synced_at;
+                if (!forceReload && data.state_hash === currentHash) return;
+                currentHash = data.state_hash;
+
+                const k = data.kpis;
+                document.getElementById('kpiTotalTickets').textContent = pad2(k.total_tickets);
+                document.getElementById('deltaTotal').textContent = k.delta_total;
+
+                document.getElementById('kpiProcessing').textContent = pad2(k.processing_tickets);
+                document.getElementById('deltaProcessing').textContent = k.delta_processing;
+
+                document.getElementById('kpiShortage').textContent = pad2(k.shortage_tickets);
+                document.getElementById('deltaShortage').textContent = k.delta_shortage;
+
+                document.getElementById('kpiHandedOver').textContent = pad2(k.handed_over_tickets);
+                document.getElementById('deltaHandedOver').textContent = k.delta_handed_over;
+
+                document.getElementById('kpiPendingRecon').textContent = pad2(k.pending_reconcile);
+                document.getElementById('deltaPendingRecon').textContent = k.delta_pending_recon;
+
+                document.getElementById('kpiDiscrepancy').textContent = pad2(k.discrepancy_tickets);
+                document.getElementById('deltaDiscrepancy').textContent = k.delta_discrepancy;
+
+                const notifs = data.notifications || [];
+                document.getElementById('bellBadgeCount').textContent = notifs.length;
+                document.getElementById('bellList').innerHTML = notifs.length ? notifs.map(n => `
+                    <a href="${n.url}" style="text-decoration:none; padding:8px 10px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; display:block;">
+                        <div style="font-size:12.5px; font-weight:700; color:#0f172a;">${n.title}</div>
+                        <div style="font-size:11.5px; color:#64748b; margin-top:2px;">${n.desc} · ${n.time}</div>
+                    </a>
+                `).join('') : '<div style="font-size:12.5px; color:#64748b;">Không có cảnh báo mới.</div>';
+
+                const tasks = data.priority_tasks || [];
+                document.getElementById('priorityTasksContainer').innerHTML = tasks.length ? tasks.map(t => `
+                    <div class="task-row">
+                        <div class="task-left">
+                            <div class="task-ico" style="background:${t.icon_bg}; color:${t.icon_color};">${t.icon}</div>
+                            <div>
+                                <div class="task-title">${t.title}</div>
+                                <div class="task-sub">${t.subtitle}</div>
+                            </div>
+                        </div>
+                        <div class="task-right">
+                            ${renderPriorityBadge(t.priority)}
+                            <span class="task-time">${t.time}</span>
+                            <a href="${t.action_url}" class="btn-detail-link">Xử lý &rarr;</a>
+                        </div>
+                    </div>
+                `).join('') : '<div style="font-size:13px; color:#057a55; font-weight:600; padding:12px 0;">Tất cả phiếu và dữ liệu đối soát trong kỳ đang ổn định.</div>';
+
+                updateDonutChart(data.progress);
+
+                const tickets = data.recent_tickets || [];
+                document.getElementById('recentTicketsBody').innerHTML = tickets.length ? tickets.map(r => `
+                    <tr>
+                        <td><strong>${r.pick_id}</strong></td>
+                        <td><strong>${r.platform}</strong></td>
+                        <td>${r.product_name} <small style="color:#64748b;">(${r.sku})</small></td>
+                        <td>
+                            <strong>${r.qty_requested} PCS</strong>
+                            <div style="font-size:11.5px; color:#64748b;">OUT: ${r.qty_out} · Đóng gói: ${r.qty_packed} · Bàn giao: ${r.qty_handed}</div>
+                        </td>
+                        <td>${renderStatusBadge(r.status)}</td>
+                        <td style="color:#475569;">${r.updated_at}</td>
+                        <td><a href="${r.detail_url}" class="btn-detail-link">Xem chi tiết &rarr;</a></td>
+                    </tr>
+                `).join('') : '<tr><td colspan="7" style="text-align:center; color:#64748b;">Không có phiếu nào trong phạm vi lọc đã chọn.</td></tr>';
+
+                const acts = data.recent_activities || [];
+                document.getElementById('recentActivitiesFeed').innerHTML = acts.length ? acts.map(a => `
+                    <div class="activity-row">
+                        <div>
+                            <strong style="color:#086f68;">[${a.actor}]</strong> ${a.message}
+                        </div>
+                        <span style="font-size:12px; color:#64748b; font-weight:600;">${a.time}</span>
+                    </div>
+                `).join('') : '<div style="font-size:13px; color:#64748b;">Chưa ghi nhận hoạt động nào trong ngày.</div>';
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        loadDispatcherDashboard(true);
+        setInterval(() => loadDispatcherDashboard(false), 5000);
+
+    async function syncDispatcherNotifications() {
+            try {
+                const res = await fetch('/api/dispatcher/notifications');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const badge = document.getElementById('bellBadgeCount');
+                const list = document.getElementById('bellList');
+                if (!badge || !list) return;
+
+                const unread = Number(data.unread_count || 0);
+                badge.textContent = unread > 99 ? '99+' : String(unread);
+                badge.classList.toggle('has-unread', unread > 0);
+
+                const items = data.notifications || [];
+                list.innerHTML = items.length ? items.map(n => `
+                    <a href="${n.url}" style="text-decoration:none; padding:8px 10px; border-radius:8px; background:${n.is_read ? '#f8fafc' : '#f0fdf4'}; border:1px solid ${n.is_read ? '#e2e8f0' : '#bbf7d0'}; display:block;" onclick="markSingleDispNotiRead('${n.id}')">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                            <span style="font-size:10.5px; font-weight:800; color:${n.level === 'danger' ? '#dc2626' : '#d97706'}; text-transform:uppercase;">${n.tag}</span>
+                            <span style="font-size:11px; color:#64748b;">${n.time}</span>
+                        </div>
+                        <div style="font-size:12.5px; font-weight:700; color:#0f172a;">${n.title}</div>
+                        <div style="font-size:11.5px; color:#475569; margin-top:2px;">${n.message}</div>
+                    </a>
+                `).join('') : '<div style="font-size:12.5px; color:#64748b; text-align:center; padding:12px;">Không có cảnh báo điều phối nào.</div>';
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function markSingleDispNotiRead(notiId) {
+            try {
+                await fetch('/api/dispatcher/notifications/read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: notiId })
+                });
+            } catch (e) {}
+        }
+
+        async function markAllDispNotiRead() {
+            try {
+                await fetch('/api/dispatcher/notifications/read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ all: true })
+                });
+                syncDispatcherNotifications();
+            } catch (e) {}
+        }
+
+        // Gọi ngay khi tải trang và lặp lại mỗi 6 giây
+        syncDispatcherNotifications();
+        setInterval(syncDispatcherNotifications, 6000);
+        
+    </script>
+</body>
+</html>

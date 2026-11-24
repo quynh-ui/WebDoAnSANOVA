@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yêu cầu lấy hàng · SANOVA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-bg: #033928;
+            --sidebar-active: #086f68;
+            --brand-teal: #086f68;
+            --brand-green: #057a55;
+            --mint-label: #34d399;
+            --mint-text: #a7f3d0;
+            --bg-page: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        body {
+            display: flex;
+            height: 100vh;
+            max-height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+        }
+
+        /* SIDEBAR CỐ ĐỊNH */
+        .sidebar {
+            width: 248px;
+            height: 100vh;
+            background-color: var(--sidebar-bg);
+            color: #ecfdf5;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px 18px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 90;
+            user-select: none;
+        }
+        .brand-header { display: flex; align-items: center; gap: 11px; padding: 0 10px 22px; }
+        .brand-name { font-size: 21px; font-weight: 800; letter-spacing: 1.1px; color: #ffffff; }
+        .nav-category { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--mint-label); padding: 0 12px 12px; }
+        .nav-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+        .nav-link {
+            display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+            color: var(--mint-text); text-decoration: none; border-radius: 10px;
+            font-size: 13.5px; font-weight: 600; transition: all 0.16s ease;
+        }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.08); color: #ffffff; }
+        .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; font-weight: 700; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18); }
+        .sidebar-footer { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .logout-link:hover { background-color: rgba(220, 38, 38, 0.22); color: #fca5a5; }
+
+        /* MAIN WRAPPER */
+        .main-wrapper { flex: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .top-navbar {
+            height: 54px; background: #ffffff; border-bottom: 1px solid var(--border);
+            padding: 0 28px; display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0; position: sticky; top: 0; z-index: 50;
+        }
+        .sync-badge {
+            display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5;
+            border: 1px solid #a7f3d0; color: #065f46; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700;
+        }
+        .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; }
+        .user-chip { display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 700; }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; color: #334155; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+
+        .content-body { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 16px; }
+        .page-title { font-size: 25px; font-weight: 800; color: #0f172a; }
+        .page-subtitle { font-size: 13.5px; color: var(--text-muted); margin-top: 2px; }
+
+        /* TABS & CREATE BTN */
+        .tabs-action-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .status-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tab-pill {
+            padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 700;
+            border: 1px solid var(--border); background: #ffffff; color: #334155; cursor: pointer; transition: all 0.15s;
+        }
+        .tab-pill:hover { background: #f1f5f9; }
+        .tab-pill.active { background: #057a55; color: #ffffff; border-color: #057a55; }
+        .tab-pill.tab-warn.active { background: #dc2626; border-color: #dc2626; color: #ffffff; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            height: 38px; padding: 0 16px; border-radius: 9px; font-size: 13px; font-weight: 700;
+            cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
+        }
+        .btn-primary { background: #057a55; color: #ffffff; }
+        .btn-primary:hover { background: #046c4e; }
+        .btn-outline { background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; }
+        .btn-outline:hover { background: #f8fafc; }
+
+        /* CARD & FILTERS */
+        .card-box { background: #ffffff; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+        .filter-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+        .ctrl {
+            height: 38px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 9px;
+            font-size: 13px; font-weight: 500; background: #ffffff; color: #0f172a; outline: none;
+        }
+        .ctrl:focus { border-color: var(--brand-teal); }
+
+        /* TABLE */
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .data-table th {
+            background: #f8fafc; color: #475569; font-size: 12px; font-weight: 700;
+            padding: 11px 12px; border-bottom: 1.5px solid var(--border); white-space: nowrap;
+        }
+        .data-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
+        .data-table tr:hover td { background: #f8fafc; }
+
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+        .bg-amber  { background: #fef3c7; color: #b45309; }
+        .bg-blue   { background: #e0f2fe; color: #0369a1; }
+        .bg-green  { background: #dcfce7; color: #15803d; }
+        .bg-purple { background: #f3e8ff; color: #7e22ce; }
+        .bg-red    { background: #fee2e2; color: #b91c1c; }
+        .bg-gray   { background: #f1f5f9; color: #475569; }
+
+        /* ACTION BUTTONS & FLOATING MENU */
+        .act-group { display: inline-flex; align-items: center; gap: 6px; }
+        .icon-btn {
+            width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0;
+            background: #ffffff; color: #475569; display: inline-flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.16s ease;
+        }
+        .icon-btn:hover, .icon-btn.menu-active { background: #ecfdf5; border-color: #057a55; color: #057a55; }
+
+        .floating-action-menu {
+            position: fixed; width: 215px; background: #ffffff; border: 1px solid #e2e8f0;
+            border-radius: 12px; box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.14);
+            padding: 6px; z-index: 9999; opacity: 0; transform: translateY(-6px) scale(0.97);
+            pointer-events: none; transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+        .floating-action-menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+        .dd-item {
+            width: 100%; text-align: left; padding: 8px 10px; border: none; background: transparent;
+            border-radius: 8px; font-size: 13px; font-weight: 600; color: #1e293b; cursor: pointer;
+            display: flex; align-items: center; gap: 9px;
+        }
+        .dd-item:hover { background: #f1f5f9; color: #057a55; }
+        .dd-divider { height: 1px; background: #f1f5f9; margin: 4px 6px; }
+        .dd-item.danger { color: #dc2626; }
+        .dd-item.danger:hover { background: #fef2f2; }
+
+        /* DRAWER TẠO YÊU CẦU MỚI */
+        .drawer-backdrop {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.42);
+            display: none; justify-content: flex-end; z-index: 200;
+        }
+        .drawer-backdrop.open { display: flex; }
+        .drawer-panel {
+            width: 100%; max-width: 550px; height: 100vh; background: #ffffff;
+            display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(15, 23, 42, 0.16);
+        }
+        .drawer-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .drawer-body { flex: 1; overflow-y: auto; padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+        .drawer-foot { padding: 14px 22px; border-top: 1px solid var(--border); background: #f8fafc; display: flex; justify-content: flex-end; gap: 10px; }
+        .sec-box { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: #ffffff; }
+        .sec-title { font-size: 13.5px; font-weight: 800; color: #0f172a; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .lbl { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+        .sku-line-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; background: #f8fafc; margin-bottom: 10px; }
+        .shortage-alert-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; font-size: 12.5px; color: #92400e; }
+
+        /* POPUP CHI TIẾT & MODALS */
+        .modal-backdrop {
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+            display: none; align-items: center; justify-content: center; z-index: 250; padding: 16px;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal-card {
+            background: #ffffff; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto;
+            border-radius: 16px; padding: 22px 24px; box-shadow: 0 20px 35px rgba(0, 0, 0, 0.2);
+        }
+        .stat-3-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+        .stat-mini { border: 1px solid var(--border); border-radius: 11px; padding: 12px 14px; background: #f8fafc; }
+        .stat-mini span { display: block; font-size: 12px; color: #64748b; font-weight: 600; }
+        .stat-mini strong { display: block; font-size: 20px; font-weight: 800; margin-top: 3px; }
+    </style>
+    <script src="/js/role_common.js"></script>
+    <script src="/js/sanova_xlsx_export.js"></script>
+</head>
+<body>
+    
+    <aside class="sidebar">
+        <div>
+            <div class="brand-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">ĐIỀU PHỐI KHO</div>
+
+            <ul class="nav-list">
+                <li>
+                    <a href="/dispatcher" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Tổng quan</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/picking-requests" class="nav-link active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M9 12h6"></path><path d="M9 16h6"></path></svg>
+                        <span>Yêu cầu lấy hàng</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/order-tracking" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 7 2 2 4-4"></path><path d="m3 17 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+                        <span>Theo dõi xử lý đơn</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/reconciliation-data" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+                        <span>Dữ liệu đối soát</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/outbound-reconciliation" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>
+                        <span>Đối soát xuất hàng</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/dispatcher/reports" class="nav-link ">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        <span>Báo cáo &amp; lịch sử</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <a href="/dispatcher/profile" class="nav-link ">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>Tài khoản cá nhân</span>
+            </a>
+            <a href="/logout" class="nav-link logout-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span>Đăng xuất</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-wrapper">
+        <div class="top-navbar">
+            <span class="sync-badge"><span class="sync-dot"></span> Đồng bộ thời gian thực · <span id="syncClock">--:--:--</span></span>
+            <div class="user-chip">
+                <div class="user-avatar">ĐP</div>
+                <span><span data-sanova-user-name>Điều phối viên</span></span>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <div>
+                <h1 class="page-title">Yêu cầu lấy hàng</h1>
+                <p class="page-subtitle">Quản lý yêu cầu lấy hàng · Phân tách rõ PCS còn cần lấy với PCS thiếu tồn &amp; đồng bộ trực tiếp Staff OUT/RETURNED</p>
+            </div>
+
+            <!-- 6 TABS TRẠNG THÁI -->
+            <div class="tabs-action-row">
+                <div class="status-tabs">
+                    <button class="tab-pill active" data-tab="ALL" onclick="switchTab('ALL', this)">Tất cả (<span id="cntAll">0</span>)</button>
+                    <button class="tab-pill" data-tab="WAITING" onclick="switchTab('WAITING', this)">Chờ xử lý (<span id="cntWaiting">0</span>)</button>
+                    <button class="tab-pill" data-tab="PICKING" onclick="switchTab('PICKING', this)">Đang lấy hàng (<span id="cntPicking">0</span>)</button>
+                    <button class="tab-pill tab-warn" data-tab="SHORTAGE" onclick="switchTab('SHORTAGE', this)">Thiếu tồn (<span id="cntShortage">0</span>)</button>
+                    <button class="tab-pill" data-tab="COMPLETED" onclick="switchTab('COMPLETED', this)">Hoàn tất lấy hàng (<span id="cntCompleted">0</span>)</button>
+                    <button class="tab-pill" data-tab="CANCELLED" onclick="switchTab('CANCELLED', this)">Đã hủy (<span id="cntCancelled">0</span>)</button>
+                </div>
+                <button class="btn btn-primary" onclick="openCreateDrawer()">+ Tạo yêu cầu mới</button>
+            </div>
+
+            <!-- BẢNG DANH SÁCH PHIẾU YÊU CẦU LẤY HÀNG -->
+            <section class="card-box">
+                <div class="filter-toolbar">
+                    <select class="ctrl" id="fltPlatform" onchange="renderTicketsTable()">
+                        <option value="ALL">Tất cả nền tảng</option>
+                        <option value="Shopee">Shopee</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Lazada">Lazada</option>
+                        <option value="Nội bộ">Nội bộ</option>
+                    </select>
+                    <select class="ctrl" id="fltPriority" onchange="renderTicketsTable()">
+                        <option value="ALL">Tất cả độ ưu tiên</option>
+                        <option value="Khẩn">Ưu tiên: Khẩn</option>
+                        <option value="Bình thường">Ưu tiên: Bình thường</option>
+                    </select>
+                    <select class="ctrl" id="fltStaff" onchange="renderTicketsTable()">
+                        <option value="ALL">Tất cả nhân viên</option>
+                    </select>
+                    <input type="text" class="ctrl" id="fltKeyword" style="flex:1; min-width:220px;" placeholder="Tìm mã phiếu, mã đơn, sản phẩm..." oninput="renderTicketsTable()">
+                    <button class="btn btn-outline" onclick="loadPickingRequests(true)" title="Làm mới dữ liệu">↻</button>
+                    <button class="btn btn-outline" onclick="exportTicketsExcel()" title="Xuất file Excel">⬇ Xuất Excel</button>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Mã phiếu</th>
+                                <th>Ngày tạo &amp; Hạn</th>
+                                <th>Nguồn / Ưu tiên</th>
+                                <th>Sản phẩm</th>
+                                <th>PCS yêu cầu</th>
+                                <th>Đã OUT ròng</th>
+                                <th>Còn cần lấy</th>
+                                <th>Nhân viên</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketsTableBody">
+                            <tr><td colspan="10" style="text-align:center; color:#64748b;">Đang tải danh sách phiếu yêu cầu lấy hàng...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- DRAWER TẠO YÊU CẦU LẤY HÀNG -->
+    <div class="drawer-backdrop" id="createDrawer" onclick="closeCreateDrawer()">
+        <div class="drawer-panel" onclick="event.stopPropagation()">
+            <div class="drawer-head">
+                <div>
+                    <h2 style="font-size:18px; font-weight:800;">Tạo yêu cầu lấy hàng</h2>
+                    <span style="font-size:12px; color:#64748b;">Không tự trừ tồn khi tạo · Chỉ giảm tồn khi Staff quét Box OUT</span>
+                </div>
+                <button class="btn btn-outline" style="height:32px; padding:0 10px;" onclick="closeCreateDrawer()">✕</button>
+            </div>
+
+            <div class="drawer-body">
+                <!-- 1. Thông tin chung & Phân công -->
+                <div class="sec-box">
+                    <div class="sec-title">1. Thông tin chung &amp; Phân công</div>
+                    <div class="form-grid-2" style="margin-bottom:10px;">
+                        <div>
+                            <label class="lbl">Nguồn yêu cầu *</label>
+                            <select class="ctrl" id="newPlatform" style="width:100%;">
+                                <option value="Shopee">Shopee</option>
+                                <option value="TikTok">TikTok</option>
+                                <option value="Lazada">Lazada</option>
+                                <option value="Nội bộ">Nội bộ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="lbl">Mã tham chiếu / Mã đơn *</label>
+                            <input type="text" class="ctrl" id="newOrderCode" style="width:100%;" placeholder="VD: DH-2026-091">
+                        </div>
+                    </div>
+                    <div id="dupOrderWarnBox" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:8px 10px; font-size:12px; color:#991b1b; margin-bottom:10px;">
+                        <label style="display:flex; align-items:center; gap:7px; cursor:pointer; font-weight:700;">
+                            <input type="checkbox" id="chkAllowDupOrder"> Xác nhận tạo phiếu bổ sung cho mã đơn đã tồn tại
+                        </label>
+                    </div>
+                    <div class="form-grid-2" style="margin-bottom:10px;">
+                        <div>
+                            <label class="lbl">Độ ưu tiên</label>
+                            <select class="ctrl" id="newPriority" style="width:100%;">
+                                <option value="Bình thường">Bình thường</option>
+                                <option value="Khẩn">Khẩn</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="lbl">Thời hạn hoàn thành</label>
+                            <input type="datetime-local" class="ctrl" id="newDeadline" style="width:100%;">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="lbl">Nhân viên phụ trách (Staff đang hoạt động) *</label>
+                        <select class="ctrl" id="newAssignee" style="width:100%;"></select>
+                    </div>
+                </div>
+
+                <!-- 2. Danh sách sản phẩm (Hỗ trợ cấu hình Combo theo từng SKU) -->
+                <div class="sec-box">
+                    <div class="sec-title">
+                        <span>2. Danh sách sản phẩm (SKU)</span>
+                        <button type="button" class="btn btn-outline" style="height:28px; font-size:12px; padding:0 10px;" onclick="addProductRow()">+ Thêm sản phẩm</button>
+                    </div>
+                    <div id="productRowsContainer"></div>
+                </div>
+
+                <!-- 3. Xử lý thiếu tồn trước phát hành (KHÔNG CHỌN SẴN MẶC ĐỊNH) -->
+                <div class="shortage-alert-box" id="drawerShortageBox" style="display:none;">
+                    <div style="font-weight:800; margin-bottom:6px;" id="drawerShortageTitle">⚠️ Phát hiện thiếu tồn so với yêu cầu. Vui lòng chủ động chọn phương án xử lý:</div>
+                    <div style="display:flex; flex-direction:column; gap:7px; margin-top:6px;">
+                        <label style="display:flex; align-items:flex-start; gap:7px; cursor:pointer;">
+                            <input type="radio" name="shortagePolicy" value="WAIT_ALL" onchange="onShortagePolicyChange()">
+                            <span><strong>Chờ bổ sung (Giữ toàn bộ):</strong> Lưu phiếu ở trạng thái Thiếu tồn, chưa phát hành công việc lấy hàng cho Staff.</span>
+                        </label>
+                        <label style="display:flex; align-items:flex-start; gap:7px; cursor:pointer;" id="optPartialRelease">
+                            <input type="radio" name="shortagePolicy" value="PARTIAL_RELEASE" onchange="onShortagePolicyChange()">
+                            <span><strong>Phát hành một phần khả dụng:</strong> Giao Staff lấy trước phần tồn có sẵn, giữ phần thiếu chờ bổ sung.</span>
+                        </label>
+                        <label style="display:flex; align-items:flex-start; gap:7px; cursor:pointer;" id="optAdjustQty">
+                            <input type="radio" name="shortagePolicy" value="ADJUST_QTY" onchange="onShortagePolicyChange()">
+                            <span><strong>Điều chỉnh yêu cầu:</strong> Giảm số lượng yêu cầu về đúng mức tồn khả dụng hiện có.</span>
+                        </label>
+                        <label style="display:flex; align-items:flex-start; gap:7px; cursor:pointer;">
+                            <input type="radio" name="shortagePolicy" value="CANCEL_ALL" onchange="onShortagePolicyChange()">
+                            <span><strong>Hủy yêu cầu:</strong> Không phát hành phiếu này.</span>
+                        </label>
+                    </div>
+
+                    <!-- Khối đối chiếu chi tiết khi chọn Điều chỉnh yêu cầu -->
+                    <div id="adjustDetailBox" style="display:none; margin-top:10px; padding:10px; background:#ffffff; border:1px solid #fcd34d; border-radius:8px;">
+                        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px; font-size:11.5px; text-align:center; margin-bottom:8px;">
+                            <div style="background:#f8fafc; padding:5px; border-radius:6px;">Ban đầu<strong style="display:block; font-size:13px;" id="adjOldVal">0</strong></div>
+                            <div style="background:#f8fafc; padding:5px; border-radius:6px;">Khả dụng<strong style="display:block; font-size:13px; color:#057a55;" id="adjAvailVal">0</strong></div>
+                            <div style="background:#f8fafc; padding:5px; border-radius:6px;">Yêu cầu mới<strong style="display:block; font-size:13px; color:#0369a1;" id="adjNewVal">0</strong></div>
+                            <div style="background:#fef2f2; padding:5px; border-radius:6px;">PCS giảm<strong style="display:block; font-size:13px; color:#dc2626;" id="adjDiffVal">0</strong></div>
+                        </div>
+                        <label class="lbl">Lý do điều chỉnh số lượng *</label>
+                        <input type="text" class="ctrl" id="newAdjustReason" style="width:100%; height:34px;" placeholder="Nhập lý do giảm số lượng yêu cầu...">
+                    </div>
+                </div>
+
+                <!-- Ghi chú -->
+                <div class="sec-box">
+                    <label class="lbl">Ghi chú hướng dẫn Staff</label>
+                    <textarea class="ctrl" id="newNote" style="width:100%; height:64px; padding:8px 12px; resize:none;" placeholder="Nhập ghi chú hướng dẫn Staff..."></textarea>
+                </div>
+            </div>
+
+            <div class="drawer-foot">
+                <button type="button" class="btn btn-outline" onclick="closeCreateDrawer()">Hủy</button>
+                <button type="button" class="btn btn-outline" onclick="verifyStockFromServer()">Kiểm tra tồn</button>
+                <button type="button" class="btn btn-outline" onclick="submitPickingRequest('DRAFT')">Lưu nháp</button>
+                <button type="button" class="btn btn-primary" onclick="submitPickingRequest('PUBLISH')">Phát hành yêu cầu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP CHI TIẾT PHIẾU (BỐ CỤC CHUẨN 4 KHỐI + NÚT ĐỔI NHÂN VIÊN & XỬ LÝ THIẾU TỒN) -->
+    <div class="modal-backdrop" id="detailModal" onclick="closeModal('detailModal')">
+        <div class="modal-card" onclick="event.stopPropagation()" id="detailModalBody"></div>
+    </div>
+
+    <!-- MODAL PHÂN CÔNG / ĐỔI NHÂN VIÊN -->
+    <div class="modal-backdrop" id="assignModal" onclick="closeModal('assignModal')">
+        <div class="modal-card" style="max-width:440px;" onclick="event.stopPropagation()">
+            <h3 style="font-size:17px; font-weight:800; margin-bottom:6px;">Đổi nhân viên phụ trách</h3>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:14px;" id="assignModalSub">Phiếu --</p>
+            <input type="hidden" id="assignPickId">
+            <label class="lbl">Chọn nhân viên kho nhận phần việc còn lại *</label>
+            <select class="ctrl" id="assignStaffSelect" style="width:100%; margin-bottom:16px;"></select>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn btn-outline" onclick="closeModal('assignModal')">Hủy</button>
+                <button class="btn btn-primary" onclick="confirmAssignStaff()">Xác nhận phân công</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL XỬ LÝ THIẾU TỒN -->
+    <div class="modal-backdrop" id="shortageModal" onclick="closeModal('shortageModal')">
+        <div class="modal-card" style="max-width:520px;" onclick="event.stopPropagation()">
+            <h3 style="font-size:17px; font-weight:800; margin-bottom:6px;">Xử lý ngoại lệ thiếu tồn</h3>
+            <p style="font-size:12.5px; color:#64748b; margin-bottom:12px;" id="shortageModalSummary">--</p>
+            <input type="hidden" id="shortagePickId">
+
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px; font-size:13px;">
+                <label style="padding:10px; border:1px solid #e2e8f0; border-radius:9px; cursor:pointer;">
+                    <input type="radio" name="resolveDecision" value="RELEASE_AVAILABLE" checked>
+                    <strong>Phát hành phần tồn hiện có:</strong> Đẩy số PCS khả dụng hiện tại xuống cho Staff lấy tiếp.
+                </label>
+                <label style="padding:10px; border:1px solid #e2e8f0; border-radius:9px; cursor:pointer;">
+                    <input type="radio" name="resolveDecision" value="WAIT_STOCK">
+                    <strong>Chờ bổ sung:</strong> Giữ nguyên phần còn thiếu chờ nhập hàng lên kệ.
+                </label>
+                <label style="padding:10px; border:1px solid #e2e8f0; border-radius:9px; cursor:pointer;">
+                    <input type="radio" name="resolveDecision" value="ADJUST_QTY">
+                    <strong>Điều chỉnh yêu cầu:</strong> Giảm số lượng yêu cầu bằng mức đã OUT / khả dụng.
+                </label>
+                <label style="padding:10px; border:1px solid #e2e8f0; border-radius:9px; cursor:pointer;">
+                    <input type="radio" name="resolveDecision" value="CANCEL_REMAINING">
+                    <strong>Hủy phần còn lại:</strong> Chốt hoàn tất một phần cho số PCS đã OUT, dừng phần thiếu.
+                </label>
+            </div>
+
+            <label class="lbl">Lý do quyết định xử lý *</label>
+            <input type="text" class="ctrl" id="shortageReasonInput" style="width:100%; margin-bottom:16px;" placeholder="Nhập lý do chi tiết để lưu lịch sử đối soát...">
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn btn-outline" onclick="closeModal('shortageModal')">Đóng</button>
+                <button class="btn btn-primary" onclick="confirmResolveShortage()">Xác nhận phương án</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="globalFloatingMenu" class="floating-action-menu" onclick="event.stopPropagation()"></div>
+
+    <script>
+        let allTickets = [];
+        let activeStaffs = [];
+        let activeSkus = [];
+        let currentTab = 'ALL';
+        let draftRows = [];
+        let activeMenuPickId = null;
+
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+        function closeFloatingMenu() {
+            const menu = document.getElementById('globalFloatingMenu');
+            if (menu) menu.classList.remove('open');
+            document.querySelectorAll('.icon-btn.menu-active').forEach(b => b.classList.remove('menu-active'));
+            activeMenuPickId = null;
+        }
+        document.addEventListener('click', closeFloatingMenu);
+        window.addEventListener('scroll', closeFloatingMenu, true);
+        window.addEventListener('resize', closeFloatingMenu);
+
+        function renderStatusBadge(t) {
+            const st = t.status;
+            if (st === 'Thiếu tồn') {
+                const sub = t.shortage_source === 'STAFF_REPORTED' ? 'Staff báo thiếu' : 'Thiếu trước PH';
+                return `<span class="badge bg-amber" title="${sub}">⚠️ Thiếu tồn (${t.shortage_pcs} PCS)</span>`;
+            }
+            if (st === 'Đang lấy hàng') return `<span class="badge bg-blue">🕒 Đang lấy hàng</span>`;
+            if (st === 'Hoàn tất lấy hàng' || st === 'Hoàn tất một phần') return `<span class="badge bg-green">✅ ${st}</span>`;
+            if (st === 'Chờ xử lý' || st === 'Nháp') return `<span class="badge bg-purple">${st}</span>`;
+            return `<span class="badge bg-gray">${st}</span>`;
+        }
+
+        function switchTab(tabKey, btnEl) {
+            currentTab = tabKey;
+            document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+            renderTicketsTable();
+        }
+
+        async function loadPickingRequests(manual = false) {
+            try {
+                const res = await fetch('/api/dispatcher/picking-requests');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                document.getElementById('syncClock').textContent = data.synced_at;
+                allTickets = data.tickets || [];
+                activeStaffs = data.staffs || [];
+                activeSkus = data.skus || [];
+
+                const c = data.counts || {};
+                document.getElementById('cntAll').textContent = c.ALL || 0;
+                document.getElementById('cntWaiting').textContent = c.WAITING || 0;
+                document.getElementById('cntPicking').textContent = c.PICKING || 0;
+                document.getElementById('cntShortage').textContent = c.SHORTAGE || 0;
+                document.getElementById('cntCompleted').textContent = c.COMPLETED || 0;
+                document.getElementById('cntCancelled').textContent = c.CANCELLED || 0;
+
+                const fltStaff = document.getElementById('fltStaff');
+                const curStaffVal = fltStaff.value;
+                fltStaff.innerHTML = `<option value="ALL">Tất cả nhân viên</option>` +
+                    activeStaffs.map(s => `<option value="${s.name}">${s.label}</option>`).join('');
+                fltStaff.value = curStaffVal || 'ALL';
+
+                renderTicketsTable();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderTicketsTable() {
+            const plat = document.getElementById('fltPlatform').value;
+            const prio = document.getElementById('fltPriority').value;
+            const stf = document.getElementById('fltStaff').value;
+            const kw = document.getElementById('fltKeyword').value.trim().toLowerCase();
+
+            const filtered = allTickets.filter(t => {
+                if (currentTab === 'WAITING' && !['Chờ xử lý', 'Nháp'].includes(t.status)) return false;
+                if (currentTab === 'PICKING' && t.status !== 'Đang lấy hàng') return false;
+                if (currentTab === 'SHORTAGE' && t.status !== 'Thiếu tồn') return false;
+                if (currentTab === 'COMPLETED' && !['Hoàn tất lấy hàng', 'Hoàn tất một phần'].includes(t.status)) return false;
+                if (currentTab === 'CANCELLED' && t.status !== 'Đã hủy') return false;
+
+                if (plat !== 'ALL' && t.platform.toLowerCase() !== plat.toLowerCase()) return false;
+                if (prio !== 'ALL' && t.priority !== prio) return false;
+                if (stf !== 'ALL' && t.assignee !== stf) return false;
+                if (kw && !(`${t.pick_id} ${t.order_code} ${t.sku_summary} ${t.assignee}`.toLowerCase().includes(kw))) return false;
+                return true;
+            });
+
+            const tbody = document.getElementById('ticketsTableBody');
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#64748b; padding:24px;">Không có phiếu yêu cầu lấy hàng nào khớp bộ lọc.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(t => `
+                <tr>
+                    <td><a href="javascript:void(0)" onclick="openDetailModal('${t.pick_id}')" style="font-weight:800; color:#086f68; text-decoration:none;">${t.pick_id}</a></td>
+                    <td style="color:#475569;">
+                        <div>${t.created_at}</div>
+                        ${t.deadline ? `<small style="color:#d97706; font-weight:700;">Hạn: ${t.deadline.replace('T', ' ')}</small>` : ''}
+                    </td>
+                    <td>
+                        <strong>${t.platform}</strong> · <small style="color:#64748b;">${t.order_code}</small>
+                        <div style="margin-top:3px;">${t.priority === 'Khẩn' ? '<span class="badge bg-red" style="padding:2px 7px; font-size:10.5px;">Khẩn</span>' : '<span class="badge bg-gray" style="padding:2px 7px; font-size:10.5px;">Bình thường</span>'}</div>
+                    </td>
+                    <td><strong>${t.sku_summary}</strong></td>
+                    <td><strong>${t.total_req_pcs} PCS</strong></td>
+                    <td style="color:#057a55; font-weight:700;">${t.total_out_pcs} PCS</td>
+                    <td style="color:${t.total_rem_pcs > 0 ? '#0369a1' : '#64748b'}; font-weight:700;">${t.total_rem_pcs} PCS</td>
+                    <td>${t.assignee || '<span style="color:#94a3b8;">Chưa gán</span>'}</td>
+                    <td>${renderStatusBadge(t)}</td>
+                    <td>
+                        <div class="act-group">
+                            <button type="button" class="icon-btn" title="Xem chi tiết phiếu" onclick="openDetailModal('${t.pick_id}')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </button>
+                            <button type="button" class="icon-btn" title="Thao tác khác" onclick="openFloatingMenu(event, '${t.pick_id}')">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openFloatingMenu(e, pickId) {
+            e.stopPropagation();
+            const menu = document.getElementById('globalFloatingMenu');
+            const btn = e.currentTarget;
+            if (activeMenuPickId === pickId && menu.classList.contains('open')) {
+                closeFloatingMenu();
+                return;
+            }
+            closeFloatingMenu();
+            const t = allTickets.find(x => x.pick_id === pickId);
+            if (!t) return;
+
+            const canAssign = !['Hoàn tất lấy hàng', 'Hoàn tất một phần', 'Đã hủy'].includes(t.status);
+            const canResolve = t.status === 'Thiếu tồn' || (t.total_rem_pcs > 0 && t.total_out_pcs > 0);
+            const canCancel = t.total_out_pcs === 0 && t.status !== 'Đã hủy';
+
+            let html = `<button type="button" class="dd-item" onclick="closeFloatingMenu(); openDetailModal('${t.pick_id}')">📄 Chi tiết &amp; Lịch sử</button>`;
+            if (canAssign) html += `<button type="button" class="dd-item" onclick="closeFloatingMenu(); openAssignModal('${t.pick_id}')">👤 Đổi nhân viên phụ trách</button>`;
+            if (canResolve) html += `<button type="button" class="dd-item" onclick="closeFloatingMenu(); openShortageModal('${t.pick_id}')">⚠️ Xử lý thiếu tồn</button>`;
+            if (canCancel) html += `<div class="dd-divider"></div><button type="button" class="dd-item danger" onclick="closeFloatingMenu(); cancelTicket('${t.pick_id}')">✕ Hủy phiếu yêu cầu</button>`;
+
+            menu.innerHTML = html;
+            btn.classList.add('menu-active');
+            activeMenuPickId = pickId;
+
+            const rect = btn.getBoundingClientRect();
+            menu.style.visibility = 'hidden';
+            menu.classList.add('open');
+            const spaceBelow = window.innerHeight - rect.bottom;
+            menu.style.top = `${spaceBelow < menu.offsetHeight + 16 ? rect.top - menu.offsetHeight - 6 : rect.bottom + 6}px`;
+            menu.style.left = `${Math.max(12, rect.right - menu.offsetWidth)}px`;
+            menu.style.visibility = 'visible';
+        }
+
+        /* ================= DRAWER TẠO YÊU CẦU MỚI ================= */
+        function openCreateDrawer() {
+            const selStaff = document.getElementById('newAssignee');
+            selStaff.innerHTML = activeStaffs.length
+                ? activeStaffs.map(s => `<option value="${s.staff_code}">${s.label}</option>`).join('')
+                : `<option value="">Không có nhân viên kho hoạt động</option>`;
+
+            document.getElementById('newOrderCode').value = '';
+            document.getElementById('newNote').value = '';
+            document.getElementById('newAdjustReason').value = '';
+            document.getElementById('dupOrderWarnBox').style.display = 'none';
+            document.getElementById('chkAllowDupOrder').checked = false;
+            document.querySelectorAll('input[name="shortagePolicy"]').forEach(r => r.checked = false);
+            document.getElementById('adjustDetailBox').style.display = 'none';
+
+            const firstSku = activeSkus[0] ? activeSkus[0].sku : '';
+            draftRows = firstSku ? [{ sku: firstSku, requested_pcs: 10, is_combo_item: false, combo_qty: 1 }] : [];
+            renderDraftRows();
+            document.getElementById('createDrawer').classList.add('open');
+        }
+
+        function closeCreateDrawer() { document.getElementById('createDrawer').classList.remove('open'); }
+
+        function addProductRow() {
+            if (!activeSkus.length) return;
+            const unused = activeSkus.find(s => !draftRows.some(r => r.sku === s.sku)) || activeSkus[0];
+            draftRows.push({ sku: unused.sku, requested_pcs: 10, is_combo_item: false, combo_qty: 1 });
+            renderDraftRows();
+        }
+
+        function removeDraftRow(idx) {
+            if (draftRows.length <= 1) return;
+            draftRows.splice(idx, 1);
+            renderDraftRows();
+        }
+
+        function updateDraftRow(idx, field, val) {
+            if (field === 'sku') draftRows[idx].sku = val;
+            if (field === 'qty') draftRows[idx].requested_pcs = Math.max(1, parseInt(val || 1, 10));
+            if (field === 'is_combo') draftRows[idx].is_combo_item = Boolean(val);
+            if (field === 'combo_qty') draftRows[idx].combo_qty = Math.max(1, parseInt(val || 1, 10));
+            renderDraftRows();
+        }
+
+        function onShortagePolicyChange() {
+            const picked = document.querySelector('input[name="shortagePolicy"]:checked');
+            document.getElementById('adjustDetailBox').style.display = (picked && picked.value === 'ADJUST_QTY') ? 'block' : 'none';
+        }
+
+        function renderDraftRows() {
+            const box = document.getElementById('productRowsContainer');
+            let totalReq = 0, totalAvailCap = 0, totalShortage = 0;
+
+            box.innerHTML = draftRows.map((r, idx) => {
+                const skuInfo = activeSkus.find(s => s.sku === r.sku) || { name: r.sku, available_pcs: 0 };
+                const avail = Number(skuInfo.available_pcs || 0);
+                const shortQty = Math.max(0, r.requested_pcs - avail);
+                totalReq += r.requested_pcs;
+                totalAvailCap += Math.min(r.requested_pcs, avail);
+                totalShortage += shortQty;
+
+                return `
+                    <div class="sku-line-card">
+                        <div style="display:flex; justify-content:space-between; gap:8px; margin-bottom:8px;">
+                            <select class="ctrl" style="flex:1;" onchange="updateDraftRow(${idx}, 'sku', this.value)">
+                                ${activeSkus.map(s => `<option value="${s.sku}" ${s.sku === r.sku ? 'selected' : ''}>${s.sku} – ${s.name}</option>`).join('')}
+                            </select>
+                            ${draftRows.length > 1 ? `<button type="button" class="icon-btn" style="color:#dc2626;" onclick="removeDraftRow(${idx})">🗑️</button>` : ''}
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; font-size:12px; margin-bottom:8px;">
+                            <div>
+                                <span style="color:#64748b; display:block; margin-bottom:3px;">Yêu cầu (PCS)</span>
+                                <input type="number" min="1" class="ctrl" style="width:100%; height:34px;" value="${r.requested_pcs}" onchange="updateDraftRow(${idx}, 'qty', this.value)">
+                            </div>
+                            <div>
+                                <span style="color:#64748b; display:block; margin-bottom:3px;">Khả dụng kho</span>
+                                <div style="height:34px; display:flex; align-items:center; font-weight:800; color:#057a55;">${avail} PCS</div>
+                            </div>
+                            <div>
+                                <span style="color:#64748b; display:block; margin-bottom:3px;">Thiếu tồn</span>
+                                <div style="height:34px; display:flex; align-items:center; font-weight:800; color:${shortQty > 0 ? '#dc2626' : '#64748b'};">${shortQty} PCS</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px dashed #cbd5e1; padding-top:7px; font-size:12px;">
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer;">
+                                <input type="checkbox" ${r.is_combo_item ? 'checked' : ''} onchange="updateDraftRow(${idx}, 'is_combo', this.checked)">
+                                Thuộc nhóm đóng Combo (Pre-packing)
+                            </label>
+                            ${r.is_combo_item ? `
+                                <div style="display:flex; align-items:center; gap:5px;">
+                                    <span>Số bộ Combo:</span>
+                                    <input type="number" min="1" class="ctrl" style="width:68px; height:28px; padding:0 8px;" value="${r.combo_qty}" onchange="updateDraftRow(${idx}, 'combo_qty', this.value)">
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const alertBox = document.getElementById('drawerShortageBox');
+            if (totalShortage > 0) {
+                alertBox.style.display = 'block';
+                document.getElementById('drawerShortageTitle').textContent = `⚠️ Thiếu ${totalShortage} PCS so với yêu cầu (Khả dụng: ${totalAvailCap}/${totalReq} PCS). Vui lòng chọn phương án:`;
+                document.getElementById('optPartialRelease').style.display = totalAvailCap > 0 ? 'flex' : 'none';
+                document.getElementById('optAdjustQty').style.display = totalAvailCap > 0 ? 'flex' : 'none';
+
+                document.getElementById('adjOldVal').textContent = `${totalReq} PCS`;
+                document.getElementById('adjAvailVal').textContent = `${totalAvailCap} PCS`;
+                document.getElementById('adjNewVal').textContent = `${totalAvailCap} PCS`;
+                document.getElementById('adjDiffVal').textContent = `-${totalShortage} PCS`;
+            } else {
+                alertBox.style.display = 'none';
+            }
+        }
+
+        async function verifyStockFromServer() {
+            const res = await fetch('/api/dispatcher/picking-requests/check-stock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: draftRows })
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            (data.items || []).forEach(it => {
+                const found = activeSkus.find(s => s.sku === it.sku);
+                if (found) found.available_pcs = it.available_pcs;
+            });
+            renderDraftRows();
+            alert(data.has_shortage ? 'Đã kiểm tra tồn kho mới nhất: Có SKU chưa đủ tồn khả dụng!' : 'Kiểm tra tồn hoàn tất: Tất cả SKU đều đủ tồn khả dụng.');
+        }
+
+        async function submitPickingRequest(mode) {
+            const policyRadio = document.querySelector('input[name="shortagePolicy"]:checked');
+            const payload = {
+                mode: mode,
+                platform: document.getElementById('newPlatform').value,
+                order_code: document.getElementById('newOrderCode').value.trim(),
+                allow_duplicate_order: document.getElementById('chkAllowDupOrder').checked,
+                priority: document.getElementById('newPriority').value,
+                deadline: document.getElementById('newDeadline').value,
+                assignee_code: document.getElementById('newAssignee').value,
+                shortage_policy: policyRadio ? policyRadio.value : '',
+                adjust_reason: document.getElementById('newAdjustReason').value.trim(),
+                note: document.getElementById('newNote').value.trim(),
+                items: draftRows
+            };
+
+            const res = await fetch('/api/dispatcher/picking-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (res.status === 409) {
+                    document.getElementById('dupOrderWarnBox').style.display = 'block';
+                }
+                alert(data.error || 'Không thể lưu phiếu yêu cầu.');
+                return;
+            }
+            closeCreateDrawer();
+            await loadPickingRequests(true);
+        }
+
+        /* ================= POPUP CHI TIẾT PHIẾU (BỐ CỤC CHUẨN 4 KHỐI) ================= */
+        function openDetailModal(pickId) {
+            const t = allTickets.find(x => x.pick_id === pickId);
+            if (!t) return;
+
+            const canEdit = !['Hoàn tất lấy hàng', 'Hoàn tất một phần', 'Đã hủy'].includes(t.status);
+
+            const skuRowsHtml = (t.items || []).map(it => {
+                const netP = Number(it.net_picked_pcs !== undefined ? it.net_picked_pcs : it.picked_pcs) || 0;
+                const remP = Math.max(0, Number(it.requested_pcs || 0) - netP);
+                return `
+                    <tr>
+                        <td><strong>${it.sku}</strong>${it.is_combo_item ? ` <span class="badge bg-purple" style="padding:2px 6px; font-size:10px;">Combo (${it.combo_qty} bộ)</span>` : ''}</td>
+                        <td>${it.product_name}</td>
+                        <td><strong>${it.requested_pcs}</strong></td>
+                        <td style="color:#057a55; font-weight:700;">${netP}</td>
+                        <td style="color:#0369a1; font-weight:700;">${remP}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const txRowsHtml = (t.transactions || []).length ? t.transactions.map(tx => `
+                <tr>
+                    <td><strong>${tx.box_id}</strong></td>
+                    <td>${tx.location_snapshot}</td>
+                    <td style="font-weight:700; color:${tx.type === 'RETURNED' ? '#d97706' : '#057a55'};">
+                        ${tx.type === 'RETURNED' ? `RETURNED ${tx.qty_pcs} PCS` : `OUT ${tx.qty_pcs} PCS`}
+                    </td>
+                    <td>${tx.staff_name || '--'} · ${tx.time || ''}</td>
+                </tr>
+            `).join('') : `<tr><td colspan="4" style="text-align:center; color:#64748b;">Chưa phát sinh giao dịch OUT / RETURNED thực tế.</td></tr>`;
+
+            const histHtml = (t.history || []).map(h => `
+                <div style="font-size:12.5px; padding:7px 10px; background:#f8fafc; border-left:3px solid #086f68; border-radius:6px;">
+                    <strong>${h.time}</strong> – ${h.action} (${h.actor}): <span style="color:#475569;">${h.detail}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('detailModalBody').innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <h3 style="font-size:19px; font-weight:800;">Chi tiết phiếu ${t.pick_id}</h3>
+                            ${renderStatusBadge(t)}
+                        </div>
+                        <p style="font-size:13px; color:#64748b; margin-top:4px;">
+                            ${t.order_code} · ${t.platform} · <strong>${t.assignee || 'Chưa phân công'}</strong> · Ưu tiên: <strong>${t.priority}</strong>
+                        </p>
+                    </div>
+                    <button class="btn btn-outline" style="height:32px; padding:0 10px;" onclick="closeModal('detailModal')">✕</button>
+                </div>
+
+                <!-- 3 THẺ SỐ LIỆU: YÊU CẦU / ĐÃ OUT RÒNG / CÒN CẦN LẤY -->
+                <div class="stat-3-grid">
+                    <div class="stat-mini">
+                        <span>Yêu cầu</span>
+                        <strong>${t.total_req_pcs} PCS</strong>
+                    </div>
+                    <div class="stat-mini" style="background:#ecfdf5; border-color:#a7f3d0;">
+                        <span>Đã OUT (ròng)</span>
+                        <strong style="color:#057a55;">${t.total_out_pcs} PCS</strong>
+                    </div>
+                    <div class="stat-mini" style="background:#eff6ff; border-color:#bfdbfe;">
+                        <span>Còn cần lấy</span>
+                        <strong style="color:#0369a1;">${t.total_rem_pcs} PCS</strong>
+                    </div>
+                </div>
+
+                <h4 style="font-size:13.5px; font-weight:800; margin-bottom:6px;">Danh sách SKU</h4>
+                <table class="data-table" style="margin-bottom:14px;">
+                    <thead><tr><th>SKU</th><th>Sản phẩm</th><th>Yêu cầu</th><th>OUT</th><th>Còn</th></tr></thead>
+                    <tbody>${skuRowsHtml}</tbody>
+                </table>
+
+                <h4 style="font-size:13.5px; font-weight:800; margin-bottom:6px;">Giao dịch OUT &amp; RETURNED thực tế</h4>
+                <table class="data-table" style="margin-bottom:14px;">
+                    <thead><tr><th>Box</th><th>Kệ/tầng</th><th>Biến động</th><th>Nhân viên / Giờ</th></tr></thead>
+                    <tbody>${txRowsHtml}</tbody>
+                </table>
+
+                <h4 style="font-size:13.5px; font-weight:800; margin-bottom:6px;">Lịch sử xử lý</h4>
+                <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:16px;">${histHtml}</div>
+
+                ${canEdit ? `
+                    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:14px;">
+                        <button class="btn btn-outline" onclick="closeModal('detailModal'); openAssignModal('${t.pick_id}')">Đổi nhân viên</button>
+                        <button class="btn btn-primary" onclick="closeModal('detailModal'); openShortageModal('${t.pick_id}')">Xử lý thiếu tồn</button>
+                    </div>
+                ` : ''}
+            `;
+            document.getElementById('detailModal').classList.add('open');
+        }
+
+        function openAssignModal(pickId) {
+            const t = allTickets.find(x => x.pick_id === pickId);
+            if (!t) return;
+            document.getElementById('assignPickId').value = pickId;
+            document.getElementById('assignModalSub').textContent = `Phiếu ${pickId} (${t.order_code}) · Hiện tại: ${t.assignee || 'Chưa phân công'}`;
+            document.getElementById('assignStaffSelect').innerHTML = activeStaffs.map(s =>
+                `<option value="${s.staff_code}" ${s.staff_code === t.assignee_code ? 'selected' : ''}>${s.label}</option>`
+            ).join('');
+            document.getElementById('assignModal').classList.add('open');
+        }
+
+        async function confirmAssignStaff() {
+            const pickId = document.getElementById('assignPickId').value;
+            const code = document.getElementById('assignStaffSelect').value;
+            const res = await fetch(`/api/dispatcher/picking-requests/${pickId}/assign`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assignee_code: code })
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(data.error || 'Lỗi phân công'); return; }
+            closeModal('assignModal');
+            loadPickingRequests(true);
+        }
+
+        function openShortageModal(pickId) {
+            const t = allTickets.find(x => x.pick_id === pickId);
+            if (!t) return;
+            document.getElementById('shortagePickId').value = pickId;
+            document.getElementById('shortageModalSummary').textContent =
+                `Phiếu ${pickId}: Yêu cầu ${t.total_req_pcs} PCS · Đã OUT ${t.total_out_pcs} PCS · Còn cần lấy ${t.total_rem_pcs} PCS`;
+            document.getElementById('shortageReasonInput').value = '';
+            document.getElementById('shortageModal').classList.add('open');
+        }
+
+        async function confirmResolveShortage() {
+            const pickId = document.getElementById('shortagePickId').value;
+            const decision = document.querySelector('input[name="resolveDecision"]:checked').value;
+            const reason = document.getElementById('shortageReasonInput').value.trim();
+
+            const res = await fetch(`/api/dispatcher/picking-requests/${pickId}/resolve-shortage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ decision, reason })
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(data.error || 'Lỗi xử lý thiếu tồn'); return; }
+            closeModal('shortageModal');
+            loadPickingRequests(true);
+        }
+
+        async function cancelTicket(pickId) {
+            const reason = prompt(`Nhập lý do hủy phiếu ${pickId}:`);
+            if (!reason) return;
+            const res = await fetch(`/api/dispatcher/picking-requests/${pickId}/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(data.error || 'Không thể hủy phiếu'); return; }
+            loadPickingRequests(true);
+        }
+
+        function exportTicketsExcel() {
+            let csv = '\uFEFFMã phiếu,Ngày tạo,Hạn hoàn thành,Nguồn,Mã đơn,Ưu tiên,Sản phẩm,PCS yêu cầu,Đã OUT ròng,Còn cần lấy,Nhân viên,Trạng thái\n';
+            allTickets.forEach(t => {
+                csv += `"${t.pick_id}","${t.created_at}","${t.deadline}","${t.platform}","${t.order_code}","${t.priority}","${t.sku_summary}",${t.total_req_pcs},${t.total_out_pcs},${t.total_rem_pcs},"${t.assignee}","${t.status}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `SANOVA_YeuCauLayHang_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+        }
+
+        loadPickingRequests(true);
+        setInterval(() => loadPickingRequests(false), 6000);
+    </script>
+</body>
+</html>

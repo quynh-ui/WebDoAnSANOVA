@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quét QR / Barcode · SANOVA WMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        :root {
+            --sidebar-bg: #063b2c;
+            --sidebar-active: #167963;
+            --brand-mint: #79b49f;
+            --primary: #0f766e;
+            --primary-hover: #0d5c56;
+            --bg-main: #f4f7f6;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --warning: #d97706;
+            --warning-bg: #fffbeb;
+            --info: #0284c7;
+            --info-bg: #f0f9ff;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+        }
+
+        /* ================= 1. SIDEBAR CỐ ĐỊNH ================= */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            left: 0;
+            background-color: var(--sidebar-bg);
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 22px 14px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .sidebar-top {
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        .sidebar-top::-webkit-scrollbar { display: none; }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 10px 22px;
+        }
+
+        .brand-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-category {
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--brand-mint);
+            letter-spacing: 0.6px;
+            padding: 0 10px 14px;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            color: #e2ece9;
+            text-decoration: none;
+            font-size: 14.5px;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.14);
+            padding-top: 14px;
+            margin-top: 10px;
+        }
+
+        .logout-link:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+        }
+
+        /* ================= 2. VÙNG NỘI DUNG CHÍNH ================= */
+        .main-content {
+            flex-grow: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 24px 32px 48px;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #063b2c;
+            letter-spacing: -0.3px;
+        }
+
+        .page-sub {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header-icons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .circle-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #334155;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .circle-icon-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* CARD CHUNG */
+        .panel-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+            gap: 12px;
+        }
+
+        .panel-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: #063b2c;
+        }
+
+        .panel-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        /* NÚT CAMERA GÓC PHẢI KHỐI QUÉT */
+        .camera-trigger-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid #ccebe3;
+            background: #f0fdf9;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .camera-trigger-btn:hover {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
+        .camera-trigger-btn.active {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #ffffff;
+        }
+
+        /* Ô NHẬP MÃ QUÉT */
+        .scan-label {
+            display: block;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 8px;
+        }
+
+        .scan-input {
+            width: 100%;
+            height: 48px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 0 18px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+            outline: none;
+            margin-bottom: 12px;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .scan-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+        }
+
+        .scan-btn-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .btn-search-dark {
+            flex: 1;
+            height: 44px;
+            background: #0f172a;
+            color: #ffffff;
+            border: none;
+            border-radius: 99px;
+            font-size: 14.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.15s;
+        }
+
+        .btn-search-dark:hover { background: #1e293b; }
+
+        .btn-clear-pill {
+            height: 44px;
+            padding: 0 22px;
+            border-radius: 99px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: var(--text-dark);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-clear-pill:hover {
+            border-color: #94a3b8;
+            background: #f8fafc;
+        }
+
+        .scanner-hint {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        /* KHUNG CAMERA QUÉT TRỰC TIẾP */
+        .camera-reader-box {
+            display: none;
+            border: 1.5px dashed var(--primary);
+            border-radius: 14px;
+            padding: 14px;
+            background: #f8fafc;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .camera-reader-box.open { display: block; }
+
+        #qrCameraRegion {
+            max-width: 420px;
+            margin: 0 auto;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        /* CHIP TRUY CẬP NHANH DỮ LIỆU THỰC TẾ */
+        .quick-samples-label {
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .sample-chips-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .sample-chip {
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: #334155;
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .sample-chip:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #f0fdf9;
+        }
+
+        /* ================= 3. KẾT QUẢ TRA CỨU ================= */
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        .st-waiting { background: #fef3c7; color: #b45309; }
+        .st-placing { background: #e0f2fe; color: #0369a1; }
+        .st-danger { background: #fee2e2; color: #b91c1c; }
+        .st-out { background: #f3e8ff; color: #7e22ce; }
+
+        .result-hero-box {
+            background: #f0fdf9;
+            border: 1px solid #d1fae5;
+            border-radius: 14px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .hero-qr-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid #ccebe3;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .hero-code {
+            font-size: 19px;
+            font-weight: 800;
+            color: #063b2c;
+            margin-bottom: 3px;
+            word-break: break-all;
+        }
+
+        .hero-sub {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.4;
+        }
+
+        .meta-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px 24px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 16px;
+        }
+
+        .meta-cell span {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+        }
+
+        .meta-cell strong {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .actions-bar-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .actions-bar-head span {
+            font-size: 14px;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .action-buttons-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-action-primary {
+            background: #0f172a;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 18px;
+            border-radius: 99px;
+            font-size: 13.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-action-primary:hover { background: #1e293b; }
+
+        .btn-action-secondary {
+            background: #ffffff;
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 99px;
+            font-size: 13.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .btn-action-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #f0fdf9;
+        }
+
+        /* Bảng danh sách nhiều lựa chọn (khi Barcode trùng nhiều SKU) hoặc Box trong kệ */
+        .sub-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .sub-items-table th {
+            background: #f8fafc;
+            padding: 9px 12px;
+            text-align: left;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .sub-items-table td {
+            padding: 10px 12px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+
+        /* ================= 4. LỊCH SỬ QUÉT GẦN ĐÂY ================= */
+        .history-filter-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .history-select {
+            flex: 1;
+            height: 40px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0 12px;
+            font-size: 13.5px;
+            color: var(--text-dark);
+            background: #ffffff;
+        }
+
+        .history-count-pill {
+            padding: 6px 12px;
+            border-radius: 99px;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-item {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .history-item:hover {
+            border-color: #99f6e4;
+            background: #f8fafc;
+        }
+
+        .hi-code {
+            font-size: 14px;
+            font-weight: 800;
+            color: #063b2c;
+        }
+
+        .hi-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .alert-error-box {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 4px solid var(--danger);
+            color: #991b1b;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 13.5px;
+            font-weight: 600;
+            display: none;
+            margin-bottom: 16px;
+        }
+
+        .alert-error-box.show { display: block; }
+    </style>
+    <script src="/js/role_common.js"></script>
+    <script src="/js/sanova_xlsx_export.js"></script>
+</head>
+<body>
+
+    <!-- 1. SIDEBAR NHÂN VIÊN KHO SANOVA CỐ ĐỊNH -->
+    <aside class="sidebar">
+        <div class="sidebar-top">
+            <div class="brand-header">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path>
+                    <polyline points="7 5 12 8 17 5"></polyline>
+                    <line x1="12" y1="8" x2="12" y2="13"></line>
+                    <path d="M7 10L12 13V18L7 21L2 18V13L7 10Z"></path>
+                    <polyline points="2 13 7 16 12 13"></polyline>
+                    <line x1="7" y1="16" x2="7" y2="21"></line>
+                    <path d="M17 10L22 13V18L17 21L12 18V13L17 10Z"></path>
+                    <polyline points="12 13 17 16 22 13"></polyline>
+                    <line x1="17" y1="16" x2="17" y2="21"></line>
+                </svg>
+                <span class="brand-name">SANOVA</span>
+            </div>
+
+            <div class="nav-category">NHÂN VIÊN KHO</div>
+
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/staff/dashboard" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        <span>Tổng quan công việc</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/inbound" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><line x1="16" y1="19" x2="22" y2="19"></line><line x1="19" y1="16" x2="19" y2="22"></line></svg>
+                        <span>Nhập kho &amp; lưu trữ</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/scan" class="nav-link active">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><line x1="7" y1="12" x2="17" y2="12"></line></svg>
+                        <span>Quét QR / Barcode</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/picking-returns" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+                        <span>Lấy hàng &amp; Trả hàng</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/prepacking" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L17 5V10L12 13L7 10V5L12 2Z"></path><path d="M7 10L12 13V18L7 21L2 18V13L7 10Z"></path><path d="M17 10L22 13V18L17 21L12 18V13L17 10Z"></path></svg>
+                        <span>Pre-packing &amp; Combo</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/packing-handover" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line><polyline points="16 16 18 18 22 14"></polyline></svg>
+                        <span>Đóng gói &amp; Bàn giao</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/stocktake" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg>
+                        <span>Kiểm kê kho</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/staff/history" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
+                        <span>Lịch sử giao dịch</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="sidebar-footer">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="/staff/profile" class="nav-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>Tài khoản cá nhân</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/logout" class="nav-link logout-link">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        <span>Đăng xuất</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
+
+    <!-- 2. VÙNG NỘI DUNG QUÉT QR / BARCODE -->
+    <main class="main-content">
+
+        <header class="top-header">
+            <div>
+                <h1 class="page-title">Quét QR / Barcode</h1>
+                <p class="page-sub">Tra cứu thông tin hàng hóa và vị trí lưu trữ</p>
+            </div>
+            <div class="header-icons">
+                <a href="/staff/dashboard" class="circle-icon-btn" title="Thông báo công việc">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </a>
+                <a href="/staff/profile" class="circle-icon-btn" title="Tài khoản cá nhân">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </a>
+            </div>
+        </header>
+
+        <!-- KHỐI 1: QUÉT MÃ ĐỂ TRA CỨU -->
+        <section class="panel-card">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Quét mã để tra cứu</h2>
+                    <p class="panel-desc">Sử dụng máy quét USB/HID, camera hoặc nhập mã thủ công</p>
+                </div>
+                <button type="button" class="camera-trigger-btn" id="toggleCameraBtn" onclick="toggleCameraScanner()" title="Bật / Tắt Camera quét mã QR & Barcode">
+                    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+                </button>
+            </div>
+
+            <!-- Vùng hiển thị Camera khi người dùng bật -->
+            <div class="camera-reader-box" id="cameraReaderBox">
+                <div style="font-size:13px; font-weight:700; color:#063b2c; margin-bottom:10px;">
+                    Đưa mã QR hoặc Barcode vào khung hình bên dưới để tự động nhận diện
+                </div>
+                <div id="qrCameraRegion"></div>
+                <button type="button" class="btn-clear-pill" style="margin-top:10px; height:36px;" onclick="stopCameraScanner()">Tắt Camera</button>
+            </div>
+
+            <label class="scan-label" for="scanCodeInput">QR / Barcode</label>
+            <input type="text" class="scan-input" id="scanCodeInput" placeholder="Quét hoặc nhập mã Box (QR-SANOVA-...), vị trí kệ (A1-010) hoặc mã SKU..." autofocus onkeydown="if(event.key==='Enter'){ event.preventDefault(); executeLookup(); }">
+
+            <div class="scan-btn-row">
+                <button type="button" class="btn-search-dark" onclick="executeLookup()">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <span>Tra cứu</span>
+                </button>
+                <button type="button" class="btn-clear-pill" onclick="clearScanInput()">Xóa</button>
+            </div>
+
+            <div class="scanner-hint">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span>Máy quét USB/HID sẽ tự động gửi Enter để tra cứu ngay sau khi bắn mã. Chức năng này chỉ tra cứu, không làm thay đổi tồn kho.</span>
+            </div>
+
+            <div class="quick-samples-label">MÃ DỮ LIỆU THỰC TẾ TRONG KHO (NHẤN ĐỂ TRA CỨU NHANH)</div>
+            <div class="sample-chips-row" id="realQuickSamplesRow">
+                <span style="font-size:12.5px; color:#94a3b8;">Đang nạp mã thực tế từ hệ thống...</span>
+            </div>
+        </section>
+
+        <!-- THÔNG BÁO LỖI KHI MÃ KHÔNG TỒN TẠI / MẤT KẾT NỐI -->
+        <div class="alert-error-box" id="scanErrorAlert"></div>
+
+        <!-- KHỐI 2: KẾT QUẢ TRA CỨU -->
+        <section class="panel-card" id="lookupResultCard" style="display:none;">
+            <div class="panel-head" style="align-items:center;">
+                <h2 class="panel-title" id="resultCardHeading">Kết quả tra cứu</h2>
+                <span class="status-badge" id="resultStatusBadge">--</span>
+            </div>
+
+            <div class="result-hero-box">
+                <div class="hero-qr-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                </div>
+                <div>
+                    <div class="hero-code" id="resultHeroCode">--</div>
+                    <div class="hero-sub" id="resultHeroSub">--</div>
+                </div>
+            </div>
+
+            <div class="meta-grid-2" id="resultMetaGrid"></div>
+
+            <!-- Danh sách lựa chọn SKU (nếu 1 Barcode trùng nhiều sản phẩm) hoặc Box đang lưu trong kệ -->
+            <div id="resultSubTableWrapper" style="display:none; margin-bottom:16px;"></div>
+
+            <div class="actions-bar-head">
+                <span>Thao tác phù hợp</span>
+                <span style="font-size:12px; font-weight:500; color:#64748b;">Điều hướng theo trạng thái &amp; quyền STAFF</span>
+            </div>
+            <div class="action-buttons-row" id="resultActionsRow"></div>
+        </section>
+
+        <!-- KHỐI 3: LỊCH SỬ QUÉT GẦN ĐÂY -->
+        <section class="panel-card">
+            <div class="panel-head" style="align-items:center;">
+                <h2 class="panel-title">Lịch sử quét gần đây</h2>
+                <button type="button" class="btn-clear-pill" style="height:32px; padding:0 12px; font-size:12px;" onclick="toggleHistoryCollapse()" id="toggleHistoryBtn">Thu gọn ▲</button>
+            </div>
+
+            <div id="historyBodyWrapper">
+                <div class="history-filter-row">
+                    <select class="history-select" id="historyTypeFilter" onchange="renderScanHistory()">
+                        <option value="ALL">Tất cả loại mã</option>
+                        <option value="BOX">Box nội bộ</option>
+                        <option value="SHELF">Vị trí kệ</option>
+                        <option value="PRODUCT">Sản phẩm (SKU)</option>
+                    </select>
+                    <span class="history-count-pill" id="historyCountBadge">0 lượt</span>
+                </div>
+
+                <div class="history-list" id="scanHistoryList">
+                    <div style="text-align:center; padding:20px; color:#94a3b8; font-size:13px;">Chưa có lượt quét nào trong phiên làm việc.</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let html5QrScanner = null;
+        let isCameraRunning = false;
+        let scanHistoryData = [];
+        let historyCollapsed = false;
+
+        function normalizeRawInput(raw) {
+            let val = (raw || '').trim();
+            if (val.includes('/staff/box-info/')) {
+                val = decodeURIComponent(val.split('/staff/box-info/').pop().trim());
+            } else if (val.includes('/q/')) {
+                val = decodeURIComponent(val.split('/q/').pop().trim());
+            }
+            return val;
+        }
+
+        function clearScanInput() {
+            const inp = document.getElementById('scanCodeInput');
+            inp.value = '';
+            document.getElementById('scanErrorAlert').classList.remove('show');
+            inp.focus();
+        }
+
+        // Bật / Tắt Camera quét mã QR & Barcode
+        async function toggleCameraScanner() {
+            if (isCameraRunning) {
+                await stopCameraScanner();
+            } else {
+                await startCameraScanner();
+            }
+        }
+
+        async function startCameraScanner() {
+            const box = document.getElementById('cameraReaderBox');
+            const btn = document.getElementById('toggleCameraBtn');
+            if (typeof Html5Qrcode === 'undefined') {
+                showScanError('Trình duyệt chưa nạp được bộ giải mã Camera. Vui lòng kiểm tra kết nối mạng hoặc dùng máy quét USB.');
+                return;
+            }
+            box.classList.add('open');
+            btn.classList.add('active');
+
+            try {
+                html5QrScanner = new Html5Qrcode('qrCameraRegion');
+                await html5QrScanner.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 240, height: 240 } },
+                    async (decodedText) => {
+                        const clean = normalizeRawInput(decodedText);
+                        document.getElementById('scanCodeInput').value = clean;
+                        await stopCameraScanner();
+                        executeLookup(clean);
+                    },
+                    () => {}
+                );
+                isCameraRunning = true;
+            } catch (err) {
+                box.classList.remove('open');
+                btn.classList.remove('active');
+                showScanError('Không thể truy cập Camera (chưa cấp quyền hoặc thiết bị không có camera). Bạn có thể quét bằng máy quét USB hoặc nhập mã thủ công.');
+            }
+        }
+
+        async function stopCameraScanner() {
+            const box = document.getElementById('cameraReaderBox');
+            const btn = document.getElementById('toggleCameraBtn');
+            if (html5QrScanner && isCameraRunning) {
+                try {
+                    await html5QrScanner.stop();
+                    html5QrScanner.clear();
+                } catch (e) {}
+            }
+            isCameraRunning = false;
+            box.classList.remove('open');
+            btn.classList.remove('active');
+        }
+
+        function showScanError(msg) {
+            const alertBox = document.getElementById('scanErrorAlert');
+            alertBox.textContent = `⚠ ${msg}`;
+            alertBox.classList.add('show');
+            document.getElementById('lookupResultCard').style.display = 'none';
+        }
+
+        // Gửi yêu cầu tra cứu lên Backend POST /api/staff/scan/lookup
+        async function executeLookup(forcedCode = null, selectedSku = null) {
+            const inputEl = document.getElementById('scanCodeInput');
+            const raw = forcedCode !== null ? forcedCode : inputEl.value;
+            const code = normalizeRawInput(raw);
+            inputEl.value = code;
+
+            if (!code) {
+                showScanError('Vui lòng quét hoặc nhập mã QR / Barcode / vị trí kệ cần tra cứu.');
+                inputEl.focus();
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/staff/scan/lookup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ code: code, selected_sku: selectedSku })
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    showScanError(data.error || `Không tìm thấy dữ liệu cho mã "${code}".`);
+                    loadScanHistory();
+                    inputEl.select();
+                    return;
+                }
+
+                document.getElementById('scanErrorAlert').classList.remove('show');
+                renderLookupResult(data);
+                loadScanHistory();
+                inputEl.select();
+            } catch (err) {
+                showScanError('Mất kết nối tới máy chủ SANOVA. Vui lòng kiểm tra mạng và thử lại.');
+            }
+        }
+
+        // Hiển thị kết quả tra cứu theo đúng loại mã (BOX | SHELF | PRODUCT | MULTI_PRODUCT)
+        function renderLookupResult(data) {
+            const card = document.getElementById('lookupResultCard');
+            const heading = document.getElementById('resultCardHeading');
+            const badge = document.getElementById('resultStatusBadge');
+            const heroCode = document.getElementById('resultHeroCode');
+            const heroSub = document.getElementById('resultHeroSub');
+            const metaGrid = document.getElementById('resultMetaGrid');
+            const subTableWrap = document.getElementById('resultSubTableWrapper');
+            const actionsRow = document.getElementById('resultActionsRow');
+
+            card.style.display = 'block';
+            subTableWrap.style.display = 'none';
+            subTableWrap.innerHTML = '';
+            badge.className = 'status-badge';
+
+            // TRƯỜNG HỢP 1: MÃ BOX NỘI BỘ
+            if (data.type === 'BOX') {
+                const b = data.box;
+                const r = data.receipt || {};
+                const p = data.product || {};
+                const st = b.box_status || 'Đang lưu trữ';
+
+                heading.textContent = 'Kết quả tra cứu Box';
+                badge.textContent = st;
+                if (st === 'Chờ xếp kệ' || st === 'Đã xếp kệ, chờ duyệt') badge.classList.add('st-waiting');
+                else if (st === 'Hư hỏng / Cách ly') badge.classList.add('st-danger');
+                else if (st === 'Đã OUT') badge.classList.add('st-out');
+
+                heroCode.textContent = b.box_id;
+                heroSub.innerHTML = `Mã QR nội bộ: <strong>${b.internal_qr}</strong><br>Phiếu nhập: <strong>${r.id || b.receipt_id || '--'}</strong>`;
+
+                const isDamaged = st === 'Hư hỏng / Cách ly';
+                metaGrid.innerHTML = `
+                    <div class="meta-cell"><span>Sản phẩm</span><strong>${b.sku} · ${p.name || b.product_name}</strong></div>
+                    <div class="meta-cell"><span>Số lượng hiện tại</span><strong style="color:#0f766e;">${b.quantity} ${p.unit || 'PCS'}</strong></div>
+                    <div class="meta-cell"><span>Vị trí</span><strong>${b.shelf_position_id || 'Chưa xếp lên kệ'}</strong></div>
+                    <div class="meta-cell"><span>Tình trạng</span><strong style="color:${isDamaged ? '#dc2626' : '#0f172a'};">${isDamaged ? 'Hư hỏng / Cách ly' : 'Bình thường'}</strong></div>
+                    <div class="meta-cell"><span>Ngày tiếp nhận</span><strong>${r.created_at || '--'}</strong></div>
+                    <div class="meta-cell"><span>Nguồn hàng</span><strong>${r.supplier || '--'} (${r.vehicle_code || 'NCC'})</strong></div>
+                `;
+
+                // Quy tắc hiển thị nút hành động theo đúng trạng thái Box
+                let btns = '';
+                if (st === 'Chờ xếp kệ') {
+                    btns += `<a href="/staff/inbound?ticket=${encodeURIComponent(b.receipt_id)}&box=${encodeURIComponent(b.internal_qr)}" class="btn-action-primary">Xếp kệ lưu trữ →</a>`;
+                } else if (st === 'Đã xếp kệ, chờ duyệt') {
+                    btns += `<a href="/staff/inbound?ticket=${encodeURIComponent(b.receipt_id)}" class="btn-action-primary">Theo dõi xác nhận phiếu</a>`;
+                } else if (st === 'Đang lưu trữ') {
+                    btns += `<a href="/staff/picking-returns?tab=OUT&box=${encodeURIComponent(b.internal_qr)}" class="btn-action-primary">Lấy hàng</a>`;
+                } else if (st === 'Đã OUT') {
+                    btns += `<a href="/staff/picking-returns?tab=RETURNED&box=${encodeURIComponent(b.internal_qr)}" class="btn-action-primary">Tiếp nhận trả hàng (RETURNED)</a>`;
+                } else if (isDamaged) {
+                    btns += `<a href="/staff/inbound?ticket=${encodeURIComponent(b.receipt_id)}" class="btn-action-primary" style="background:#dc2626;">Xử lý hàng cách ly / lỗi</a>`;
+                }
+                btns += `<a href="/staff/history?q=${encodeURIComponent(b.box_id)}" class="btn-action-secondary">Lịch sử Box</a>`;
+                actionsRow.innerHTML = btns;
+                return;
+            }
+
+            // TRƯỜNG HỢP 2: MÃ VỊ TRÍ KỆ
+            if (data.type === 'SHELF') {
+                const s = data.shelf;
+                const boxes = data.boxes_in_slot || [];
+                heading.textContent = 'Kết quả tra cứu Vị trí kệ';
+                badge.textContent = s.status || 'Đang sử dụng';
+                if (s.status !== 'Đang sử dụng') badge.classList.add('st-danger');
+
+                heroCode.textContent = s.slot_code;
+                heroSub.innerHTML = `Khu vực ${s.zone_id} (${s.zone_name}) · Kệ ${s.rack_id} · Tầng ${s.floor_no}`;
+
+                metaGrid.innerHTML = `
+                    <div class="meta-cell"><span>Sức chứa Box</span><strong>${s.current_boxes} / ${s.max_boxes} Box (Còn trống ${s.rem_boxes})</strong></div>
+                    <div class="meta-cell"><span>Tải trọng hiện tại</span><strong>${s.current_weight} / ${s.max_weight} kg</strong></div>
+                    <div class="meta-cell"><span>Kích thước ô kệ</span><strong>${s.dimensions} cm</strong></div>
+                    <div class="meta-cell"><span>Trạng thái lưu trữ</span><strong>${s.status}</strong></div>
+                `;
+
+                if (boxes.length > 0) {
+                    subTableWrap.style.display = 'block';
+                    subTableWrap.innerHTML = `
+                        <div style="font-size:13px; font-weight:700; color:#063b2c; margin-bottom:6px;">Danh sách Box đang lưu tại vị trí ${s.slot_code} (${boxes.length} Box):</div>
+                        <table class="sub-items-table">
+                            <thead><tr><th>BoxId</th><th>Sản phẩm</th><th>Số PCS</th><th>Trạng thái</th><th></th></tr></thead>
+                            <tbody>
+                                ${boxes.map(bx => `
+                                    <tr>
+                                        <td><strong>${bx.box_id}</strong></td>
+                                        <td>${bx.sku} · ${bx.product_name}</td>
+                                        <td>${bx.quantity} PCS</td>
+                                        <td>${bx.box_status}</td>
+                                        <td><button type="button" class="sample-chip" style="padding:3px 10px; font-size:12px;" onclick="executeLookup('${bx.internal_qr}')">Xem Box</button></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+
+                actionsRow.innerHTML = `
+                    <a href="/staff/inbound" class="btn-action-primary">Xếp Box vào kệ này</a>
+                    <a href="/staff/stocktake" class="btn-action-secondary">Kiểm kê vị trí</a>
+                `;
+                return;
+            }
+
+            // TRƯỜNG HỢP 3: MÃ SẢN PHẨM (SKU)
+            if (data.type === 'PRODUCT') {
+                const p = data.product;
+                const locs = data.locations || [];
+                heading.textContent = 'Kết quả tra cứu Sản phẩm (SKU)';
+                badge.textContent = p.status || 'Đang sử dụng';
+
+                heroCode.textContent = `${p.sku} · ${p.name}`;
+                heroSub.innerHTML = `Nhóm: <strong>${p.category}</strong> · Đơn vị tính: <strong>${p.unit}</strong> · Quy cách: ${p.spec || 'Tiêu chuẩn'}`;
+
+                metaGrid.innerHTML = `
+                    <div class="meta-cell"><span>Tổng tồn khả dụng trên kệ</span><strong style="color:#0f766e;">${data.available_pcs ?? 0} ${p.unit}</strong></div>
+                    <div class="meta-cell"><span>Số Box đang lưu trữ</span><strong>${locs.length} Box</strong></div>
+                    <div class="meta-cell"><span>Kích thước sản phẩm</span><strong>${p.length_cm || 0}×${p.width_cm || 0}×${p.height_cm || 0} cm</strong></div>
+                    <div class="meta-cell"><span>Trọng lượng đơn vị</span><strong>${p.weight_g || 0} g</strong></div>
+                `;
+
+                if (locs.length > 0) {
+                    subTableWrap.style.display = 'block';
+                    subTableWrap.innerHTML = `
+                        <div style="font-size:13px; font-weight:700; color:#063b2c; margin-bottom:6px;">Các vị trí &amp; Box đang lưu sản phẩm ${p.sku}:</div>
+                        <table class="sub-items-table">
+                            <thead><tr><th>Vị trí kệ</th><th>BoxId</th><th>Số lượng</th><th>Trạng thái</th></tr></thead>
+                            <tbody>
+                                ${locs.map(l => `
+                                    <tr>
+                                        <td><strong style="color:#0f766e;">${l.shelf_position_id || 'Khu tiếp nhận'}</strong></td>
+                                        <td>${l.box_id}</td>
+                                        <td>${l.quantity} ${p.unit}</td>
+                                        <td>${l.box_status}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+
+                actionsRow.innerHTML = `
+                    <a href="/staff/picking-returns?tab=OUT&sku=${encodeURIComponent(p.sku)}" class="btn-action-primary">Lấy hàng theo SKU</a>
+                    <a href="/staff/inbound" class="btn-action-secondary">Nhập thêm hàng</a>
+                `;
+                return;
+            }
+
+            // TRƯỜNG HỢP 4: MỘT BARCODE LIÊN KẾT NHIỀU SẢN PHẨM -> BẮT BUỘC CHỌN ĐÚNG SKU
+            if (data.type === 'MULTI_PRODUCT') {
+                const candidates = data.candidates || [];
+                heading.textContent = 'Phát hiện nhiều sản phẩm trùng Barcode';
+                badge.textContent = 'Cần chọn đúng SKU';
+                badge.classList.add('st-waiting');
+
+                heroCode.textContent = data.code;
+                heroSub.textContent = 'Mã vạch này đang liên kết với nhiều sản phẩm khác nhau. Vui lòng chọn đúng sản phẩm cần tra cứu:';
+                metaGrid.innerHTML = '';
+
+                subTableWrap.style.display = 'block';
+                subTableWrap.innerHTML = `
+                    <table class="sub-items-table">
+                        <thead><tr><th>Mã SKU</th><th>Tên sản phẩm</th><th>Nhóm hàng</th><th>Thao tác</th></tr></thead>
+                        <tbody>
+                            ${candidates.map(c => `
+                                <tr>
+                                    <td><strong>${c.sku}</strong></td>
+                                    <td>${c.name}</td>
+                                    <td>${c.category}</td>
+                                    <td><button type="button" class="btn-action-primary" style="padding:6px 14px; font-size:12px;" onclick="executeLookup('${c.sku}', '${c.sku}')">Chọn sản phẩm này</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                actionsRow.innerHTML = '';
+            }
+        }
+
+        // Nạp lịch sử quét & danh sách mã thực tế để bấm thử nhanh
+        async function loadScanHistory() {
+            try {
+                const res = await fetch('/api/staff/scan/history', { credentials: 'same-origin', cache: 'no-store' });
+                if (!res.ok) return;
+                const data = await res.json();
+                scanHistoryData = data.history || [];
+                renderScanHistory();
+
+                // Nạp các chip dữ liệu thực tế từ hệ thống
+                const samples = data.real_samples || [];
+                const sampleRow = document.getElementById('realQuickSamplesRow');
+                if (samples.length > 0) {
+                    sampleRow.innerHTML = samples.map(s =>
+                        `<button type="button" class="sample-chip" onclick="executeLookup('${s.code}')">${s.label}</button>`
+                    ).join('');
+                }
+            } catch (e) {}
+        }
+
+        function renderScanHistory() {
+            const filterType = document.getElementById('historyTypeFilter').value;
+            const filtered = scanHistoryData.filter(h => filterType === 'ALL' || h.code_type === filterType);
+
+            document.getElementById('historyCountBadge').textContent = `${filtered.length} lượt`;
+            const listEl = document.getElementById('scanHistoryList');
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-size:13px;">Không có lượt quét nào phù hợp bộ lọc.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(item => `
+                <div class="history-item" onclick="executeLookup('${item.code}')">
+                    <div>
+                        <div class="hi-code">${item.code}</div>
+                        <div class="hi-meta">${item.type_label} · ${item.summary} · Nhân viên: ${item.staff_name}</div>
+                        <div class="hi-meta" style="margin-top:4px;">${item.time}</div>
+                    </div>
+                    <span class="status-badge ${item.found ? '' : 'st-danger'}">${item.found ? 'Hợp lệ' : 'Không tìm thấy'}</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleHistoryCollapse() {
+            historyCollapsed = !historyCollapsed;
+            document.getElementById('historyBodyWrapper').style.display = historyCollapsed ? 'none' : 'block';
+            document.getElementById('toggleHistoryBtn').textContent = historyCollapsed ? 'Mở rộng ▼' : 'Thu gọn ▲';
+        }
+
+        // Khởi chạy
+        loadScanHistory();
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('code')) {
+            executeLookup(urlParams.get('code'));
+        }
+    </script>
+</body>
+</html>
