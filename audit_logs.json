@@ -1,5 +1,22 @@
 [
   {
+    "id": "LOG-20261124-6C5EA57C",
+    "timestamp": "24/11/2026 – 14:25:38",
+    "date": "2026-11-24",
+    "time": "14:25:38",
+    "actor": "Nguyên Văn D",
+    "by": "Nguyên Văn D (staffD)",
+    "category": "Bảo mật",
+    "action": "Đăng nhập hệ thống",
+    "target": "staffD",
+    "result": "Thành công",
+    "status": "Thành công",
+    "ip": "worker-edge",
+    "device": "Cloudflare Worker",
+    "changes": [],
+    "reason": ""
+  },
+  {
     "id": "LOG-20261124-0EC2C6C3",
     "timestamp": "24/11/2026 – 12:03:02",
     "date": "2026-11-24",
